@@ -10,6 +10,6 @@ include_directories(.)
 # add subprojects
 add_subdirectory(utility)
 add_subdirectory(data_structures)
-#add_subdirectory(protocols)
-#add_subdirectory(applications)
+add_subdirectory(protocols)
+add_subdirectory(applications)
 
