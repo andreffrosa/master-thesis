@@ -1,0 +1,220 @@
+
+sudo gdb --args ../bin/broadcast_test -I wlan2 -H raspi-03 --file ../experiments/configs/latency.conf
+
+GNU gdb (Ubuntu 9.1-0ubuntu1) 9.1
+Copyright (C) 2020 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+    <http://www.gnu.org/software/gdb/documentation/>.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from ../bin/broadcast_test...
+(gdb) start
+Temporary breakpoint 1 at 0xc1f9: file /home/andreffrosa/Desktop/Escola/Tese/ad-hoc_communication-primitives/CommunicationPrimitives/applications/broadcast/broadcast_test.c, line 49.
+Starting program: /home/andreffrosa/Desktop/Escola/Tese/ad-hoc_communication-primitives/bin/broadcast_test -I wlan2 -H raspi-03 --file ../experiments/configs/latency.conf
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Temporary breakpoint 1, main (argc=0, argv=0x0) at /home/andreffrosa/Desktop/Escola/Tese/ad-hoc_communication-primitives/CommunicationPrimitives/applications/broadcast/broadcast_test.c:49
+49	int main(int argc, char* argv[]) {
+(gdb) c
+Continuing.
+[New Thread 0x7ffff7c18700 (LWP 93115)]
+[New Thread 0x7ffff6c16700 (LWP 93118)]
+[New Thread 0x7ffff7417700 (LWP 93117)]
+[New Thread 0x7ffff6415700 (LWP 93122)]
+[New Thread 0x7ffff5c14700 (LWP 93126)]
+Configs {
+	BroadcastConfigs {
+		r_alg = Flooding 100
+		r_delay = 
+		r_policy = 
+		r_context = LatencyContext
+		r_phases = 1
+		seen_expiration_ms = 60000
+		gc_interval_s = 180
+	}
+	DiscoveryConfigs {
+		window_size = 10 s
+		horizon = 2
+		max_jitter = 500
+		heartbeat_period = 5000
+		t_gc = 60000
+		misses = 3
+		lq_alg = OLRSQuality 0.5
+		lq_threshold = 0.100000
+	}
+	AppConfigs {
+		broadcast_type = Exponential Oscillating 0.5 0.5 0.5 10.0
+		initial_grace_period = 3 ms
+		max_broadcasts = Infinite
+		exp_duration_s = 60 s
+		rcv_only = true
+		overlay = ../topologies/line/
+		interface_name = wlan2
+		hostname = raspi-03
+	}
+}
+<raspi-03> TIME: 2020:07:22 16:52:27 449389266 :: [YGG_RUNTIME] : [INIT] Initialized logging
+<raspi-03> TIME: 2020:07:22 16:52:31 183377493 :: [UTILS] : [GEN STATIC UUID] 66600666-1001-1001-1001-000000000003
+<raspi-03> TIME: 2020:07:22 16:52:31 189115979 :: [BROADCAST APP] : [INIT] raspi-03 starting experience of 60 s
+
+<raspi-03> TIME: 2020:07:22 16:52:36 37112403 :: [BROADCAST FRAMEWORK] : [DELIVER] [5c84020f-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:52:36 37147020 :: [LATENCY CONTEXT] : [LATENCY] [5c84020f-cc33-11ea-a851-f7bfb19b80b7] latency = 81
+<raspi-03> TIME: 2020:07:22 16:52:36 37160591 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 2nd message.
+<raspi-03> TIME: 2020:07:22 16:52:36 37198266 :: [BROADCAST FRAMEWORK] : [DELAY] [5c84020f-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 21
+<raspi-03> TIME: 2020:07:22 16:52:36 37206322 :: [BROADCAST FRAMEWORK] : [COPY] [[5c84020f-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:36 58468389 :: [BROADCAST FRAMEWORK] : [POLICY] [[5c84020f-cc33-11ea-a851-f7bfb19b80b7] Decision true on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:39 468291538 :: [BROADCAST FRAMEWORK] : [DELIVER] [5e7d3cd9-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:52:39 468321966 :: [LATENCY CONTEXT] : [LATENCY] [5e7d3cd9-cc33-11ea-a851-f7bfb19b80b7] latency = 35
+<raspi-03> TIME: 2020:07:22 16:52:39 468345049 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 4th message.
+<raspi-03> TIME: 2020:07:22 16:52:39 468381894 :: [BROADCAST FRAMEWORK] : [DELAY] [5e7d3cd9-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 51
+<raspi-03> TIME: 2020:07:22 16:52:39 468390568 :: [BROADCAST FRAMEWORK] : [COPY] [[5e7d3cd9-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:42 929406651 :: [BROADCAST FRAMEWORK] : [DELIVER] [60dd599a-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:52:42 929451783 :: [LATENCY CONTEXT] : [LATENCY] [60dd599a-cc33-11ea-a851-f7bfb19b80b7] latency = 54
+<raspi-03> TIME: 2020:07:22 16:52:42 929507421 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 5th message.
+<raspi-03> TIME: 2020:07:22 16:52:42 929528965 :: [BROADCAST FRAMEWORK] : [DELAY] [60dd599a-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 28
+<raspi-03> TIME: 2020:07:22 16:52:42 929538333 :: [BROADCAST FRAMEWORK] : [COPY] [[60dd599a-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:43 760770424 :: [BROADCAST FRAMEWORK] : [DELIVER] [60dd599c-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:52:43 760784956 :: [LATENCY CONTEXT] : [LATENCY] [60dd599c-cc33-11ea-a851-f7bfb19b80b7] latency = 73
+<raspi-03> TIME: 2020:07:22 16:52:43 760812413 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 7th message.
+<raspi-03> TIME: 2020:07:22 16:52:43 760818069 :: [BROADCAST FRAMEWORK] : [DELAY] [60dd599c-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 5
+<raspi-03> TIME: 2020:07:22 16:52:43 760854377 :: [BROADCAST FRAMEWORK] : [COPY] [[60dd599c-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:43 766216456 :: [BROADCAST FRAMEWORK] : [POLICY] [[60dd599c-cc33-11ea-a851-f7bfb19b80b7] Decision true on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:55 758616838 :: [BROADCAST FRAMEWORK] : [DELIVER] [67c4bb4f-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:52:55 758632301 :: [LATENCY CONTEXT] : [LATENCY] [67c4bb4f-cc33-11ea-a851-f7bfb19b80b7] latency = 59
+<raspi-03> TIME: 2020:07:22 16:52:55 758711074 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 38th message.
+<raspi-03> TIME: 2020:07:22 16:52:55 758728966 :: [BROADCAST FRAMEWORK] : [DELAY] [67c4bb4f-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 64
+<raspi-03> TIME: 2020:07:22 16:52:55 758742239 :: [BROADCAST FRAMEWORK] : [COPY] [[67c4bb4f-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:55 823055332 :: [BROADCAST FRAMEWORK] : [POLICY] [[67c4bb4f-cc33-11ea-a851-f7bfb19b80b7] Decision true on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:59 703463672 :: [BROADCAST FRAMEWORK] : [DELIVER] [69e31a6c-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:52:59 703484974 :: [LATENCY CONTEXT] : [LATENCY] [69e31a6c-cc33-11ea-a851-f7bfb19b80b7] latency = 53
+<raspi-03> TIME: 2020:07:22 16:52:59 703495807 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 52th message.
+<raspi-03> TIME: 2020:07:22 16:52:59 703522146 :: [BROADCAST FRAMEWORK] : [DELAY] [69e31a6c-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 18
+<raspi-03> TIME: 2020:07:22 16:52:59 703531297 :: [BROADCAST FRAMEWORK] : [COPY] [[69e31a6c-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:59 756151452 :: [BROADCAST FRAMEWORK] : [DELIVER] [69e31a6d-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:52:59 756196463 :: [LATENCY CONTEXT] : [LATENCY] [69e31a6d-cc33-11ea-a851-f7bfb19b80b7] latency = 0
+<raspi-03> TIME: 2020:07:22 16:52:59 756221591 :: [BROADCAST FRAMEWORK] : [DELAY] [69e31a6d-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 95
+<raspi-03> TIME: 2020:07:22 16:52:59 756247094 :: [BROADCAST FRAMEWORK] : [COPY] [[69e31a6d-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:52:59 756270257 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 53th message.
+<raspi-03> TIME: 2020:07:22 16:53:01 335650123 :: [BROADCAST FRAMEWORK] : [DELIVER] [6b23ee99-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:01 335681095 :: [LATENCY CONTEXT] : [LATENCY] [6b23ee99-cc33-11ea-a851-f7bfb19b80b7] latency = 5
+<raspi-03> TIME: 2020:07:22 16:53:01 335697779 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 59th message.
+<raspi-03> TIME: 2020:07:22 16:53:01 335712510 :: [BROADCAST FRAMEWORK] : [DELAY] [6b23ee99-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 26
+<raspi-03> TIME: 2020:07:22 16:53:01 335765535 :: [BROADCAST FRAMEWORK] : [COPY] [[6b23ee99-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:01 574786520 :: [BROADCAST FRAMEWORK] : [DELIVER] [6b23ee9b-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:01 574799866 :: [LATENCY CONTEXT] : [LATENCY] [6b23ee9b-cc33-11ea-a851-f7bfb19b80b7] latency = 89
+<raspi-03> TIME: 2020:07:22 16:53:01 574834143 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 61th message.
+<raspi-03> TIME: 2020:07:22 16:53:01 574842803 :: [BROADCAST FRAMEWORK] : [DELAY] [6b23ee9b-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 58
+<raspi-03> TIME: 2020:07:22 16:53:01 574870808 :: [BROADCAST FRAMEWORK] : [COPY] [[6b23ee9b-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:03 258403312 :: [BROADCAST FRAMEWORK] : [DELIVER] [6c604417-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:03 258443136 :: [LATENCY CONTEXT] : [LATENCY] [6c604417-cc33-11ea-a851-f7bfb19b80b7] latency = 60
+<raspi-03> TIME: 2020:07:22 16:53:03 258502207 :: [BROADCAST FRAMEWORK] : [DELAY] [6c604417-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 25
+<raspi-03> TIME: 2020:07:22 16:53:03 258522673 :: [BROADCAST FRAMEWORK] : [COPY] [[6c604417-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:03 258527127 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 69th message.
+<raspi-03> TIME: 2020:07:22 16:53:03 597550065 :: [BROADCAST FRAMEWORK] : [DELIVER] [6c604418-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:03 597629085 :: [LATENCY CONTEXT] : [LATENCY] [6c604418-cc33-11ea-a851-f7bfb19b80b7] latency = 43
+<raspi-03> TIME: 2020:07:22 16:53:03 597655728 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 70th message.
+<raspi-03> TIME: 2020:07:22 16:53:03 597661535 :: [BROADCAST FRAMEWORK] : [DELAY] [6c604418-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 80
+<raspi-03> TIME: 2020:07:22 16:53:03 597677312 :: [BROADCAST FRAMEWORK] : [COPY] [[6c604418-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:05 10996274 :: [BROADCAST FRAMEWORK] : [DELIVER] [6d8eab78-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:05 11023838 :: [LATENCY CONTEXT] : [LATENCY] [6d8eab78-cc33-11ea-a851-f7bfb19b80b7] latency = 0
+<raspi-03> TIME: 2020:07:22 16:53:05 11048634 :: [BROADCAST FRAMEWORK] : [DELAY] [6d8eab78-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 18
+<raspi-03> TIME: 2020:07:22 16:53:05 11054276 :: [BROADCAST FRAMEWORK] : [COPY] [[6d8eab78-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:05 11056270 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 74th message.
+<raspi-03> TIME: 2020:07:22 16:53:05 504564997 :: [BROADCAST FRAMEWORK] : [DELIVER] [6d8eab7b-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:05 504586484 :: [LATENCY CONTEXT] : [LATENCY] [6d8eab7b-cc33-11ea-a851-f7bfb19b80b7] latency = 99
+<raspi-03> TIME: 2020:07:22 16:53:05 504604800 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 77th message.
+<raspi-03> TIME: 2020:07:22 16:53:05 504668795 :: [BROADCAST FRAMEWORK] : [DELAY] [6d8eab7b-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 40
+<raspi-03> TIME: 2020:07:22 16:53:05 504680251 :: [BROADCAST FRAMEWORK] : [COPY] [[6d8eab7b-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:05 544960269 :: [BROADCAST FRAMEWORK] : [POLICY] [[6d8eab7b-cc33-11ea-a851-f7bfb19b80b7] Decision true on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:05 922411252 :: [BROADCAST FRAMEWORK] : [DELIVER] [6d8eab80-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:05 922425222 :: [LATENCY CONTEXT] : [LATENCY] [6d8eab80-cc33-11ea-a851-f7bfb19b80b7] latency = 90
+<raspi-03> TIME: 2020:07:22 16:53:05 922473617 :: [BROADCAST FRAMEWORK] : [DELAY] [6d8eab80-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 73
+<raspi-03> TIME: 2020:07:22 16:53:05 922484441 :: [BROADCAST FRAMEWORK] : [COPY] [[6d8eab80-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:05 922489627 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 82th message.
+<raspi-03> TIME: 2020:07:22 16:53:15 910324995 :: [BROADCAST FRAMEWORK] : [DELIVER] [736dc8e5-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:15 910338940 :: [LATENCY CONTEXT] : [LATENCY] [736dc8e5-cc33-11ea-a851-f7bfb19b80b7] latency = 5
+<raspi-03> TIME: 2020:07:22 16:53:15 910343679 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 148th message.
+<raspi-03> TIME: 2020:07:22 16:53:15 910389131 :: [BROADCAST FRAMEWORK] : [DELAY] [736dc8e5-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 83
+<raspi-03> TIME: 2020:07:22 16:53:15 910417431 :: [BROADCAST FRAMEWORK] : [COPY] [[736dc8e5-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:16 473114545 :: [BROADCAST FRAMEWORK] : [DELIVER] [74a5857c-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:16 473155417 :: [LATENCY CONTEXT] : [LATENCY] [74a5857c-cc33-11ea-a851-f7bfb19b80b7] latency = 48
+<raspi-03> TIME: 2020:07:22 16:53:16 473178286 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 159th message.
+<raspi-03> TIME: 2020:07:22 16:53:16 473237777 :: [BROADCAST FRAMEWORK] : [DELAY] [74a5857c-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 4
+<raspi-03> TIME: 2020:07:22 16:53:16 473253038 :: [BROADCAST FRAMEWORK] : [COPY] [[74a5857c-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:17 271273889 :: [BROADCAST FRAMEWORK] : [DELIVER] [74a58582-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:17 271289289 :: [LATENCY CONTEXT] : [LATENCY] [74a58582-cc33-11ea-a851-f7bfb19b80b7] latency = 25
+<raspi-03> TIME: 2020:07:22 16:53:17 271343242 :: [BROADCAST FRAMEWORK] : [DELAY] [74a58582-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 43
+<raspi-03> TIME: 2020:07:22 16:53:17 271355436 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 165th message.
+<raspi-03> TIME: 2020:07:22 16:53:17 271359560 :: [BROADCAST FRAMEWORK] : [COPY] [[74a58582-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:19 374494232 :: [BROADCAST FRAMEWORK] : [DELIVER] [75d5b268-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:19 374519903 :: [LATENCY CONTEXT] : [LATENCY] [75d5b268-cc33-11ea-a851-f7bfb19b80b7] latency = 54
+<raspi-03> TIME: 2020:07:22 16:53:19 374527666 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 189th message.
+<raspi-03> TIME: 2020:07:22 16:53:19 374543865 :: [BROADCAST FRAMEWORK] : [DELAY] [75d5b268-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 36
+<raspi-03> TIME: 2020:07:22 16:53:19 374551668 :: [BROADCAST FRAMEWORK] : [COPY] [[75d5b268-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:19 565413816 :: [BROADCAST FRAMEWORK] : [DELIVER] [75d5b26b-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:19 565426524 :: [LATENCY CONTEXT] : [LATENCY] [75d5b26b-cc33-11ea-a851-f7bfb19b80b7] latency = 69
+<raspi-03> TIME: 2020:07:22 16:53:19 565477230 :: [BROADCAST FRAMEWORK] : [DELAY] [75d5b26b-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 30
+<raspi-03> TIME: 2020:07:22 16:53:19 565485801 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 192th message.
+<raspi-03> TIME: 2020:07:22 16:53:19 565490276 :: [BROADCAST FRAMEWORK] : [COPY] [[75d5b26b-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:19 658167729 :: [BROADCAST FRAMEWORK] : [DELIVER] [75d5b26c-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:19 658183734 :: [LATENCY CONTEXT] : [LATENCY] [75d5b26c-cc33-11ea-a851-f7bfb19b80b7] latency = 22
+<raspi-03> TIME: 2020:07:22 16:53:19 658192255 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 193th message.
+<raspi-03> TIME: 2020:07:22 16:53:19 658215208 :: [BROADCAST FRAMEWORK] : [DELAY] [75d5b26c-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 66
+<raspi-03> TIME: 2020:07:22 16:53:19 658226607 :: [BROADCAST FRAMEWORK] : [COPY] [[75d5b26c-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:21 134632277 :: [BROADCAST FRAMEWORK] : [DELIVER] [77052130-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:21 134672717 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 206th message.
+<raspi-03> TIME: 2020:07:22 16:53:21 134674482 :: [LATENCY CONTEXT] : [LATENCY] [77052130-cc33-11ea-a851-f7bfb19b80b7] latency = 26
+<raspi-03> TIME: 2020:07:22 16:53:21 134749568 :: [BROADCAST FRAMEWORK] : [DELAY] [77052130-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 16
+<raspi-03> TIME: 2020:07:22 16:53:21 134768133 :: [BROADCAST FRAMEWORK] : [COPY] [[77052130-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:21 151003167 :: [BROADCAST FRAMEWORK] : [POLICY] [[77052130-cc33-11ea-a851-f7bfb19b80b7] Decision true on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:24 561306612 :: [BROADCAST FRAMEWORK] : [DELIVER] [79647f4f-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:24 561345644 :: [LATENCY CONTEXT] : [LATENCY] [79647f4f-cc33-11ea-a851-f7bfb19b80b7] latency = 53
+<raspi-03> TIME: 2020:07:22 16:53:24 561330937 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 240th message.
+<raspi-03> TIME: 2020:07:22 16:53:24 561356607 :: [BROADCAST FRAMEWORK] : [DELAY] [79647f4f-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 99
+<raspi-03> TIME: 2020:07:22 16:53:24 561444261 :: [BROADCAST FRAMEWORK] : [COPY] [[79647f4f-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:24 660718168 :: [BROADCAST FRAMEWORK] : [POLICY] [[79647f4f-cc33-11ea-a851-f7bfb19b80b7] Decision true on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:26 643897015 :: [BROADCAST FRAMEWORK] : [DELIVER] [7a95ac6a-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:26 643941698 :: [LATENCY CONTEXT] : [LATENCY] [7a95ac6a-cc33-11ea-a851-f7bfb19b80b7] latency = 0
+<raspi-03> TIME: 2020:07:22 16:53:26 644017041 :: [BROADCAST FRAMEWORK] : [DELAY] [7a95ac6a-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 12
+<raspi-03> TIME: 2020:07:22 16:53:26 644035249 :: [BROADCAST FRAMEWORK] : [COPY] [[7a95ac6a-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:26 644017595 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 271th message.
+<raspi-03> TIME: 2020:07:22 16:53:28 867246611 :: [BROADCAST FRAMEWORK] : [DELIVER] [7bcd120c-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:28 867276367 :: [LATENCY CONTEXT] : [LATENCY] [7bcd120c-cc33-11ea-a851-f7bfb19b80b7] latency = 91
+<raspi-03> TIME: 2020:07:22 16:53:28 867292615 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 296th message.
+<raspi-03> TIME: 2020:07:22 16:53:28 867303767 :: [BROADCAST FRAMEWORK] : [DELAY] [7bcd120c-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 73
+<raspi-03> TIME: 2020:07:22 16:53:28 867323457 :: [BROADCAST FRAMEWORK] : [COPY] [[7bcd120c-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:29 379273391 :: [BROADCAST FRAMEWORK] : [DELIVER] [7bcd120f-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:29 379293758 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 299th message.
+<raspi-03> TIME: 2020:07:22 16:53:29 379309087 :: [LATENCY CONTEXT] : [LATENCY] [7bcd120f-cc33-11ea-a851-f7bfb19b80b7] latency = 3
+<raspi-03> TIME: 2020:07:22 16:53:29 379397975 :: [BROADCAST FRAMEWORK] : [DELAY] [7bcd120f-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 81
+<raspi-03> TIME: 2020:07:22 16:53:29 379409025 :: [BROADCAST FRAMEWORK] : [COPY] [[7bcd120f-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:30 32936510 :: [BROADCAST FRAMEWORK] : [DELIVER] [7bcd1215-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:30 32951629 :: [LATENCY CONTEXT] : [LATENCY] [7bcd1215-cc33-11ea-a851-f7bfb19b80b7] latency = 66
+<raspi-03> TIME: 2020:07:22 16:53:30 32984652 :: [BROADCAST FRAMEWORK] : [DELAY] [7bcd1215-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 81
+<raspi-03> TIME: 2020:07:22 16:53:30 32988788 :: [BROADCAST FRAMEWORK] : [COPY] [[7bcd1215-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:30 33025926 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 305th message.
+<raspi-03> TIME: 2020:07:22 16:53:30 177621412 :: [BROADCAST FRAMEWORK] : [DELIVER] [7cfd2ff0-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:30 177635330 :: [LATENCY CONTEXT] : [LATENCY] [7cfd2ff0-cc33-11ea-a851-f7bfb19b80b7] latency = 1
+<raspi-03> TIME: 2020:07:22 16:53:30 177638688 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 310th message.
+<raspi-03> TIME: 2020:07:22 16:53:30 177706812 :: [BROADCAST FRAMEWORK] : [DELAY] [7cfd2ff0-cc33-11ea-a851-f7bfb19b80b7] phase = 1 copy = 1 delay = 64
+<raspi-03> TIME: 2020:07:22 16:53:30 177717821 :: [BROADCAST FRAMEWORK] : [COPY] [[7cfd2ff0-cc33-11ea-a851-f7bfb19b80b7] Received copy 1 on phase 1
+<raspi-03> TIME: 2020:07:22 16:53:30 440721727 :: [BROADCAST FRAMEWORK] : [DELIVER] [7cfd2ff3-cc33-11ea-a851-f7bfb19b80b7
+<raspi-03> TIME: 2020:07:22 16:53:30 440753101 :: [LATENCY CONTEXT] : [LATENCY] [7cfd2ff3-cc33-11ea-a851-f7bfb19b80b7] latency = 17
+Thread 1 "broadcast_test" received signal SIGINT, Interrupt.
+futex_abstimed_wait_cancelable (private=0, abstime=0x0, clockid=0, expected=0, futex_word=0x5555555c5ea0) at ../sysdeps/nptl/futex-internal.h:320
+(gdb) q
+A debugging session is active.
+
+	Inferior 1 [process 93097] will be killed.
+
+Quit anyway? (y or n) y

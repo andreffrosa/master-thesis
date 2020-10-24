@@ -1,0 +1,1167 @@
+
+sudo gdb --args ../bin/broadcast_test -I wlan0 -H raspi-01 --file ../experiments/configs/monitor.conf
+
+GNU gdb (Ubuntu 9.1-0ubuntu1) 9.1
+Copyright (C) 2020 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+    <http://www.gnu.org/software/gdb/documentation/>.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from ../bin/broadcast_test...
+(gdb) start
+Temporary breakpoint 1 at 0xc1f9: file /home/andreffrosa/Desktop/Escola/Tese/ad-hoc_communication-primitives/CommunicationPrimitives/applications/broadcast/broadcast_test.c, line 49.
+Starting program: /home/andreffrosa/Desktop/Escola/Tese/ad-hoc_communication-primitives/bin/broadcast_test -I wlan0 -H raspi-01 --file ../experiments/configs/monitor.conf
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Temporary breakpoint 1, main (argc=0, argv=0x0) at /home/andreffrosa/Desktop/Escola/Tese/ad-hoc_communication-primitives/CommunicationPrimitives/applications/broadcast/broadcast_test.c:49
+49	int main(int argc, char* argv[]) {
+(gdb) c
+Continuing.
+[New Thread 0x7ffff7c18700 (LWP 37899)]
+[New Thread 0x7ffff7417700 (LWP 37900)]
+[New Thread 0x7ffff6c16700 (LWP 37901)]
+[New Thread 0x7ffff6415700 (LWP 37902)]
+[New Thread 0x7ffff5c14700 (LWP 37903)]
+[New Thread 0x7ffff5413700 (LWP 37904)]
+Configs {
+	BroadcastConfigs {
+		r_alg = Flooding 100
+		r_delay = 
+		r_policy = 
+		r_context = Monitor 3000 wma NeighborsContext false
+		r_phases = 1
+		seen_expiration_ms = 60000
+		gc_interval_s = 180
+	}
+	DiscoveryConfigs {
+		window_size = 10 s
+		horizon = 2
+		max_jitter = 500
+		heartbeat_period = 5000
+		t_gc = 60000
+		misses = 3
+		lq_alg = OLRSQuality 0.5
+		lq_threshold = 0.100000
+	}
+	AppConfigs {
+		broadcast_type = Exponential Oscillating 0.5 0.5 0.5 10.0
+		initial_grace_period = 3 ms
+		max_broadcasts = Infinite
+		exp_duration_s = 60 s
+		rcv_only = false
+		overlay = NULL
+		interface_name = wlan0
+		hostname = raspi-01
+	}
+}
+<raspi-01> TIME: 2020:07:20 22:37:09 209885042 :: [YGG_RUNTIME] : [INIT] Initialized logging
+<raspi-01> TIME: 2020:07:20 22:37:12 942669952 :: [UTILS] : [GEN STATIC UUID] 66600666-1001-1001-1001-000000000001
+<raspi-01> TIME: 2020:07:20 22:37:12 945893453 :: [BROADCAST APP] : [INIT] raspi-01 starting experience of 60 s
+
+<raspi-01> TIME: 2020:07:20 22:37:15 944327447 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.145455 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:18 640713049 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 1st message.
+<raspi-01> TIME: 2020:07:20 22:37:18 641228210 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 1st message.
+<raspi-01> TIME: 2020:07:20 22:37:18 641231033 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 1st message.
+<raspi-01> TIME: 2020:07:20 22:37:18 945082399 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.454545 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:19 968854741 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 2nd message.
+<raspi-01> TIME: 2020:07:20 22:37:19 968935019 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 2nd message.
+<raspi-01> TIME: 2020:07:20 22:37:19 968954091 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 2nd message.
+<raspi-01> TIME: 2020:07:20 22:37:20 594364299 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 3rd message.
+<raspi-01> TIME: 2020:07:20 22:37:20 594757617 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 3rd message.
+<raspi-01> TIME: 2020:07:20 22:37:20 594835323 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 3rd message.
+<raspi-01> TIME: 2020:07:20 22:37:21 793871926 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 4th message.
+<raspi-01> TIME: 2020:07:20 22:37:21 794046891 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 4th message.
+<raspi-01> TIME: 2020:07:20 22:37:21 794074349 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 4th message.
+<raspi-01> TIME: 2020:07:20 22:37:21 946572414 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.781818 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:24 605843807 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 5th message.
+<raspi-01> TIME: 2020:07:20 22:37:24 606217847 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 5th message.
+<raspi-01> TIME: 2020:07:20 22:37:24 606285616 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 5th message.
+<raspi-01> TIME: 2020:07:20 22:37:24 948542822 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.672727 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:25 445571493 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 6th message.
+<raspi-01> TIME: 2020:07:20 22:37:25 445737660 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 6th message.
+<raspi-01> TIME: 2020:07:20 22:37:25 445738848 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 6th message.
+<raspi-01> TIME: 2020:07:20 22:37:26 237807471 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 7th message.
+<raspi-01> TIME: 2020:07:20 22:37:26 238226505 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 7th message.
+<raspi-01> TIME: 2020:07:20 22:37:26 238231698 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 7th message.
+<raspi-01> TIME: 2020:07:20 22:37:27 949077462 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.654545 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:28 105313062 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 8th message.
+<raspi-01> TIME: 2020:07:20 22:37:28 105705740 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 8th message.
+<raspi-01> TIME: 2020:07:20 22:37:28 105770530 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 8th message.
+<raspi-01> TIME: 2020:07:20 22:37:29 933346870 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 9th message.
+<raspi-01> TIME: 2020:07:20 22:37:29 933398317 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 9th message.
+<raspi-01> TIME: 2020:07:20 22:37:29 933398515 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 9th message.
+<raspi-01> TIME: 2020:07:20 22:37:30 232081804 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 10th message.
+<raspi-01> TIME: 2020:07:20 22:37:30 232552233 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 10th message.
+<raspi-01> TIME: 2020:07:20 22:37:30 232611097 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 10th message.
+<raspi-01> TIME: 2020:07:20 22:37:30 242096795 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 11th message.
+<raspi-01> TIME: 2020:07:20 22:37:30 242239457 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 11th message.
+<raspi-01> TIME: 2020:07:20 22:37:30 242240678 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 11th message.
+<raspi-01> TIME: 2020:07:20 22:37:30 949399223 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.963636 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:31 456776860 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 12th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 456949043 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 12th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 456979031 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 12th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 744191266 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 13th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 744234527 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 13th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 744291829 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 13th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 761258434 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 14th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 761440026 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 14th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 761502255 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 14th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 856990848 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 15th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 857170077 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 15th message.
+<raspi-01> TIME: 2020:07:20 22:37:31 857204858 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 15th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 397488425 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 16th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 397927696 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 16th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 397989617 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 16th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 641978867 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 17th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 642084904 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 17th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 642089987 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 17th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 842911722 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 18th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 842965850 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 18th message.
+<raspi-01> TIME: 2020:07:20 22:37:32 843023585 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 18th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 586677417 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 19th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 586778983 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 19th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 586782660 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 19th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 657923104 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 20th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 658005939 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 20th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 658018935 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 20th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 749284065 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 21th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 749351675 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 21th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 749366609 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 21th message.
+<raspi-01> TIME: 2020:07:20 22:37:33 950258668 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 2.181818 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:34 12198127 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 22th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 12733718 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 22th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 12787951 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 22th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 602638721 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 23th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 602782025 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 23th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 602786034 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 23th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 646476911 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 24th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 646639038 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 24th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 646640273 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 24th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 893219432 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 25th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 893414454 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 25th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 893441931 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 25th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 928411763 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 26th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 928609838 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 26th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 928636653 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 26th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 941408574 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 27th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 941470462 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 27th message.
+<raspi-01> TIME: 2020:07:20 22:37:34 941482815 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 27th message.
+<raspi-01> TIME: 2020:07:20 22:37:35 258226200 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 28th message.
+<raspi-01> TIME: 2020:07:20 22:37:35 258327047 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 28th message.
+<raspi-01> TIME: 2020:07:20 22:37:35 258329157 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 28th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 208851681 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 29th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 209293527 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 29th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 209371434 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 29th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 241676407 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 30th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 241829574 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 30th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 241837233 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 30th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 594124405 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 31th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 594180052 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 31th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 594218406 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 31th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 639289418 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 32th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 639438355 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 32th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 639440022 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 32th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 951202200 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 3.072727 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:36 983487134 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 33th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 983602262 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 33th message.
+<raspi-01> TIME: 2020:07:20 22:37:36 983602740 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 33th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 17944703 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 34th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 17983035 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 34th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 18038373 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 34th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 58614611 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 35th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 58794407 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 35th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 58872946 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 35th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 342301210 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 36th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 342421605 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 36th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 342423255 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 36th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 379119451 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 37th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 379208720 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 37th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 379262267 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 37th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 852343080 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 38th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 852449855 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 38th message.
+<raspi-01> TIME: 2020:07:20 22:37:37 852451761 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 38th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 602380190 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 39th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 602795256 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 39th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 602826614 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 39th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 628047093 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 40th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 628159643 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 40th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 628161039 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 40th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 893761250 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 41th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 893970952 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 41th message.
+<raspi-01> TIME: 2020:07:20 22:37:38 894005121 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 41th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 719482228 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 42th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 719519191 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 42th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 719576910 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 42th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 827678818 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 43th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 827838387 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 43th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 827847628 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 43th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 872737453 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 44th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 872914459 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 44th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 872924800 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 44th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 875823682 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 45th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 876005286 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 45th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 876061051 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 45th message.
+<raspi-01> TIME: 2020:07:20 22:37:39 951980250 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 3.818182 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:40 503434159 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 46th message.
+<raspi-01> TIME: 2020:07:20 22:37:40 503856182 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 46th message.
+<raspi-01> TIME: 2020:07:20 22:37:40 503916446 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 46th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 149440795 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 47th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 149566479 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 47th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 149568181 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 47th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 545233193 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 48th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 545333237 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 48th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 545357862 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 48th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 639973720 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 49th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 640149598 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 49th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 640155758 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 49th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 989021995 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 50th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 989152145 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 50th message.
+<raspi-01> TIME: 2020:07:20 22:37:41 989179179 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 50th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 84616621 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 51th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 85096297 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 51th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 85190575 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 51th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 272647194 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 52th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 272788366 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 52th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 272790169 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 52th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 364453858 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 53th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 364598807 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 53th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 364599461 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 53th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 413816946 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 54th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 413963029 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 54th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 413978582 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 54th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 430260463 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 55th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 430481022 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 55th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 430538488 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 55th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 489544878 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 56th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 489748728 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 56th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 489806303 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 56th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 712333209 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 57th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 712603046 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 57th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 712606298 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 57th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 740561549 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 58th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 740726180 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 58th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 740730839 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 58th message.
+<raspi-01> TIME: 2020:07:20 22:37:42 952720222 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 4.272727 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:43 227402114 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 59th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 227504683 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 59th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 227504992 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 59th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 415073624 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 60th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 415212255 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 60th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 415241045 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 60th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 467371219 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 61th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 467517232 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 61th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 467518533 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 61th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 658475828 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 62th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 658686365 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 62th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 658695086 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 62th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 682822542 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 63th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 683030515 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 63th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 683083731 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 63th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 749168298 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 64th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 749376836 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 64th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 749432263 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 64th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 767123156 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 65th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 767292245 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 65th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 767324510 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 65th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 825665093 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 66th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 825802026 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 66th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 825826942 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 66th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 892000587 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 67th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 892147944 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 67th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 892228438 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 67th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 941052234 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 68th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 941124862 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 68th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 941127155 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 68th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 960977843 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 69th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 961212904 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 69th message.
+<raspi-01> TIME: 2020:07:20 22:37:43 961221413 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 69th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 13887635 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 70th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 14359728 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 70th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 14391777 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 70th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 221682270 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 71th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 221949243 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 71th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 221979647 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 71th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 494060149 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 72th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 494266431 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 72th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 494321698 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 72th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 538802557 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 73th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 538963233 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 73th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 538971611 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 73th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 629341757 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 74th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 629461603 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 74th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 629489403 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 74th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 693455872 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 75th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 693602678 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 75th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 693681171 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 75th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 847530504 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 76th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 847628543 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 76th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 847630577 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 76th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 920978647 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 77th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 921280592 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 77th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 921331603 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 77th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 969591918 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 78th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 969788786 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 78th message.
+<raspi-01> TIME: 2020:07:20 22:37:44 969910298 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 78th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 225698246 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 79th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 225766786 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 79th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 225816722 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 79th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 439677129 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 80th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 439838431 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 80th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 439839110 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 80th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 451929436 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 81th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 452021288 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 81th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 452047065 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 81th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 480901017 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 82th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 481058564 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 82th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 481117819 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 82th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 666099101 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 83th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 666199451 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 83th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 666199942 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 83th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 923026075 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 84th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 923104390 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 84th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 923125018 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 84th message.
+<raspi-01> TIME: 2020:07:20 22:37:45 952890389 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 6.509091 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:46 3659302 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 85th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 3854904 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 85th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 3860540 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 85th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 235244954 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 86th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 235729873 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 86th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 235742821 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 86th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 243338160 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 87th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 243507768 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 87th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 243570078 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 87th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 251614047 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 88th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 251739406 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 88th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 251828281 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 88th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 616140932 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 89th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 616350314 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 89th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 616414461 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 89th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 675454128 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 90th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 675530963 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 90th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 675550378 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 90th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 679385360 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 91th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 679545699 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 91th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 679602217 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 91th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 783439996 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 92th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 783533969 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 92th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 783535069 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 92th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 835281866 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 93th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 835457090 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 93th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 835542576 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 93th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 862568627 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 94th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 862787995 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 94th message.
+<raspi-01> TIME: 2020:07:20 22:37:46 862874203 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 94th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 107599484 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 95th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 107701733 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 95th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 107701914 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 95th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 182238202 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 96th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 182427561 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 96th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 182504811 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 96th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 272156401 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 97th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 272196928 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 97th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 272254537 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 97th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 358563417 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 98th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 358722583 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 98th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 358723252 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 98th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 832913901 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 99th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 833034634 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 99th message.
+<raspi-01> TIME: 2020:07:20 22:37:47 833038258 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 99th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 162386488 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 100th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 162803607 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 100th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 162837982 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 100th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 332957140 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 101th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 333129558 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 101th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 333228095 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 101th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 484350826 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 102th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 484528975 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 102th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 484586207 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 102th message.
+<raspi-01> TIME: 2020:07:20 22:37:48 953560168 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 6.527273 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:49 181639825 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 103th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 181821055 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 103th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 181883617 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 103th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 522379494 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 104th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 522504986 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 104th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 522507878 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 104th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 527429336 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 105th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 527635992 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 105th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 527666502 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 105th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 577793138 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 106th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 577998362 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 106th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 578075271 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 106th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 820962152 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 107th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 821200273 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 107th message.
+<raspi-01> TIME: 2020:07:20 22:37:49 821208001 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 107th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 1220912 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 108th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 1299752 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 108th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 1317001 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 108th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 113189777 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 109th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 113598261 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 109th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 113683389 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 109th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 237530299 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 110th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 237745622 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 110th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 237785928 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 110th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 316217429 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 111th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 316476727 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 111th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 316500406 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 111th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 742862768 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 112th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 743008928 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 112th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 743084818 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 112th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 926513427 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 113th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 926693679 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 113th message.
+<raspi-01> TIME: 2020:07:20 22:37:50 926777191 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 113th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 4260123 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 114th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 4528677 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 114th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 4529150 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 114th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 187398905 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 115th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 187572960 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 115th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 187659755 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 115th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 271274529 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 116th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 271443356 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 116th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 271498315 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 116th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 298344944 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 117th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 298439800 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 117th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 298444341 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 117th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 507821733 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 118th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 507972047 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 118th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 508046792 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 118th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 606504186 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 119th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 606738215 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 119th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 606768438 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 119th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 677356267 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 120th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 677503178 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 120th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 677532519 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 120th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 749867350 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 121th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 750029620 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 121th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 750033563 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 121th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 856105900 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 122th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 856164636 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 122th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 856177600 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 122th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 886671489 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 123th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 886913623 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 123th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 886948758 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 123th message.
+<raspi-01> TIME: 2020:07:20 22:37:51 954210057 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 6.890909 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:52 45090840 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 124th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 45537810 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 124th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 45551127 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 124th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 50208582 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 125th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 50394140 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 125th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 50449230 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 125th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 102779048 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 126th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 102968728 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 126th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 103002522 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 126th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 111069788 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 127th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 111260065 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 127th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 111440316 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 127th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 328447805 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 128th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 328578629 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 128th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 328578712 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 128th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 509050563 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 129th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 509131105 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 129th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 509142947 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 129th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 510438423 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 130th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 510571211 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 130th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 510574507 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 130th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 662774713 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 131th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 662855004 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 131th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 662866886 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 131th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 733674376 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 132th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 733858968 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 132th message.
+<raspi-01> TIME: 2020:07:20 22:37:52 733935626 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 132th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 342014093 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 133th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 342133887 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 133th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 342165560 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 134th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 342169573 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 133th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 342189634 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 134th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 342196508 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 134th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 478679306 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 135th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 478825341 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 135th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 478853513 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 135th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 537891061 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 136th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 538025481 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 136th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 538093393 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 136th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 582862550 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 137th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 583021521 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 137th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 583059372 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 137th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 790855564 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 138th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 791021029 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 138th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 791103492 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 138th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 800131118 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 139th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 800267045 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 139th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 800346813 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 139th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 824478992 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 140th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 824583396 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 140th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 824588420 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 140th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 884086881 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 141th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 884307482 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 141th message.
+<raspi-01> TIME: 2020:07:20 22:37:53 884335603 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 141th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 118623577 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 142th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 119136154 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 142th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 119171002 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 142th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 195717405 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 143th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 195926470 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 143th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 195944396 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 143th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 269931538 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 144th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 270094289 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 144th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 270130395 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 144th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 386989001 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 145th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 387165871 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 145th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 387166079 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 145th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 412560314 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 146th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 412597162 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 146th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 412604996 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 146th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 703739759 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 147th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 703780262 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 147th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 703838629 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 147th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 894023374 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 148th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 894180593 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 148th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 894262098 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 148th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 937663529 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 149th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 937700697 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 149th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 937754862 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 149th message.
+<raspi-01> TIME: 2020:07:20 22:37:54 954781499 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 7.600000 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:55 107059008 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 150th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 107138129 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 150th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 107173471 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 150th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 196350860 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 151th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 196582601 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 151th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 196645723 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 151th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 350317820 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 152th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 350526286 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 152th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 350551666 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 152th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 470250282 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 153th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 470352557 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 153th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 470356534 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 153th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 477392061 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 154th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 477506954 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 154th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 477532304 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 154th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 643026326 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 155th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 643236914 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 155th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 643269713 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 155th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 772125164 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 156th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 772280377 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 156th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 772310853 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 156th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 927467128 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 157th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 927646587 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 157th message.
+<raspi-01> TIME: 2020:07:20 22:37:55 927703151 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 157th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 130412642 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 158th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 130870219 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 158th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 130935255 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 158th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 202844741 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 159th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 202884966 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 159th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 202919602 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 159th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 277678674 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 160th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 277836092 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 160th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 277837179 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 160th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 299639603 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 161th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 299732764 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 161th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 299733105 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 161th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 376977385 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 162th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 377140237 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 162th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 377141446 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 162th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 406238914 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 163th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 406331712 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 163th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 406334668 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 163th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 488169781 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 164th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 488269430 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 164th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 488272554 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 164th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 688243505 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 165th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 688319660 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 165th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 688336882 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 165th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 714525018 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 166th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 714634867 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 166th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 714636577 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 166th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 949712072 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 167th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 949973742 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 167th message.
+<raspi-01> TIME: 2020:07:20 22:37:56 950008731 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 167th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 19869015 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 168th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 19908112 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 168th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 19962706 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 168th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 68252643 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 169th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 68441032 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 169th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 68501634 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 169th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 105142651 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 170th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 105345282 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 170th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 105374165 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 170th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 220347445 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 171th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 220567333 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 171th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 220621872 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 171th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 226331292 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 172th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 226509685 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 172th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 226510281 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 172th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 295589707 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 173th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 295716689 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 173th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 295719030 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 173th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 358999356 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 174th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 359215889 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 174th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 359302941 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 174th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 439212981 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 175th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 439307511 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 175th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 439345341 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 175th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 444220316 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 176th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 444345526 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 176th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 444367070 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 176th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 757751066 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 177th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 757821618 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 177th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 757852721 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 177th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 906536692 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 178th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 906770409 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 178th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 906848899 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 178th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 926591794 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 179th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 926765947 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 179th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 926774592 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 179th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 955889567 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 9.090909 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:37:57 955890682 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 180th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 955973333 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 180th message.
+<raspi-01> TIME: 2020:07:20 22:37:57 955987984 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 180th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 28492791 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 181th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 28757531 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 182th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 28927698 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 181th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 28941734 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 182th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 28981103 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 181th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 29075261 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 182th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 64985293 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 183th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 65192298 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 183th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 65249495 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 183th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 129129498 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 184th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 129215934 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 184th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 129230055 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 184th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 137296115 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 185th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 137430759 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 185th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 137515009 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 185th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 139220680 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 186th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 139412756 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 186th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 139456177 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 186th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 148347269 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 187th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 148418753 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 187th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 148443688 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 187th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 324173160 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 188th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 324360783 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 188th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 324368805 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 188th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 345443437 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 189th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 345579282 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 189th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 345621724 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 189th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 581351837 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 190th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 581444077 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 190th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 581473948 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 190th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 681563750 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 191th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 681675312 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 191th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 681676070 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 191th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 809244251 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 192th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 809396330 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 192th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 809469937 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 192th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 937121631 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 193th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 937256350 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 193th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 937340945 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 193th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 952407738 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 194th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 952597475 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 194th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 952602479 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 194th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 973622384 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 195th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 973797817 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 195th message.
+<raspi-01> TIME: 2020:07:20 22:37:58 973887124 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 195th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 48338229 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 196th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 48602068 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 196th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 48605343 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 196th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 172137861 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 197th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 172327095 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 197th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 172334804 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 197th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 223852539 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 198th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 223977853 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 198th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 223981268 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 198th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 525614353 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 199th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 525682971 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 199th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 525713115 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 199th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 525919743 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 200th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 525995878 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 200th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 526004789 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 200th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 638493464 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 201th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 638753581 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 201th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 638787134 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 201th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 887326006 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 202th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 887363369 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 202th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 887422337 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 202th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 891159094 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 203th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 891345581 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 203th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 891437779 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 203th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 948618712 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 204th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 948755316 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 204th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 948790687 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 204th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 987772199 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 205th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 988034810 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 205th message.
+<raspi-01> TIME: 2020:07:20 22:37:59 988097699 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 205th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 217037209 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 206th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 217500115 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 206th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 217539615 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 206th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 283008772 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 207th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 283195090 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 207th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 283248222 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 207th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 311834875 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 208th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 311971968 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 208th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 312058840 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 208th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 411192737 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 209th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 411275816 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 209th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 411288642 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 209th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 513805912 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 210th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 514018755 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 210th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 514073965 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 210th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 687803745 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 211th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 687993528 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 211th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 687998185 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 211th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 743538223 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 212th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 743754184 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 212th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 743810574 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 212th message.
+<raspi-01> TIME: 2020:07:20 22:38:00 956670012 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 10.200000 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:01 53864588 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 213th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 54045366 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 213th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 54102798 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 213th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 111365474 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 214th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 111502788 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 214th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 111504201 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 214th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 293717408 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 215th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 293804852 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 215th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 293818585 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 215th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 294006463 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 216th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 294051610 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 216th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 294082682 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 216th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 450422661 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 217th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 450594210 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 217th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 450653717 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 217th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 478090111 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 218th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 478183961 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 218th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 478184268 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 218th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 492495618 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 219th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 492672023 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 219th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 492751080 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 219th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 526309697 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 220th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 526441595 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 220th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 526537331 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 220th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 536551963 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 221th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 536668774 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 221th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 536676267 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 221th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 540360090 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 222th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 540500490 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 222th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 540587479 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 222th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 848019995 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 223th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 848164658 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 223th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 848189219 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 223th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 858942548 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 224th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 859076019 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 224th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 859228860 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 224th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 879252706 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 225th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 879422730 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 225th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 879460259 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 225th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 891063514 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 226th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 891303755 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 226th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 891314019 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 226th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 985846389 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 227th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 985970716 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 227th message.
+<raspi-01> TIME: 2020:07:20 22:38:01 985974018 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 227th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 179376822 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 228th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 179896788 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 228th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 179963639 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 228th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 359368435 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 229th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 359578736 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 229th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 359631998 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 229th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 564698890 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 230th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 564870933 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 230th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 564970228 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 230th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 755687538 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 231th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 755829359 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 231th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 755830067 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 231th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 913402564 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 232th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 913539001 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 232th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 913542754 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 232th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 922591894 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 233th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 922729670 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 233th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 922810626 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 233th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 947083051 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 234th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 947272873 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 234th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 947279806 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 234th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 968236968 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 235th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 968384932 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 235th message.
+<raspi-01> TIME: 2020:07:20 22:38:02 968387925 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 235th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 100593180 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 236th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 100687825 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 236th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 100695062 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 236th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 108933611 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 237th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 109142389 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 237th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 109179514 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 237th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 212602742 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 238th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 212743368 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 238th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 212743436 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 238th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 246655663 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 239th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 246878403 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 239th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 246998723 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 240th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 247053714 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 239th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 247114273 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 240th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 247122008 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 240th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 335060793 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 241th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 335199236 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 241th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 335210955 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 241th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 342996992 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 242th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 343178622 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 242th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 343214868 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 242th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 395282606 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 243th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 395354543 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 243th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 395387706 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 243th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 591410450 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 244th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 591577842 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 244th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 591635871 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 244th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 768536300 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 245th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 768654346 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 245th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 768655850 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 245th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 791656000 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 246th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 791789486 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 246th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 791831277 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 246th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 957197733 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 10.836364 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:03 986464624 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 247th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 986654569 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 247th message.
+<raspi-01> TIME: 2020:07:20 22:38:03 986734219 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 247th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 240694361 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 248th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 241157256 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 248th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 241223256 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 248th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 391411284 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 249th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 391565183 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 249th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 391602426 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 249th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 428567033 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 250th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 428657634 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 250th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 428657832 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 250th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 449423226 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 251th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 449628177 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 251th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 449640039 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 251th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 471185447 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 252th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 471272684 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 252th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 471287981 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 252th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 516182931 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 253th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 516352446 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 253th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 516406382 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 253th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 529066017 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 254th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 529195225 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 254th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 529270411 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 254th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 563521571 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 255th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 563609586 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 255th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 563611406 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 255th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 762907275 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 256th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 763072823 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 256th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 763075674 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 256th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 849492130 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 257th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 849671433 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 257th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 849671807 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 257th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 873527825 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 258th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 873705981 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 258th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 873756932 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 258th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 993123668 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 259th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 993298037 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 259th message.
+<raspi-01> TIME: 2020:07:20 22:38:04 993351883 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 259th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 40692100 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 260th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 40840143 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 260th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 40923702 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 260th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 92407647 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 261th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 92497829 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 261th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 92565548 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 261th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 284162608 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 262th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 284374600 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 262th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 284404428 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 262th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 298783723 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 263th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 298930264 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 263th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 298930741 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 263th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 363398221 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 264th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 363589576 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 264th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 363589630 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 264th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 367756763 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 265th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 367895143 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 265th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 367971389 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 265th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 477515215 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 266th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 477656320 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 266th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 477658148 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 266th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 497321594 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 267th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 497532957 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 267th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 497590953 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 267th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 560468494 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 268th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 560628502 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 268th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 560638547 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 268th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 659237952 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 269th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 659383006 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 269th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 659458567 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 269th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 816637071 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 270th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 816804986 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 270th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 816900975 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 270th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 877021140 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 271th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 877189679 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 271th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 877246959 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 271th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 952140723 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 272th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 952355267 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 272th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 952389839 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 272th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 973036242 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 273th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 973223452 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 273th message.
+<raspi-01> TIME: 2020:07:20 22:38:05 973275601 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 273th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 156818014 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 274th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 157213305 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 274th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 157293504 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 274th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 200778533 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 275th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 200965088 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 275th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 201022613 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 275th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 675520171 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 276th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 675661242 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 276th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 675714931 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 276th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 721859306 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 277th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 722027798 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 277th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 722060723 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 277th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 797784112 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 278th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 797952181 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 278th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 797978640 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 278th message.
+<raspi-01> TIME: 2020:07:20 22:38:06 957848454 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 10.672727 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:07 34926232 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 279th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 35031480 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 279th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 35036559 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 279th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 48124357 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 280th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 48251513 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 280th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 48252066 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 280th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 229544243 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 281th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 229730626 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 281th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 229787975 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 281th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 236395196 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 282th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 236517215 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 282th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 236553658 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 282th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 272788593 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 283th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 272923683 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 283th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 273003797 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 283th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 344131077 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 284th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 344341050 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 284th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 344396890 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 284th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 419406969 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 285th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 419593170 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 285th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 419686083 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 285th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 690687704 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 286th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 690846487 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 286th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 690847579 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 286th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 735181478 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 287th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 735401316 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 287th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 735414359 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 287th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 743276152 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 288th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 743428315 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 288th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 743492518 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 288th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 756627225 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 289th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 756781003 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 289th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 756841235 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 289th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 802648211 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 290th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 802842624 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 290th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 802993997 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 290th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 957749047 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 291th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 957871843 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 291th message.
+<raspi-01> TIME: 2020:07:20 22:38:07 957899289 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 291th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 33808002 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 292th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 34236818 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 292th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 34333910 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 292th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 113036329 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 293th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 113245185 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 293th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 113300158 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 293th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 142960796 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 294th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 143151515 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 294th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 143238348 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 294th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 612094656 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 295th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 612385426 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 295th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 612415319 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 295th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 703220717 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 296th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 703306815 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 296th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 703321550 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 296th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 948136685 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 297th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 948549120 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 297th message.
+<raspi-01> TIME: 2020:07:20 22:38:08 948552081 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 297th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 16891264 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 298th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 16931817 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 298th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 16989766 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 298th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 20813153 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 299th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 21298261 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 299th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 21363129 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 299th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 95982163 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 300th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 96157545 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 300th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 96237568 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 300th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 128600965 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 301th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 128729184 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 301th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 128827133 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 301th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 195540462 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 302th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 195743110 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 302th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 195802180 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 302th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 199549712 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 303th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 199677481 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 303th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 199778230 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 303th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 261750393 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 304th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 261891271 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 304th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 261977885 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 304th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 368200548 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 305th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 368564473 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 305th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 368743970 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 305th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 497411714 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 306th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 497578585 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 306th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 497615184 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 306th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 654710982 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 307th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 654824381 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 307th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 654825047 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 307th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 656676019 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 308th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 656818193 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 308th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 656897569 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 308th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 685007899 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 309th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 685199588 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 309th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 685239265 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 309th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 686903104 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 310th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 687066327 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 310th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 687068684 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 310th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 754039927 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 311th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 754187603 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 311th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 754245157 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 311th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 806161062 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 312th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 806255717 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 312th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 806256415 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 312th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 815244513 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 313th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 815460164 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 313th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 815493546 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 313th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 829458598 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 314th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 829735938 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 314th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 829836071 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 314th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 857727068 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 315th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 857869382 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 315th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 857963168 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 315th message.
+<raspi-01> TIME: 2020:07:20 22:38:09 958705816 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 11.490909 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:10 159832360 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 316th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 160295829 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 316th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 160315504 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 316th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 164558909 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 317th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 164693697 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 317th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 164693817 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 317th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 257825550 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 318th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 258133619 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 318th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 258203670 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 318th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 260630991 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 319th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 260803163 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 319th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 260804987 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 319th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 280534182 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 320th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 280670746 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 320th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 280675299 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 320th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 317559260 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 321th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 317654325 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 321th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 317655484 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 321th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 485176143 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 322th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 485340618 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 322th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 485399200 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 322th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 607416822 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 323th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 607668625 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 323th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 607689700 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 323th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 798772490 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 324th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 798809303 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 324th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 798866457 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 324th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 805217499 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 325th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 805403495 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 325th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 805404183 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 325th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 807216715 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 326th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 807298130 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 326th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 807311953 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 326th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 954773483 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 327th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 955115767 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 327th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 955185038 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 327th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 992876071 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 328th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 992940045 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 328th message.
+<raspi-01> TIME: 2020:07:20 22:38:10 992970331 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 328th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 183811504 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 329th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 183937867 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 329th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 184031498 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 329th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 199157194 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 330th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 199360304 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 330th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 199412894 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 330th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 384483152 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 331th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 384692166 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 331th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 384754003 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 331th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 447646057 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 332th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 447818217 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 332th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 447896806 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 332th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 547962897 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 333th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 548128779 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 333th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 548208107 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 333th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 570456362 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 334th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 570613738 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 334th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 570666710 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 334th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 600766296 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 335th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 600825745 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 335th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 600866777 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 335th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 698662856 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 336th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 698822685 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 336th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 698825714 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 336th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 729105957 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 337th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 729310850 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 337th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 729370767 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 337th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 778131948 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 338th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 778344346 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 338th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 778405065 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 338th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 880797284 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 339th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 880877028 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 339th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 880893301 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 339th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 950874508 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 340th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 951038053 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 340th message.
+<raspi-01> TIME: 2020:07:20 22:38:11 951063762 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 340th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 3189345 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 341th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 3732303 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 341th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 3810725 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 341th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 65647784 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 342th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 65850813 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 342th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 65906217 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 342th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 93769528 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 343th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 93929305 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 343th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 93986664 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 343th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 271755085 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 344th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 271854511 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 344th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 271854753 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 344th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 359839527 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 345th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 360049549 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 345th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 360103051 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 345th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 427093432 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 346th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 427274559 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 346th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 427282947 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 346th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 578299695 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 347th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 578489462 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 347th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 578523758 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 347th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 677776917 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 348th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 677961623 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 348th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 677963008 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 348th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 734149135 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 349th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 734261227 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 349th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 734264750 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 349th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 896246001 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 350th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 896353608 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 350th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 896354471 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 350th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 912474434 :: [BROADCAST APP] : [BROADCAST SENT] I'm raspi-01 and this is my 351th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 912554601 :: [BROADCAST APP] : [RECEIVED MESSAGE] I'm raspi-01 and this is my 351th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 912567596 :: [Broadcast Framework] : [BROADCAST] I'm raspi-01 and this is my 351th message.
+<raspi-01> TIME: 2020:07:20 22:38:12 946483443 :: [BROADCAST APP] : [MAIN LOOP] END.
+<raspi-01> TIME: 2020:07:20 22:38:12 946679205 :: [BROADCAST APP] : [BROADCAST STATS] Broadcast: 351 	 Received: 0 	 Transmitted: 351 	 Not_Transmitted: 0 	 Delivered: 351
+<raspi-01> TIME: 2020:07:20 22:38:12 946688355 :: [BROADCAST APP] : [DISCOVERY STATS] Announces: 2 	 Piggybacked: 351 	 Lost Neighs: 0 	 New Neighs: 0
+<raspi-01> TIME: 2020:07:20 22:38:12 959641021 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 11.854545 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:15 960221518 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 6.127273 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:18 960800740 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 2.436364 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:21 961277184 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.309091 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:24 962105199 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.218182 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:27 963091384 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.109091 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:30 963730279 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.200000 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:33 964987422 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.272727 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:36 965507722 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.163636 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:39 966070246 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.236364 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:42 966924509 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.127273 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:45 966961980 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.200000 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:48 967990487 :: [MONITOR CONTEXT] : [LOG] stability: 0.000000 changes/s density: 0.000000 neighs in_traffic: 0.000000 msgs/s out_traffic: 0.090909 msgs/s misses 0.000000
+<raspi-01> TIME: 2020:07:20 22:38:51 968729108 :: 
+Thread 1 "broadcast_test" received signal SIGINT, Interrupt.
+futex_abstimed_wait_cancelable (private=0, abstime=0x0, clockid=0, expected=0, futex_word=0x5555555c7b20) at ../sysdeps/nptl/futex-internal.h:320
+(gdb) q
+A debugging session is active.
+
+	Inferior 1 [process 37891] will be killed.
+
+Quit anyway? (y or n) y
