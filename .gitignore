@@ -3,6 +3,9 @@
 ./bin/
 ./lib/
 
+.tags
+.tags1
+
 ### C ###
 # Prerequisites
 *.d
