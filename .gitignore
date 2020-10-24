@@ -1,6 +1,7 @@
 
-# Created by https://www.toptal.com/developers/gitignore/api/cmake,c,python,linux
-# Edit at https://www.toptal.com/developers/gitignore?templates=cmake,c,python,linux
+# Directories to ignore
+./bin/
+./lib/
 
 ### C ###
 # Prerequisites
@@ -227,4 +228,3 @@ dmypy.json
 # profiling data
 .prof
 
-# End of https://www.toptal.com/developers/gitignore/api/cmake,c,python,linux
