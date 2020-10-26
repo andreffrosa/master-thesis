@@ -813,7 +813,20 @@ HelloDeliverSummary* newHelloDeliverSummary() {
 HackDeliverSummary* newHackDeliverSummary() {
     HackDeliverSummary* summary = malloc(sizeof(HackDeliverSummary));
 
-    // TODO
+    summary->positive_hack = false;
+    summary->updated_neighbor = false;
+    summary->missed_hacks = 0;
+    summary->new_hack = false;
+    summary->repeated_yet_fresh_hack = false;
+    summary->became_bi = false;
+    summary->lost_bi = false;
+    summary->period_changed = false;
+    summary->updated_quality = false;
+    summary->updated_quality_threshold = false;
+
+    summary->updated_two_hop_neighbor = false;
+    summary->added_two_hop_neighbor = false;
+    summary->removed_two_hop_neighbor = false;
 
     return summary;
 }
@@ -1074,28 +1087,35 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         if( nn->is_symmetric != is_symmetric ) {
                             nn->is_symmetric = is_symmetric;
 
-                            // TODO: update summary
+                            summary->updated_two_hop_neighbor = true;
+                            summary->updated_neighbor = true;
                         }
 
                         double rx_lq_delta = fabs(nn->rx_lq - hack->rx_lq);
                         double tx_lq_delta = fabs(nn->tx_lq - hack->tx_lq);
                         if( rx_lq_delta > 0.0 || tx_lq_delta > 0.0 ) {
-                            // new_or_updated = true;
+                            summary->updated_two_hop_neighbor = true;
+                            summary->updated_neighbor = true;
 
+                            /*
                             if( rx_lq_delta >= state->args->lq_threshold || tx_lq_delta >= state->args->lq_threshold ) {
 
                             }
+                            */
                         }
                         nn->rx_lq = hack->rx_lq;
                         nn->tx_lq = hack->tx_lq;
 
                         double traffic_delta = fabs(nn->traffic - hack->traffic);
                         if( traffic_delta > 0.0 ) {
-                            // new_or_updated = true;
+                            summary->updated_two_hop_neighbor = true;
+                            summary->updated_neighbor = true;
 
+                            /*
                             if( traffic_delta >= state->args->traffic_threshold ) {
                                 // summary->updated_traffic_threshold = true;
                             }
+                            */
                         }
                         nn->traffic = hack->traffic;
 
@@ -1110,6 +1130,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     assert(aux == NULL);
 
                     summary->updated_neighbor = true;
+                    summary->added_two_hop_neighbor = true;
                 }
             }
 
@@ -1161,6 +1182,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         TwoHopNeighbor* removed = NE_removeTwoHopNeighbor(neigh, hack->dest_process_id);
                         if(removed) {
                             free(removed);
+                            summary->removed_two_hop_neighbor = true;
                             summary->updated_neighbor = true;
                         }
                     }
