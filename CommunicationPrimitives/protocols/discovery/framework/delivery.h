@@ -16,8 +16,40 @@
 
 #include "messages.h"
 
-void deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr);
+typedef struct HelloDeliverSummary_ {
+    bool new_neighbor;
+    bool updated_neighbor; // TODO: verificar se está corretamente a ser set
+    bool rebooted;
+    bool period_changed;
+    bool updated_quality;
+    bool updated_quality_threshold;
+    bool updated_traffic;
+    bool updated_traffic_threshold;
+    int lost_messages;
+} HelloDeliverSummary;
 
-void deliverHack(void* f_state, HackMessage* hack);
+typedef struct HackDeliverSummary_ {
+    bool positive_hack;
+    bool updated_neighbor;
+    int missed_hacks;
+    bool new_hack;
+    bool repeated_yet_fresh_hack;
+    bool became_bi;
+    bool lost_bi;
+    bool period_changed;
+    bool updated_quality;
+    bool updated_quality_threshold;
+
+    // TODO: especificar melhor as alterações a 2-hops
+} HackDeliverSummary;
+
+
+HelloDeliverSummary* newHelloDeliverSummary();
+
+HackDeliverSummary* newHackDeliverSummary();
+
+HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr);
+
+HackDeliverSummary* deliverHack(void* f_state, HackMessage* hack);
 
 #endif /* _DISCOVERY_DELIVERY_H_ */

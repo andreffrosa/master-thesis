@@ -26,9 +26,6 @@
 
 #include "Yggdrasil.h"
 
-#include "utility/my_time.h"
-#include "utility/my_math.h"
-#include "utility/my_misc.h"
 #include "utility/seq.h"
 
 static unsigned int compute_missed(unsigned int misses, unsigned long period, struct timespec* exp_time, struct timespec* moment) {
@@ -199,14 +196,6 @@ void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, b
         // Re-schedule
         scheduleHackTimer(state, false);
     }
-}
-
-void deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr) {
-    DF_uponHelloMessage((discovery_framework_state*)f_state, hello, addr);
-}
-
-void deliverHack(void* f_state, HackMessage* hack) {
-    DF_uponHackMessage((discovery_framework_state*)f_state, hack);
 }
 
 void DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr) {
@@ -623,11 +612,11 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
         struct timespec min_exp;
         bool first = true;
         unsigned int deleted = 0;
-        hash_table* ht = NE_getNeighborNeighs(neigh);
+        hash_table* ht = NE_getTwoHopNeighbors(neigh);
         void* iterator = NULL;
         hash_table_item* hit = NULL;
         while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
-            NeighTuple* nn = (NeighTuple*)hit->value;
+            TwoHopNeighbor* nn = (TwoHopNeighbor*)hit->value;
             if( compare_timespec(&nn->expiration, &state->current_time) < 0 ) {
                 hash_table_remove(ht, nn->id);
                 free(nn);
@@ -797,7 +786,39 @@ void scheduleNeighborChange(discovery_framework_state* state, bool new_neighbor,
 
 }
 
-void DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, WLANAddr* mac_addr) {
+HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr) {
+    return DF_uponHelloMessage((discovery_framework_state*)f_state, hello, addr);
+}
+
+HackDeliverSummary* deliverHack(void* f_state, HackMessage* hack) {
+    return DF_uponHackMessage((discovery_framework_state*)f_state, hack);
+}
+
+HelloDeliverSummary* newHelloDeliverSummary() {
+    HelloDeliverSummary* summary = malloc(sizeof(HelloDeliverSummary));
+
+    summary->new_neighbor = false;
+    summary->updated_neighbor = false;
+    summary->rebooted = false;
+    summary->period_changed = false;
+    summary->updated_quality = false;
+    summary->updated_quality_threshold = false;
+    summary->updated_traffic = false;
+    summary->updated_traffic_threshold = false;
+    summary->lost_messages = 0;
+
+    return summary;
+}
+
+HackDeliverSummary* newHackDeliverSummary() {
+    HackDeliverSummary* summary = malloc(sizeof(HackDeliverSummary));
+
+    // TODO
+
+    return summary;
+}
+
+HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, WLANAddr* mac_addr) {
 
     // Log
     #ifdef DEBUG_DISCOVERY
@@ -810,29 +831,25 @@ void DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, 
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RCV HELLO", str);
     #endif
 
-    NeighborEntry* neigh = NT_getNeighbor(state->neighbors, hello->process_id);
+    HelloDeliverSummary* summary = newHelloDeliverSummary();
 
-    bool is_new_neigh = false;
-    int lost_messages = 0;
-    bool period_changed = false;
+    NeighborEntry* neigh = NT_getNeighbor(state->neighbors, hello->process_id);
 
     struct timespec rx_exp_time;
     milli_to_timespec(&rx_exp_time, hello->period*1000*state->args->hello_misses);
     add_timespec(&rx_exp_time, &rx_exp_time, &state->current_time);
 
-    bool rebooted = false;
-
     if( neigh ) {
         int seq_cmp = compare_seq(hello->seq, NE_getNeighborSEQ(neigh), state->args->ignore_zero_seq);
-        rebooted = seq_cmp < 0;
+        summary->rebooted = seq_cmp < 0;
 
-        if( NE_isDeleted(neigh) || rebooted ) {
+        if( NE_isDeleted(neigh) || summary->rebooted ) {
             flushNeighbor(state, neigh);
             neigh = NULL;
 
             CancelTimer(hello->process_id, DISCOVERY_FRAMEWORK_PROTO_ID);
 
-            if(rebooted) {
+            if(summary->rebooted) {
                 // Log
                 #ifdef DEBUG_DISCOVERY
                 char id_str[UUID_STR_LEN+1];
@@ -855,16 +872,16 @@ void DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, 
         int seq_cmp = compare_seq(hello->seq, NE_getNeighborSEQ(neigh), state->args->ignore_zero_seq);
         assert(seq_cmp >= 0);
 
-        lost_messages = (seq_cmp - 1 - prev_missed_hellos);
-        assert(lost_messages >= 0);
+        summary->lost_messages = (seq_cmp - 1 - prev_missed_hellos);
+        assert(summary->lost_messages >= 0);
 
-        state->stats.missed_hellos += lost_messages;
+        state->stats.missed_hellos += summary->lost_messages;
 
         NE_setNeighborSEQ(neigh, hello->seq);
 
-        period_changed = NE_getNeighborHelloPeriod(neigh) != hello->period;
+        summary->period_changed = NE_getNeighborHelloPeriod(neigh) != hello->period;
 
-        if( period_changed ) {
+        if( summary->period_changed ) {
             NE_setNeighborHelloPeriod(neigh, hello->period);
         }
     }
@@ -879,8 +896,8 @@ void DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, 
 
         NT_addNeighbor(state->neighbors, neigh);
 
-        is_new_neigh = rebooted ? false : true;
-        lost_messages = 0;
+        summary->new_neighbor = summary->rebooted ? false : true;
+        summary->lost_messages = 0;
 
         struct timespec t;
         milli_to_timespec(&t, hello->period*1000);
@@ -891,33 +908,31 @@ void DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, 
 
     // Update Link Quality
     double old_rx_lq = NE_getRxLinkQuality(neigh);
-    double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 1, lost_messages, is_new_neigh, &state->current_time);
+    double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 1, summary->lost_messages, summary->new_neighbor, &state->current_time);
     NE_setRxLinkQuality(neigh, new_rx_lq);
 
-    bool updated_quality = false, updated_quality_threshold = false;
     double lq_delta = fabs(old_rx_lq - new_rx_lq);
     if( lq_delta > 0.0 ) {
-        updated_quality = true;
+        summary->updated_quality = true;
 
         if( lq_delta >= state->args->lq_threshold ) {
-            updated_quality_threshold = true;
+            summary->updated_quality_threshold = true;
         }
     }
 
     // Update traffic
-    bool updated_traffic = false, updated_traffic_threshold = false;
     double traffic_delta = fabs(NE_getOutTraffic(neigh) - hello->traffic);
     if( traffic_delta > 0.0 ) {
-        updated_traffic = true;
+        summary->updated_traffic = true;
 
-        if( lq_delta >= state->args->lq_threshold ) {
-            updated_traffic_threshold = true;
+        if( traffic_delta >= state->args->traffic_threshold ) {
+            summary->updated_traffic_threshold = true;
         }
     }
     NE_setOutTraffic(neigh, hello->traffic);
 
     // Re-schedule neighbor timer
-    if( period_changed ) {
+    if( summary->period_changed ) {
         CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
 
         bool removed = DF_uponNeighborTimer(state, neigh);
@@ -925,16 +940,16 @@ void DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, 
     }
 
     // Notify
-    if( is_new_neigh ) {
+    if( summary->new_neighbor ) {
         DF_notifyNewNeighbor(state, neigh);
 
         scheduleNeighborChange(state, true, false, false, false);
 
         insertIntoWindow(NT_getInstability(state->neighbors), &state->current_time, 1.0);
-    } else if( updated_quality || updated_traffic || rebooted ) {
+    } else if( summary->updated_quality || summary->updated_traffic || summary->rebooted ) {
         DF_notifyUpdateNeighbor(state, neigh);
 
-        if( updated_quality_threshold || updated_traffic_threshold ) {
+        if( summary->updated_quality_threshold || summary->updated_traffic_threshold ) {
             scheduleNeighborChange(state, false, false, true, false);
         }
 
@@ -943,9 +958,11 @@ void DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, 
     }
 
     scheduleReply(state, hello);
+
+    return summary;
 }
 
-void DF_uponHackMessage(discovery_framework_state* state, HackMessage* hack) {
+HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMessage* hack) {
 
     // Log
     #ifdef DEBUG_DISCOVERY
@@ -962,40 +979,160 @@ void DF_uponHackMessage(discovery_framework_state* state, HackMessage* hack) {
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RCV HACK", str);
     #endif
 
-    bool updated_neighbor = false;
+    HackDeliverSummary* summary = newHackDeliverSummary();
 
     NeighborEntry* neigh = NT_getNeighbor(state->neighbors, hack->src_process_id);
 
     // The neighbor is known already and is not dead
     if( neigh && !NE_isDeleted(neigh) ) {
 
-        // Compute the expiration time for this hack
-        struct timespec hack_exp_time;
-        milli_to_timespec(&hack_exp_time, hack->period*1000*state->args->hack_misses);
-        add_timespec(&hack_exp_time, &hack_exp_time, &state->current_time);
-
-        // Check if the hack is meant for me
-        if( uuid_compare(state->myID, hack->dest_process_id) == 0 ) {
+            // Compute the expiration time for this hack
+            struct timespec hack_exp_time;
+            milli_to_timespec(&hack_exp_time, hack->period*1000*state->args->hack_misses);
+            add_timespec(&hack_exp_time, &hack_exp_time, &state->current_time);
 
             // If is a positive HACK
             if( hack->neigh_type != LOST_NEIGH ) {
+                summary->positive_hack = true;
 
-                // Check if is a fresh HACK
-                int seq_cmp = compare_seq(hack->seq, NE_getNeighborHSEQ(neigh), state->args->ignore_zero_seq);
-                assert(seq_cmp >= 0);
+                // Check if the hack is meant for me
+                if( uuid_compare(state->myID, hack->dest_process_id) == 0 ) {
 
-                unsigned int prev_missed_hacks = compute_missed(state->args->hack_misses, NE_getNeighborHackPeriod(neigh)*1000, NE_getNeighborTxExpTime(neigh), NE_getLastNeighborTimer(neigh));
-                state->stats.missed_hacks += (seq_cmp - 1 - prev_missed_hacks);
+                    // Check freshness of the hack
+                    int seq_cmp = compare_seq(hack->seq, NE_getNeighborHSEQ(neigh), state->args->ignore_zero_seq);
+                    //assert(seq_cmp >= 0);
 
-                bool new_hack = seq_cmp > 0;
-                bool repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq == state->my_seq-1;
-                if( new_hack || repeated_yet_fresh_hack ) {
-                    NE_setNeighborHSEQ(neigh, hack->seq);
+                    unsigned int prev_missed_hacks = compute_missed(state->args->hack_misses, NE_getNeighborHackPeriod(neigh)*1000, NE_getNeighborTxExpTime(neigh), NE_getLastNeighborTimer(neigh));
+                    summary->missed_hacks = (seq_cmp - 1 - prev_missed_hacks);
+                    state->stats.missed_hacks += summary->missed_hacks;
 
-                    // Check if the neighbor became symmetric (or bi)
-                    bool became_bi = NE_getNeighborType(neigh, &state->current_time) != BI_NEIGH;
-                    if( became_bi ) {
-                        updated_neighbor = true;
+                    summary->new_hack = seq_cmp > 0;
+                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq == state->my_seq-1;
+                    if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
+                        NE_setNeighborHSEQ(neigh, hack->seq);
+
+                        // Check if the neighbor became symmetric (or bi)
+                        summary->became_bi = NE_getNeighborType(neigh, &state->current_time) != BI_NEIGH;
+                        if( summary->became_bi ) {
+                            summary->updated_neighbor = true;
+
+                            // Log
+                            #ifdef DEBUG_DISCOVERY
+                            char id_str[UUID_STR_LEN+1];
+                            id_str[UUID_STR_LEN] = '\0';
+                            uuid_unparse(hack->src_process_id, id_str);
+
+                            char str[200];
+                            sprintf(str, "%s", id_str);
+                            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "BECAME BI", str);
+                            #endif
+
+                            scheduleNeighborChange(state, false, false, true, false);
+                        }
+
+                        // Update Tx expiration timestamp
+                        NE_setNeighborTxExpTime(neigh, &hack_exp_time);
+
+                        // Update Link Quality
+                        double old_tx_lq = NE_getTxLinkQuality(neigh);
+                        double new_tx_lq = hack->rx_lq;
+                        NE_setTxLinkQuality(neigh, new_tx_lq);
+
+                        double lq_delta = fabs(old_tx_lq - new_tx_lq);
+                        if( lq_delta > 0.0 ) {
+                            summary->updated_neighbor = true;
+                            summary->updated_quality = true;
+
+                            if( lq_delta >= state->args->lq_threshold ) {
+                                scheduleNeighborChange(state, false, false, true, false);
+
+                                summary->updated_quality_threshold = true;
+                            }
+                        }
+
+                        // Check if HACK period changed
+                        if( NE_getNeighborHackPeriod(neigh) != hack->period ) {
+                            NE_setNeighborHackPeriod(neigh, hack->period);
+
+                            summary->period_changed = true;
+                        }
+                    } else {
+                        // stale hack
+                    }
+                }
+
+                // Update 2-hop neighborhood (Neighbor's neighbors)
+                TwoHopNeighbor* nn = NE_getTwoHopNeighbor(neigh, hack->dest_process_id);
+                if( nn ) {
+                    int seq_cmp = compare_seq(hack->seq, nn->hseq, state->args->ignore_zero_seq);
+
+                    // if fresh hack
+                    if( seq_cmp >= 0 ) {
+                        nn->hseq = hack->seq;
+
+                        bool is_symmetric = hack->neigh_type == BI_NEIGH;
+                        if( nn->is_symmetric != is_symmetric ) {
+                            nn->is_symmetric = is_symmetric;
+
+                            // TODO: update summary
+                        }
+
+                        double rx_lq_delta = fabs(nn->rx_lq - hack->rx_lq);
+                        double tx_lq_delta = fabs(nn->tx_lq - hack->tx_lq);
+                        if( rx_lq_delta > 0.0 || tx_lq_delta > 0.0 ) {
+                            // new_or_updated = true;
+
+                            if( rx_lq_delta >= state->args->lq_threshold || tx_lq_delta >= state->args->lq_threshold ) {
+
+                            }
+                        }
+                        nn->rx_lq = hack->rx_lq;
+                        nn->tx_lq = hack->tx_lq;
+
+                        double traffic_delta = fabs(nn->traffic - hack->traffic);
+                        if( traffic_delta > 0.0 ) {
+                            // new_or_updated = true;
+
+                            if( traffic_delta >= state->args->traffic_threshold ) {
+                                // summary->updated_traffic_threshold = true;
+                            }
+                        }
+                        nn->traffic = hack->traffic;
+
+                        copy_timespec(&nn->expiration, &hack_exp_time);
+                    }
+
+                } else {
+                    // Insert new 2-hop neighbor
+                    TwoHopNeighbor* nn = newNeighTwoHopNeighbor(hack->dest_process_id, hack->seq, hack->neigh_type == BI_NEIGH, hack->rx_lq, hack->tx_lq, hack->traffic, &hack_exp_time);
+
+                    TwoHopNeighbor* aux = NE_addTwoHopNeighbor(neigh, nn);
+                    assert(aux == NULL);
+
+                    summary->updated_neighbor = true;
+                }
+
+            }
+
+            // If is a negative HACK
+            else {
+                summary->positive_hack = false;
+
+                // Check if the hack is meant for me
+                if( uuid_compare(state->myID, hack->dest_process_id) == 0 ) {
+
+                    // Check freshness of the hack
+                    int seq_cmp = compare_seq(hack->seq, NE_getNeighborHSEQ(neigh), state->args->ignore_zero_seq);
+
+                    summary->new_hack = seq_cmp > 0;
+                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq == state->my_seq-1;
+                    if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
+                        NE_setNeighborHSEQ(neigh, hack->seq);
+
+                        // Lost BI
+                        NE_setNeighborTxExpTime(neigh, &state->current_time);
+                        NE_setTxLinkQuality(neigh, 0.0);
+                        summary->lost_bi = true;
 
                         // Log
                         #ifdef DEBUG_DISCOVERY
@@ -1005,88 +1142,36 @@ void DF_uponHackMessage(discovery_framework_state* state, HackMessage* hack) {
 
                         char str[200];
                         sprintf(str, "%s", id_str);
-                        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "BECAME BI", str);
+                        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
                         #endif
 
                         scheduleNeighborChange(state, false, false, true, false);
+
+                        summary->updated_neighbor = true;
                     }
+                }
 
-                    // Update Tx expiration timestamp
-                    /* struct timespec tx_exp_time;
-                    milli_to_timespec(&tx_exp_time, hack->period*1000*state->args->hack_misses);
-                    add_timespec(&tx_exp_time, &tx_exp_time, &state->current_time); */
-                    NE_setNeighborTxExpTime(neigh, &hack_exp_time);
+                // Update 2-hop neighborhood
+                TwoHopNeighbor* nn = NE_getTwoHopNeighbor(neigh, hack->dest_process_id);
+                if( nn ) {
+                    int seq_cmp = compare_seq(hack->seq, nn->hseq, state->args->ignore_zero_seq);
 
-                    // Update Link Quality
-                    double old_tx_lq = NE_getTxLinkQuality(neigh);
-                    double new_tx_lq = hack->rx_lq;
-                    NE_setTxLinkQuality(neigh, new_tx_lq);
-
-                    double lq_delta = fabs(old_tx_lq - new_tx_lq);
-                    if( lq_delta > 0.0 ) {
-                        updated_neighbor = true;
-                        if( lq_delta >= state->args->lq_threshold ) {
-                            scheduleNeighborChange(state, false, false, true, false);
+                    // if fresh hack
+                    if( seq_cmp >= 0 ) {
+                        // Remove from 2-hop neighborhood
+                        TwoHopNeighbor* removed = NE_removeTwoHopNeighbor(neigh, hack->dest_process_id);
+                        if(removed) {
+                            free(removed);
+                            summary->updated_neighbor = true;
                         }
                     }
-
-                    // Check if HACK period changed
-                    if( NE_getNeighborHackPeriod(neigh) != hack->period ) {
-                        NE_setNeighborHackPeriod(neigh, hack->period);
-                    }
-                } else {
-                    // Ignore stale HACK
                 }
             }
-
-            // If is a negative HACK
-            else {
-                // Lost BI
-                NE_setNeighborTxExpTime(neigh, &state->current_time);
-                NE_setTxLinkQuality(neigh, 0.0);
-
-                // Log
-                #ifdef DEBUG_DISCOVERY
-                char id_str[UUID_STR_LEN+1];
-                id_str[UUID_STR_LEN] = '\0';
-                uuid_unparse(hack->src_process_id, id_str);
-
-                char str[200];
-                sprintf(str, "%s", id_str);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
-                #endif
-
-                scheduleNeighborChange(state, false, false, true, false);
-
-                updated_neighbor = true;
-            }
-
-        } else {
-            // The hack is meant for other node
-        }
-
-        // Update 2-hop neighborhood (Neighbor's neighbors)
-        // If is a positive HACK
-        if( hack->neigh_type != LOST_NEIGH ) {
-            bool new_or_updated = addNeighborNeigh(neigh, hack->dest_process_id, hack->seq, hack->neigh_type == BI_NEIGH, hack->rx_lq, hack->tx_lq, hack->traffic, &hack_exp_time);
-            if( new_or_updated ) {
-                updated_neighbor = true;
-            }
-        }
-
-        // If is a negative HACK
-        else {
-            // Remove from 2-hop neighborhood
-            bool removed = removeNeighborNeigh(neigh, hack->dest_process_id);
-            assert(removed);
-            updated_neighbor = true;
-        }
-
     } else {
         // The neighbor is not know. Ignore the HACK
     }
 
-    if( updated_neighbor ) {
+    if( summary->updated_neighbor ) {
         DF_notifyUpdateNeighbor(state, neigh);
     }
 
@@ -1095,6 +1180,8 @@ void DF_uponHackMessage(discovery_framework_state* state, HackMessage* hack) {
 
     bool removed = DF_uponNeighborTimer(state, neigh);
     assert(!removed);
+
+    return summary;
 }
 
 void DF_piggybackDiscovery(discovery_framework_state* state, YggMessage* msg) {
@@ -1323,14 +1410,14 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
     YggEvent_addPayload(ev, &is_symmetric, sizeof(byte));
 
     // Append Neighbors
-    hash_table* ht = NE_getNeighborNeighs(neigh);
+    hash_table* ht = NE_getTwoHopNeighbors(neigh);
     byte n = ht->n_items;
     YggEvent_addPayload(ev, &n, sizeof(byte));
 
     void* iterator = NULL;
     hash_table_item* hit = NULL;
     while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
-        NeighTuple* nn = (NeighTuple*)hit->value;
+        TwoHopNeighbor* nn = (TwoHopNeighbor*)hit->value;
 
         // Append Neigh ID
         YggEvent_addPayload(ev, nn->id, sizeof(uuid_t));

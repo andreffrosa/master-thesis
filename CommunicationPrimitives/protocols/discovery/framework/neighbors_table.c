@@ -193,8 +193,8 @@ NeighborEntry* newNeighborEntry(WLANAddr* mac_addr, unsigned char* id, unsigned 
     return neigh;
 }
 
-static void deleteNeighTuple_custom(hash_table_item* it, void* args) {
-    free((NeighTuple*)(it->value));
+static void deleteTwoHopNeighbor_custom(hash_table_item* it, void* args) {
+    free((TwoHopNeighbor*)(it->value));
 }
 
 void destroyNeighborEntry(NeighborEntry* neigh, void** lq_attributes, void** msg_attributes) {
@@ -203,7 +203,7 @@ void destroyNeighborEntry(NeighborEntry* neigh, void** lq_attributes, void** msg
         *lq_attributes = neigh->lq_attributes;
         *msg_attributes = neigh->msg_attributes;
 
-        hash_table_delete_custom(neigh->neighs, &deleteNeighTuple_custom, NULL);
+        hash_table_delete_custom(neigh->neighs, &deleteTwoHopNeighbor_custom, NULL);
 
         free(neigh);
     }
@@ -517,11 +517,11 @@ NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator) {
     }
 }
 
-static NeighTuple* newNeighTuple(unsigned char* id, unsigned short seq, bool is_symmetric, double rx_lq, double tx_lq, double traffic, struct timespec* expiration) {
-    NeighTuple* nt = malloc(sizeof(NeighTuple));
+TwoHopNeighbor* newNeighTwoHopNeighbor(unsigned char* id, unsigned short seq, bool is_symmetric, double rx_lq, double tx_lq, double traffic, struct timespec* expiration) {
+    TwoHopNeighbor* nt = malloc(sizeof(TwoHopNeighbor));
 
     uuid_copy(nt->id, id);
-    nt->seq = seq;
+    nt->hseq = seq;
     nt->is_symmetric = is_symmetric;
     nt->rx_lq = rx_lq;
     nt->tx_lq = tx_lq;
@@ -531,20 +531,51 @@ static NeighTuple* newNeighTuple(unsigned char* id, unsigned short seq, bool is_
     return nt;
 }
 
-hash_table* NE_getNeighborNeighs(NeighborEntry* neigh) {
+hash_table* NE_getTwoHopNeighbors(NeighborEntry* neigh) {
     assert(neigh);
 
     return neigh->neighs;
 }
 
-bool addNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id, unsigned short seq, bool is_symmetric, double rx_lq, double tx_lq, double traffic, struct timespec* expiration) {
+TwoHopNeighbor* NE_getTwoHopNeighbor(NeighborEntry* neigh, unsigned char* nn_id) {
+    assert(neigh);
+
+    TwoHopNeighbor* nn = hash_table_find_value(neigh->neighs, nn_id);
+
+    return nn;
+}
+
+TwoHopNeighbor* NE_removeTwoHopNeighbor(NeighborEntry* neigh, unsigned char* nn_id) {
+    assert(neigh);
+
+    hash_table_item* hit = hash_table_remove(neigh->neighs, nn_id);
+    if(hit) {
+        TwoHopNeighbor* aux = hit->value;
+        free(hit);
+        return aux;
+    } else {
+        return NULL;
+    }
+}
+
+TwoHopNeighbor* NE_addTwoHopNeighbor(NeighborEntry* neigh, TwoHopNeighbor* nn) {
+    assert(neigh && nn);
+
+    TwoHopNeighbor* aux = NE_removeTwoHopNeighbor(neigh, nn->id);
+
+    hash_table_insert(neigh->neighs, nn->id, nn);
+
+    return aux;
+}
+
+/*bool addNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id, unsigned short seq, bool is_symmetric, double rx_lq, double tx_lq, double traffic, struct timespec* expiration) {
     assert(neigh);
 
     bool new_or_updated = false;
 
-    NeighTuple* nn = hash_table_find_value(neigh->neighs, nn_id);
+    TwoHopNeighbor* nn = hash_table_find_value(neigh->neighs, nn_id);
     if( nn == NULL ) {
-        nn = newNeighTuple(nn_id, seq, is_symmetric, rx_lq, tx_lq, traffic, expiration);
+        nn = newTwoHopNeighbor(nn_id, seq, is_symmetric, rx_lq, tx_lq, traffic, expiration);
 
         hash_table_insert(neigh->neighs, nn->id, nn);
 
@@ -569,11 +600,10 @@ bool addNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id, unsigned short
             }
             nn->traffic = traffic;
 
-            /*
-            if( compare_timespec(&nn->expiration, expiration) > 0 ) {
-                new_or_updated = true;
-            }
-            */
+            //
+            //if( compare_timespec(&nn->expiration, expiration) > 0 ) {
+            //    new_or_updated = true;
+            //}
             copy_timespec(&nn->expiration, expiration);
         } else {
             new_or_updated = false;
@@ -581,8 +611,9 @@ bool addNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id, unsigned short
     }
 
     return new_or_updated;
-}
+}*/
 
+/*
 bool removeNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id) {
     assert(neigh);
 
@@ -595,6 +626,7 @@ bool removeNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id) {
         return false;
     }
 }
+*/
 
 
 char* NT_print(NeighborsTable* neighbors, char** str, struct timespec* current_time, char* window_type, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq) {
@@ -614,7 +646,7 @@ char line_str[line_size];
     unsigned int nneighs = 0;
     void* iterator = NULL;
     for(NeighborEntry* current_neigh = NT_nextNeighbor(neighbors, &iterator); current_neigh; current_neigh = NT_nextNeighbor(neighbors, &iterator)) {
-        nneighs = lMax(nneighs, NE_getNeighborNeighs(current_neigh)->n_items);
+        nneighs = lMax(nneighs, NE_getTwoHopNeighbors(current_neigh)->n_items);
     }
 
     unsigned long buffer_size = NT_getSize(neighbors)*(line_size*(nneighs+1)) + 3*line_size;
@@ -740,7 +772,7 @@ sprintf(ptr, "%s\n", line_str);
         align_str(found_str, found_str, 6, "CR");
 
         char neighs_str[7];
-        sprintf(neighs_str, "%u", NE_getNeighborNeighs(current_neigh)->n_items);
+        sprintf(neighs_str, "%u", NE_getTwoHopNeighbors(current_neigh)->n_items);
         align_str(neighs_str, neighs_str, 6, "CR");
 
         char periods_str[12];
@@ -754,16 +786,16 @@ sprintf(ptr, "%s\n", line_str);
         ptr += strlen(ptr);
 
         // TODO: 2-hop neighs
-        hash_table* neighs = NE_getNeighborNeighs(current_neigh);
+        hash_table* neighs = NE_getTwoHopNeighbors(current_neigh);
         void* iterator = NULL;
         hash_table_item* hit = NULL;
         while( (hit = hash_table_iterator_next(neighs, &iterator)) ) {
-            NeighTuple* nneigh = (NeighTuple*)hit->value;
+            TwoHopNeighbor* nneigh = (TwoHopNeighbor*)hit->value;
 
             uuid_unparse(nneigh->id, id_str);
             id_str[UUID_STR_LEN] = '\0';
 
-            sprintf(seq_str, "%hu", nneigh->seq);
+            sprintf(seq_str, "%hu", nneigh->hseq);
             align_str(seq_str, seq_str, 5, "R");
 
             type_str = nneigh->is_symmetric ? "S" : "A";

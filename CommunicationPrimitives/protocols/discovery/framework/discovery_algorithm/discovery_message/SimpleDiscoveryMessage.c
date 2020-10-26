@@ -64,7 +64,8 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
         memcpy(&hello, ptr, sizeof(HelloMessage));
         ptr += sizeof(HelloMessage);
 
-        deliverHello(f_state, &hello, mac_addr);
+        HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr);
+        free(summary);
     }
 
     byte n_hacks = ptr[0];
@@ -78,7 +79,8 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
             memcpy(&hacks[i], ptr, sizeof(HackMessage));
             ptr += sizeof(HackMessage);
 
-            deliverHack(f_state, &hacks[i]);
+            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i]);
+            free(summary);
         }
     }
 

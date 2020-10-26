@@ -21,6 +21,8 @@
 
 #include "messages.h"
 
+#include "delivery.h"
+
 #include "data_structures/double_list.h"
 
 #include "neighbors_table.h"
@@ -123,9 +125,9 @@ void DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackM
 
 void DF_piggybackDiscovery(discovery_framework_state* state, YggMessage* msg);
 
-void DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, WLANAddr* mac_addr);
+HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, HelloMessage* hello, WLANAddr* mac_addr);
 
-void DF_uponHackMessage(discovery_framework_state* state, HackMessage* hack);
+HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMessage* hack);
 
 
 // Requests

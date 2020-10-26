@@ -28,16 +28,16 @@ typedef enum {
     LOST_NEIGH
 } DiscoveryNeighborType;
 
-typedef struct _NeighTuple {
+typedef struct _TwoHopNeighbor {
     uuid_t id;
-    unsigned short seq;
+    unsigned short hseq;
     //DiscoveryNeighborType type; // TODO: or bool?
     bool is_symmetric;
     double rx_lq;
     double tx_lq;
     double traffic;
     struct timespec expiration;
-} NeighTuple;
+} TwoHopNeighbor;
 
 NeighborsTable* newNeighborsTable(unsigned int n_bucket, unsigned int bucket_duration_s);
 
@@ -127,11 +127,15 @@ void* NE_setMessageAttributes(NeighborEntry* neigh, void* msg_attributes);
 
 NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator);
 
-hash_table* NE_getNeighborNeighs(NeighborEntry* neigh);
+TwoHopNeighbor* newNeighTwoHopNeighbor(unsigned char* id, unsigned short seq, bool is_symmetric, double rx_lq, double tx_lq, double traffic, struct timespec* expiration);
 
-bool addNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id, unsigned short seq, bool is_symmetric, double rx_lq, double tx_lq, double traffic, struct timespec* expiration);
+hash_table* NE_getTwoHopNeighbors(NeighborEntry* neigh);
 
-bool removeNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id);
+TwoHopNeighbor* NE_getTwoHopNeighbor(NeighborEntry* neigh, unsigned char* nn_id);
+
+TwoHopNeighbor* NE_removeTwoHopNeighbor(NeighborEntry* neigh, unsigned char* nn_id);
+
+TwoHopNeighbor* NE_addTwoHopNeighbor(NeighborEntry* neigh, TwoHopNeighbor* nn);
 
 char* NT_print(NeighborsTable* neighbors, char** str, struct timespec* current_time, char* window_type, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq);
 
