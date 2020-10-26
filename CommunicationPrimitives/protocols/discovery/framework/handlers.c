@@ -1007,7 +1007,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     state->stats.missed_hacks += summary->missed_hacks;
 
                     summary->new_hack = seq_cmp > 0;
-                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq == state->my_seq-1;
+                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq == dec_seq(state->my_seq, state->args->ignore_zero_seq);
                     if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
                         NE_setNeighborHSEQ(neigh, hack->seq);
 
@@ -1111,7 +1111,6 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                     summary->updated_neighbor = true;
                 }
-
             }
 
             // If is a negative HACK
@@ -1125,7 +1124,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     int seq_cmp = compare_seq(hack->seq, NE_getNeighborHSEQ(neigh), state->args->ignore_zero_seq);
 
                     summary->new_hack = seq_cmp > 0;
-                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq == state->my_seq-1;
+                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq == dec_seq(state->my_seq, state->args->ignore_zero_seq);
                     if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
                         NE_setNeighborHSEQ(neigh, hack->seq);
 
