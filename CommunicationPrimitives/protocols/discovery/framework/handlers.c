@@ -936,7 +936,8 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
         milli_to_timespec(&t, hello->period*1000);
         SetTimer(&t, hello->process_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
 
-        state->stats.new_neighbors++;
+        if(!summary->rebooted)
+            state->stats.new_neighbors++;
     }
 
     // Update Link Quality
@@ -980,6 +981,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
         insertIntoWindow(NT_getInstability(state->neighbors), &state->current_time, 1.0);
     } else if( summary->updated_quality || summary->updated_traffic || summary->rebooted ) {
+        summary->updated_neighbor = true;
         DF_notifyUpdateNeighbor(state, neigh);
 
         if( summary->updated_quality_threshold || summary->updated_traffic_threshold ) {
