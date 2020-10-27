@@ -146,10 +146,10 @@ void DA_destroyLinkQualityAttributes(DiscoveryAlgorithm* alg, void* lq_attrs) {
     LQ_destroyAttrs(alg->lq_metric, lq_attrs);
 }
 
-void DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+bool DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, ScheduleSummary* ss, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(alg != NULL);
 
-    DM_create(alg->d_message, myID, current_time, neighbors, piggybacked, hello, hacks, n_hacks, buffer, size);
+    return DM_create(alg->d_message, myID, current_time, neighbors, ss, hello, hacks, n_hacks, buffer, size);
 }
 
 bool DA_processDiscoveryMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {

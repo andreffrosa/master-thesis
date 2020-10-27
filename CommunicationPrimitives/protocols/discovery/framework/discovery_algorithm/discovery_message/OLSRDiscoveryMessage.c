@@ -48,7 +48,7 @@ static void OLSR_destroyAttrs(ModuleState* state, void* d_msg_attrs) {
 }
 */
 
-static void OLSR_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+static bool OLSR_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, ScheduleSummary* ss, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
 
     byte* ptr = buffer;
@@ -95,6 +95,7 @@ static void OLSR_createMessage(ModuleState* state, unsigned char* myID, struct t
         *size += sizeof(aux);
     }
 
+    return true;
 }
 
 static bool OLSR_processMessage(ModuleState* state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {

@@ -91,9 +91,9 @@ void DF_init(discovery_framework_state* state);
 
 // Timers
 
-void DF_uponHelloTimer(discovery_framework_state* state);
+void DF_uponHelloTimer(discovery_framework_state* state, bool periodic);
 
-void DF_uponHackTimer(discovery_framework_state* state);
+void DF_uponHackTimer(discovery_framework_state* state, bool periodic);
 
 void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_payload, unsigned short timer_payload_size);
 
@@ -121,7 +121,7 @@ void DF_deserialize(discovery_framework_state* state, byte* data, unsigned short
 
 void DF_processMessage(discovery_framework_state* state, byte* data, unsigned short size, bool piggybacked, WLANAddr* mac_addr);
 
-void DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr);
+bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, ScheduleSummary* ss);
 
 void DF_piggybackDiscovery(discovery_framework_state* state, YggMessage* msg);
 

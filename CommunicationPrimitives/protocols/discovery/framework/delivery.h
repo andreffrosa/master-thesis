@@ -43,10 +43,14 @@ typedef struct HackDeliverSummary_ {
     bool updated_two_hop_neighbor;
     bool added_two_hop_neighbor;
     bool removed_two_hop_neighbor;
-
-    // TODO: especificar melhor as alterações a 2-hops
 } HackDeliverSummary;
 
+typedef struct ScheduleSummary_ {
+    bool piggyback;
+    bool periodic;
+    bool reply;
+    bool neighbor_change;
+} ScheduleSummary;
 
 HelloDeliverSummary* newHelloDeliverSummary();
 
