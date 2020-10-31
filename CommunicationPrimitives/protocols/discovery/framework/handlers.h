@@ -54,10 +54,9 @@ typedef struct discovery_framework_state_ {
     // Neighbor Change Timer
     bool neighbor_change_timer_active;          //
     uuid_t neighbor_change_timer_id;            //
-    bool neighbor_change_send_hello;
-    bool neighbor_change_send_hack;
     struct timespec set_neighbor_change_time;   //
     //struct timespec next_neighbor_change_time;  //
+    NeighborChangeSummary neighbor_change_summary;
 
     uuid_t windows_timer_id;                    //
     discovery_stats stats;       	            // Framework's stats
@@ -91,7 +90,7 @@ void DF_init(discovery_framework_state* state);
 
 // Timers
 
-void DF_uponHelloTimer(discovery_framework_state* state, bool periodic);
+void DF_uponHelloTimer(discovery_framework_state* state, bool periodic, bool send_hack);
 
 void DF_uponHackTimer(discovery_framework_state* state, bool periodic);
 
@@ -109,7 +108,7 @@ void scheduleHackTimer(discovery_framework_state* state, bool now);
 
 void scheduleReply(discovery_framework_state* state, HelloMessage* hello);
 
-void scheduleNeighborChange(discovery_framework_state* state, bool new_neighbor, bool lost_neighbor, bool neighbor_update, bool other);
+void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummary* hello_summary, HackDeliverSummary* hack_summary, NeighborTimerSummary* neighbor_timer_summary, bool other);
 
 void DF_uponNeighborChangeTimer(discovery_framework_state* state);
 
@@ -121,7 +120,7 @@ void DF_deserialize(discovery_framework_state* state, byte* data, unsigned short
 
 void DF_processMessage(discovery_framework_state* state, byte* data, unsigned short size, bool piggybacked, WLANAddr* mac_addr);
 
-bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, ScheduleSummary* ss);
+bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info);
 
 void DF_piggybackDiscovery(discovery_framework_state* state, YggMessage* msg);
 

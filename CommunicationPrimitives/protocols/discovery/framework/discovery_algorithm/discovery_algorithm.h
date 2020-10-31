@@ -41,6 +41,12 @@ bool DA_HelloLostNeighbor(DiscoveryAlgorithm* alg);
 
 bool DA_HelloUpdateNeighbor(DiscoveryAlgorithm* alg);
 
+bool DA_HelloNew2HopNeighbor(DiscoveryAlgorithm* alg);
+
+bool DA_HelloLost2HopNeighbor(DiscoveryAlgorithm* alg);
+
+bool DA_HelloUpdate2HopNeighbor(DiscoveryAlgorithm* alg);
+
 HelloSchedulerType DA_getHelloType(DiscoveryAlgorithm* alg);
 
 PiggybackType DA_piggybackHacks(DiscoveryAlgorithm* alg);
@@ -54,6 +60,12 @@ bool DA_HackNewNeighbor(DiscoveryAlgorithm* alg);
 bool DA_HackLostNeighbor(DiscoveryAlgorithm* alg);
 
 bool DA_HackUpdateNeighbor(DiscoveryAlgorithm* alg);
+
+bool DA_HackNew2HopNeighbor(DiscoveryAlgorithm* alg);
+
+bool DA_HackLost2HopNeighbor(DiscoveryAlgorithm* alg);
+
+bool DA_HackUpdate2HopNeighbor(DiscoveryAlgorithm* alg);
 
 HelloSchedulerType DA_getHackType(DiscoveryAlgorithm* alg);
 
@@ -71,7 +83,7 @@ void* DA_createLinkQualityAttributes(DiscoveryAlgorithm* alg);
 
 void DA_destroyLinkQualityAttributes(DiscoveryAlgorithm* alg, void* lq_attrs);
 
-bool DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, ScheduleSummary* ss, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size);
+bool DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size);
 
 bool DA_processDiscoveryMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size);
 

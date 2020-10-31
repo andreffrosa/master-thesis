@@ -25,6 +25,9 @@ typedef struct _HelloScheduler {
     bool react_to_new_neighbor;
     bool react_to_lost_neighbor;
     bool react_to_update_neighbor;
+    bool react_to_new_2hop_neighbor;
+    bool react_to_lost_2hop_neighbor;
+    bool react_to_update_2hop_neighbor;
 } HelloScheduler;
 
 #endif /* _DISCOVERY_HELLO_SCHEDULER_PRIVATE_H_ */

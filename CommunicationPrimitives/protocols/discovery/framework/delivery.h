@@ -18,14 +18,14 @@
 
 typedef struct HelloDeliverSummary_ {
     bool new_neighbor;
-    bool updated_neighbor; // TODO: verificar se está corretamente a ser set
+    bool updated_neighbor;
     bool rebooted;
     bool period_changed;
     bool updated_quality;
     bool updated_quality_threshold;
     bool updated_traffic;
     bool updated_traffic_threshold;
-    int lost_messages;
+    int missed_hellos;
 } HelloDeliverSummary;
 
 typedef struct HackDeliverSummary_ {
@@ -42,19 +42,55 @@ typedef struct HackDeliverSummary_ {
 
     bool updated_two_hop_neighbor;
     bool added_two_hop_neighbor;
-    bool removed_two_hop_neighbor;
+    bool lost_two_hop_neighbor;
 } HackDeliverSummary;
 
-typedef struct ScheduleSummary_ {
-    bool piggyback;
-    bool periodic;
-    bool reply;
-    bool neighbor_change;
-} ScheduleSummary;
+typedef struct NeighborTimerSummary_ {
+    bool updated_neighbor;
+    bool lost_neighbor;
+    bool removed;
+    bool lost_bi;
+    bool updated_quality;
+    bool updated_quality_threshold;
+    unsigned int deleted_2hop;
+    int missed_hellos;
+    int missed_hacks;
+} NeighborTimerSummary;
+
+typedef enum {
+    PIGGYBACK_MSG,
+    PERIODIC_MSG,
+    REPLY_MSG,
+    NEIGHBOR_CHANGE_MSG
+} MessageType;
+
+typedef struct NeighborChangeSummary_ {
+    bool new_neighbor;
+    bool updated_neighbor;
+    bool lost_neighbor;
+
+    bool updated_two_hop_neighbor;
+    bool added_two_hop_neighbor;
+    bool lost_two_hop_neighbor;
+
+    bool other;
+
+    bool removed;
+    bool rebooted;
+    bool lost_bi;
+    bool became_bi;
+    bool hello_period_changed;
+    bool hack_period_changed;
+    bool updated_quality;
+    bool updated_quality_threshold;
+    unsigned int deleted_2hop;
+} NeighborChangeSummary;
 
 HelloDeliverSummary* newHelloDeliverSummary();
 
 HackDeliverSummary* newHackDeliverSummary();
+
+NeighborTimerSummary* newNeighborTimerSummary();
 
 HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr);
 

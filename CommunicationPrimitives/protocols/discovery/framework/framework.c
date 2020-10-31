@@ -113,7 +113,7 @@ static bool processTimer(discovery_framework_state* f_state, YggTimer* timer) {
 
     // HELLO Timer
     if( timer->timer_type == HELLO_TIMER ) {
-        DF_uponHelloTimer(f_state, true);
+        DF_uponHelloTimer(f_state, true, false);
         return true;
     }
     // HACK Timer

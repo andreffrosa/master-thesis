@@ -26,6 +26,9 @@ typedef struct _HackScheduler {
     bool react_to_new_neighbor;
     bool react_to_lost_neighbor;
     bool react_to_update_neighbor;
+    bool react_to_new_2hop_neighbor;
+    bool react_to_lost_2hop_neighbor;
+    bool react_to_update_2hop_neighbor;
 } HackScheduler;
 
 #endif /* _DISCOVERY_HACK_SCHEDULER_PRIVATE_H_ */

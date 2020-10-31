@@ -80,8 +80,7 @@ void DF_init(discovery_framework_state* state) {
     genUUID(state->neighbor_change_timer_id);
     state->neighbor_change_timer_active = false;
     copy_timespec(&state->set_neighbor_change_time, &zero_timespec);
-    state->neighbor_change_send_hello = false;
-    state->neighbor_change_send_hack = false;
+    memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
 
     // Stats
 	memset(&state->stats, 0, sizeof(discovery_stats));
@@ -198,7 +197,7 @@ void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, b
     }
 }
 
-bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, ScheduleSummary* ss) {
+bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info) {
 
     bool send = false;
 
@@ -211,7 +210,7 @@ bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackM
     byte buffer[YGG_MESSAGE_PAYLOAD];
     unsigned short buffer_size = 0;
 
-    send = DA_createDiscoveryMessage(state->args->algorithm, state->myID, &state->current_time, state->neighbors, ss, hello, hacks, n_hacks, buffer, &buffer_size);
+    send = DA_createDiscoveryMessage(state->args->algorithm, state->myID, &state->current_time, state->neighbors, msg_type, aux_info, hello, hacks, n_hacks, buffer, &buffer_size);
 
     if( send ) {
         YggMessage_addPayload(&msg, (char*)buffer, buffer_size);
@@ -333,7 +332,7 @@ void scheduleHackTimer(discovery_framework_state* state, bool now) {
     }
 }
 
-void DF_uponHelloTimer(discovery_framework_state* state, bool periodic) {
+void DF_uponHelloTimer(discovery_framework_state* state, bool periodic, bool send_hack) {
     assert( state->hello_timer_active );
 
     if( DA_periodicHello(state->args->algorithm) ) {
@@ -351,13 +350,18 @@ void DF_uponHelloTimer(discovery_framework_state* state, bool periodic) {
             HackMessage* hacks = NULL;
 
             PiggybackType hack_piggyback_type = DA_piggybackHacks(state->args->algorithm);
-            bool piggyback_hack = hack_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hack_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hack_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC;
+            bool piggyback_hack = hack_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hack_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hack_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC || send_hack;
             if( piggyback_hack ) {
                 DF_createHackBatch(state, &hacks, &n_hacks, state->neighbors);
             }
 
-            ScheduleSummary ss = {false, !periodic, false, !periodic};
-            bool sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, &ss);
+            bool sent = false;
+            if( periodic ) {
+                sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
+            } else {
+                void* aux_info = &state->neighbor_change_summary;
+                sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, NEIGHBOR_CHANGE_MSG, aux_info);
+            }
 
             if( sent ) {
                 if(piggyback_hack) {
@@ -412,19 +416,24 @@ void DF_uponHackTimer(discovery_framework_state* state, bool periodic) {
             PiggybackType hello_piggyback_type = DA_piggybackHellos(state->args->algorithm);
             bool piggyback_hello = hello_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC;
 
-            ScheduleSummary ss = {false, periodic, false, !periodic};
             bool sent = false;
 
             HelloMessage hello;
-            if( piggyback_hello ) {
-                DF_createHello(state, &hello, false);
-                sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, &ss);
+            if( periodic ) {
+                if( piggyback_hello ) {
+                    DF_createHello(state, &hello, false);
+                    sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
 
-                if( sent ) {
-                    state->stats.piggybacked_hellos++;
+                    if( sent ) {
+                        state->stats.piggybacked_hellos++;
+                    }
+                } else {
+                    sent = DF_sendMessage(state, NULL, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
                 }
             } else {
-                sent = DF_sendMessage(state, NULL, hacks, n_hacks, NULL, &ss);
+                assert(!piggyback_hello);
+                void* aux_info = &state->neighbor_change_summary;
+                sent = DF_sendMessage(state, NULL, hacks, n_hacks, NULL, NEIGHBOR_CHANGE_MSG, aux_info);
             }
 
             #ifdef DEBUG_DISCOVERY
@@ -477,18 +486,16 @@ void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_pa
     PiggybackType hello_piggyback_type = DA_piggybackHellos(state->args->algorithm);
     bool piggyback_hello = hello_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC;
 
-    ScheduleSummary ss = {false, false, true, false};
-
     HelloMessage hello;
     if( piggyback_hello ) {
         DF_createHello(state, &hello, false); // request_replies is set to false
 
-        bool sent = DF_sendMessage(state, &hello, &hack, n_hacks, addr, &ss);
+        bool sent = DF_sendMessage(state, &hello, &hack, n_hacks, addr, REPLY_MSG, NULL);
         if(sent) {
             state->stats.piggybacked_hellos++;
         }
     } else {
-        DF_sendMessage(state, NULL, &hack, n_hacks, addr, &ss);
+        DF_sendMessage(state, NULL, &hack, n_hacks, addr, REPLY_MSG, NULL);
     }
 
     #ifdef DEBUG_DISCOVERY
@@ -521,12 +528,11 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
     struct timespec* tx_exp_time = NE_getNeighborTxExpTime(neigh);
 
     unsigned long next_timer = 0;
-    bool removed = false;
+
+    NeighborTimerSummary* summary = newNeighborTimerSummary();
 
     // Check if rx not expired
     if( compare_timespec(rx_exp_time, &state->current_time) > 0 ) {
-
-        bool lost_bi = false, updated_quality = false;
 
         // Compute missed hellos
         unsigned long hello_period = NE_getNeighborHelloPeriod(neigh)*1000;
@@ -537,23 +543,24 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
         unsigned int prev_missed_hellos = compute_missed(hello_misses, hello_period, rx_exp_time, &last_neighbor_timer);
 
         if( missed_hellos > prev_missed_hellos ) {
-            unsigned int lost_messages = 1;
+            unsigned int lost = 1;
+            summary->missed_hellos++;
 
             state->stats.missed_hellos++;
 
             // Update Link Quality
             double old_rx_lq = NE_getRxLinkQuality(neigh);
-            double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 0, lost_messages, false, &state->current_time);
+            double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 0, lost, false, &state->current_time);
             NE_setRxLinkQuality(neigh, new_rx_lq);
 
-            // Check if the new quality changed too much
-            if( fabs(old_rx_lq - new_rx_lq) >= state->args->lq_threshold ) {
-                updated_quality = true;
+            double lq_delta = fabs(old_rx_lq - new_rx_lq);
+            if( lq_delta > 0.0 ) {
+                summary->updated_quality = true;
 
-                // printf("updated rx lq due to timer\n");
-                scheduleNeighborChange(state, false, false, true, false);
+                if( lq_delta >= state->args->lq_threshold ) {
+                    summary->updated_quality_threshold = true;
+                }
             }
-
         }
 
         unsigned long next_hello_miss =  compute_next_moment(rx_exp_time, &state->current_time, hello_misses, missed_hellos, hello_period);
@@ -569,6 +576,8 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
 
             if( missed_hacks > prev_missed_hacks ) {
                 state->stats.missed_hacks++;
+
+                summary->missed_hacks++;
 
                 // TODO: actualizar também a qualidade inversa (como se fosse a qualidade normal) quando se perdem hacks? --> não porque não receber hacks não quer dizer que os hellos não estejam a chegar ao outro lado
 
@@ -595,8 +604,9 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
             next_timer = lMin(next_hello_miss, next_hack_miss);
         } else {
 
+            // Check if tx expired after the previous neighbor timer
             if( compare_timespec(tx_exp_time, &last_neighbor_timer) > 0 ) {
-                lost_bi = true;
+                summary->lost_bi = true;
 
                 // Log
                 #ifdef DEBUG_DISCOVERY
@@ -608,8 +618,6 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
                 sprintf(str, "%s", id_str);
                 ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
                 #endif
-
-                scheduleNeighborChange(state, false, false, true, false);
             }
 
             // Log
@@ -631,7 +639,6 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
         // 2-hop Neighs GC + compute next expiration
         struct timespec min_exp;
         bool first = true;
-        unsigned int deleted = 0;
         hash_table* ht = NE_getTwoHopNeighbors(neigh);
         void* iterator = NULL;
         hash_table_item* hit = NULL;
@@ -641,7 +648,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
                 hash_table_remove(ht, nn->id);
                 free(nn);
                 free(hit);
-                deleted++;
+                summary->deleted_2hop++;
             } else {
                 if( first || compare_timespec(&nn->expiration, &min_exp) < 0 ) {
                     first = false;
@@ -649,22 +656,17 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
                 }
             }
         }
-        // printf("deleted %u 2-hop neighs\n", deleted);
+        // printf("deleted %u 2-hop neighs\n", deleted_two_hop);
 
-        if( deleted > 0 ) {
+        //if( deleted_two_hop > 0 ) {
             // printf("lost 2-hop neigh(s)\n");
             //scheduleNeighborChange(state, 2);
-        }
+        //}
 
         subtract_timespec(&min_exp, &min_exp, &state->current_time);
         unsigned long nn_exp =  timespec_to_milli(&min_exp);
 
         next_timer = lMin(next_timer, nn_exp);
-
-        if( lost_bi || updated_quality || deleted > 0 ) {
-            DF_notifyUpdateNeighbor(state, neigh);
-        }
-
     } else {
         // Neighbor is dead
         if( !NE_isDeleted(neigh) ) {
@@ -672,18 +674,14 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
 
             state->stats.lost_neighbors++;
 
+            summary->lost_neighbor = true;
+
             struct timespec removal_time;
             milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
             add_timespec(&removal_time, &removal_time,  &state->current_time);
             NE_setNeighborRemovalTime(neigh, &removal_time);
 
             next_timer = state->args->neigh_hold_time_s*1000;
-
-            DF_notifyLostNeighbor(state, neigh);
-
-            scheduleNeighborChange(state, false, true, false, false);
-
-            // TODO: count as instability?
         } else {
             if( compare_timespec(NE_getNeighborRemovalTime(neigh), &state->current_time) <= 0 ) {
                 #ifdef DEBUG_DISCOVERY
@@ -696,12 +694,30 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
                 flushNeighbor(state, neigh);
                 neigh = NULL;
 
-                removed = true;
+                summary->removed = true;
             }
         }
     }
 
-    if( !removed ) {
+    summary->updated_neighbor = summary->lost_bi || summary->updated_quality;
+
+    if( summary->updated_neighbor || summary->deleted_2hop > 0 ) {
+        DF_notifyUpdateNeighbor(state, neigh);
+
+        if( summary->lost_bi || summary->updated_quality_threshold || summary->deleted_2hop > 0 ) {
+            scheduleNeighborChange(state, NULL, NULL, summary, false);
+        }
+    }
+
+    if( summary->lost_neighbor ) {
+        DF_notifyLostNeighbor(state, neigh);
+
+        scheduleNeighborChange(state, NULL, NULL, summary, false);
+
+        // TODO: count as instability?
+    }
+
+    if( !summary->removed ) {
         // printf("next timer %lu\n", next_timer);
 
         struct timespec t;
@@ -709,7 +725,9 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
         SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
     }
 
-    return removed;
+    free(summary);
+
+    return summary->removed;
 }
 
 void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
@@ -742,67 +760,171 @@ void scheduleReply(discovery_framework_state* state, HelloMessage* hello) {
 void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
     assert( state->neighbor_change_timer_active );
 
-    if( state->neighbor_change_send_hello ) {
+    bool other = state->neighbor_change_summary.other;
+    bool new_neighbor = state->neighbor_change_summary.new_neighbor;
+    bool lost_neighbor = state->neighbor_change_summary.lost_neighbor;
+    bool updated_neighbor = state->neighbor_change_summary.updated_neighbor;
+    bool new_2hop_neighbor = state->neighbor_change_summary.added_two_hop_neighbor;
+    bool lost_2hop_neighbor = state->neighbor_change_summary.lost_two_hop_neighbor;
+    bool updated_2hop_neighbor = state->neighbor_change_summary.updated_two_hop_neighbor;
+
+    DiscoveryAlgorithm* alg = state->args->algorithm;
+
+    bool send_hello = other || \
+    (DA_HelloNewNeighbor(alg) && new_neighbor) || \
+    (DA_HelloLostNeighbor(alg)  && lost_neighbor) || \
+    (DA_HelloUpdateNeighbor(alg) && updated_neighbor) || \
+    (DA_HelloNew2HopNeighbor(alg) && new_2hop_neighbor) || \
+    (DA_HelloLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
+    (DA_HelloUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
+
+    bool send_hack = other || \
+    (DA_HackNewNeighbor(alg) && new_neighbor) || \
+    (DA_HackLostNeighbor(alg)  && lost_neighbor) || \
+    (DA_HackUpdateNeighbor(alg) && updated_neighbor) || \
+    (DA_HackNew2HopNeighbor(alg) && new_2hop_neighbor) || \
+    (DA_HackLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
+    (DA_HackUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
+
+    if( send_hello ) {
         if( compare_timespec(&state->set_neighbor_change_time, &state->last_hello_time) > 0 ) {
             CancelTimer(state->hello_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID);
             copy_timespec(&state->next_hello_time, &state->current_time);
-            DF_uponHelloTimer(state, false);
-        } else {
-            // Do nothing
+            DF_uponHelloTimer(state, false, send_hack);
         }
     }
 
-    if( state->neighbor_change_send_hack ) {
+    if( !send_hello && send_hack ) {
         if( compare_timespec(&state->set_neighbor_change_time, &state->last_hack_time) > 0 ) {
             CancelTimer(state->hack_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID);
             copy_timespec(&state->next_hack_time, &state->current_time);
             DF_uponHackTimer(state, false);
-        } else {
-            // Do nothing
         }
     }
 
     state->neighbor_change_timer_active = false;
-    state->neighbor_change_send_hello = false;
-    state->neighbor_change_send_hack = false;
+    memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
 
     // Log
     #ifdef DEBUG_DISCOVERY
     char str[200];
-    sprintf(str, "HELLO=[%s] HACK=[%s]", (state->neighbor_change_send_hello?"yes":"no"), (state->neighbor_change_send_hack?"yes":"no"));
+    sprintf(str, "HELLO=[%s] HACK=[%s]", (send_hello ? "yes" : "no"), (send_hack ? "yes" : "no"));
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR CHANGE TIMER", str);
     #endif
 }
 
-void scheduleNeighborChange(discovery_framework_state* state, bool new_neighbor, bool lost_neighbor, bool neighbor_update, bool other) {
+void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummary* hello_summary, HackDeliverSummary* hack_summary, NeighborTimerSummary* neighbor_timer_summary, bool other) {
 
-    state->stats.updated_neighbors++;
+    // state->stats.updated_neighbors++;
 
     DiscoveryAlgorithm* alg = state->args->algorithm;
 
-    bool send_hello = other || (DA_HelloNewNeighbor(alg) && new_neighbor) || (DA_HelloLostNeighbor(alg)  && lost_neighbor) || (DA_HelloUpdateNeighbor(alg) && neighbor_update);
-
-    bool send_hack = other || (DA_HackNewNeighbor(alg) && new_neighbor) || (DA_HackLostNeighbor(alg)  && lost_neighbor) || (DA_HackUpdateNeighbor(alg) && neighbor_update);
-
-    state->neighbor_change_send_hello |= send_hello;
-    state->neighbor_change_send_hack |= send_hack;
-
+    // New schedule
     if( !state->neighbor_change_timer_active ) {
+        bool other = state->neighbor_change_summary.other;
+        bool new_neighbor = state->neighbor_change_summary.new_neighbor;
+        bool lost_neighbor = state->neighbor_change_summary.lost_neighbor;
+
+        bool updated_neighbor = state->neighbor_change_summary.updated_neighbor;
+
+        bool new_2hop_neighbor = state->neighbor_change_summary.added_two_hop_neighbor;
+        bool lost_2hop_neighbor = state->neighbor_change_summary.lost_two_hop_neighbor;
+        bool updated_2hop_neighbor = state->neighbor_change_summary.updated_two_hop_neighbor;
+
+        bool send_hello = other || \
+        (DA_HelloNewNeighbor(alg) && new_neighbor) || \
+        (DA_HelloLostNeighbor(alg)  && lost_neighbor) || \
+        (DA_HelloUpdateNeighbor(alg) && updated_neighbor) || \
+        (DA_HelloNew2HopNeighbor(alg) && new_2hop_neighbor) || \
+        (DA_HelloLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
+        (DA_HelloUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
+
+        bool send_hack = other || \
+        (DA_HackNewNeighbor(alg) && new_neighbor) || \
+        (DA_HackLostNeighbor(alg)  && lost_neighbor) || \
+        (DA_HackUpdateNeighbor(alg) && updated_neighbor) || \
+        (DA_HackNew2HopNeighbor(alg) && new_2hop_neighbor) || \
+        (DA_HackLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
+        (DA_HackUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
 
         if( send_hello || send_hack ) {
+
             state->neighbor_change_timer_active = true;
             copy_timespec(&state->set_neighbor_change_time, &state->current_time);
-            state->neighbor_change_send_hello = send_hello;
-            state->neighbor_change_send_hack = send_hack;
 
-            unsigned long jitter = (unsigned long)(randomProb()*state->args->max_jitter_ms);
+            memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
+
+            unsigned long max_jitter = state->args->max_jitter_ms;
+
+            struct timespec aux;
+            subtract_timespec(&aux, &state->next_hello_time, &state->current_time);
+            unsigned long aux2 = timespec_to_milli(&aux);
+            if( aux2 < state->args->max_jitter_ms ) {
+                max_jitter = aux2;
+            }
+
+            subtract_timespec(&aux, &state->next_hack_time, &state->current_time);
+            aux2 = timespec_to_milli(&aux);
+            if( aux2 < state->args->max_jitter_ms ) {
+                if( aux2 < max_jitter ) {
+                    max_jitter = aux2;
+                }
+            }
 
             struct timespec t_ = {0};
-            milli_to_timespec(&t_, jitter);
+
+            if( max_jitter < state->args->max_jitter_ms ) {
+                milli_to_timespec(&t_, max_jitter > 1 ? max_jitter-1: 0);
+            } else {
+                unsigned long jitter = (unsigned long)(randomProb()*max_jitter);
+                milli_to_timespec(&t_, jitter);
+            }
 
             SetTimer(&t_, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
         }
     }
+
+    // Update Neighbor Change Summary
+    if( hello_summary ) {
+        state->neighbor_change_summary.new_neighbor |= hello_summary->new_neighbor;
+        state->neighbor_change_summary.updated_neighbor |= hello_summary->updated_neighbor;
+        state->neighbor_change_summary.rebooted |= hello_summary->rebooted;
+        state->neighbor_change_summary.hello_period_changed |= hello_summary->period_changed;
+        state->neighbor_change_summary.updated_quality |= hello_summary->updated_quality;
+        state->neighbor_change_summary.updated_quality_threshold |= hello_summary->updated_quality_threshold;
+        // state->neighbor_change_summary.updated_traffic |= hello_summary->updated_traffic;
+        // state->neighbor_change_summary.updated_traffic_threshold |= hello_summary->updated_traffic_threshold;
+        // state->neighbor_change_summary.missed_hellos += hello_summary->misseds_hellos;
+    }
+
+    if( hack_summary ) {
+        state->neighbor_change_summary.updated_neighbor |= hack_summary->updated_neighbor;
+        // state->neighbor_change_summary.missed_hacks += hack_summary->missed_hacks;
+        state->neighbor_change_summary.became_bi |= hack_summary->became_bi;
+        state->neighbor_change_summary.lost_bi |= hack_summary->lost_bi;
+        state->neighbor_change_summary.hack_period_changed |= hack_summary->period_changed;
+        state->neighbor_change_summary.updated_quality |= hack_summary->updated_quality;
+        state->neighbor_change_summary.updated_quality_threshold |= hack_summary->updated_quality_threshold;
+        state->neighbor_change_summary.updated_two_hop_neighbor |= hack_summary->updated_two_hop_neighbor;
+        state->neighbor_change_summary.added_two_hop_neighbor |= hack_summary->added_two_hop_neighbor;
+        state->neighbor_change_summary.lost_two_hop_neighbor |= hack_summary->lost_two_hop_neighbor;
+    }
+
+    if( neighbor_timer_summary ) {
+        state->neighbor_change_summary.updated_neighbor |= neighbor_timer_summary->updated_neighbor;
+        state->neighbor_change_summary.lost_neighbor |= neighbor_timer_summary->lost_neighbor;
+        state->neighbor_change_summary.removed |= neighbor_timer_summary->removed;
+        state->neighbor_change_summary.lost_bi |= neighbor_timer_summary->lost_bi;
+        state->neighbor_change_summary.updated_quality |= neighbor_timer_summary->updated_quality;
+        state->neighbor_change_summary.updated_quality_threshold |= neighbor_timer_summary->updated_quality_threshold;
+        state->neighbor_change_summary.deleted_2hop += neighbor_timer_summary->deleted_2hop;
+        //state->neighbor_change_summary.missed_hellos  += neighbor_timer_summary->missed_hellos;
+        //state->neighbor_change_summary.missed_hacks  += neighbor_timer_summary->missed_hacks;
+    }
+
+    //if( other ) {
+        state->neighbor_change_summary.other |= other;
+    //}
 
 }
 
@@ -825,7 +947,7 @@ HelloDeliverSummary* newHelloDeliverSummary() {
     summary->updated_quality_threshold = false;
     summary->updated_traffic = false;
     summary->updated_traffic_threshold = false;
-    summary->lost_messages = 0;
+    summary->missed_hellos = 0;
 
     return summary;
 }
@@ -846,7 +968,23 @@ HackDeliverSummary* newHackDeliverSummary() {
 
     summary->updated_two_hop_neighbor = false;
     summary->added_two_hop_neighbor = false;
-    summary->removed_two_hop_neighbor = false;
+    summary->lost_two_hop_neighbor = false;
+
+    return summary;
+}
+
+NeighborTimerSummary* newNeighborTimerSummary() {
+    NeighborTimerSummary* summary = malloc(sizeof(NeighborTimerSummary));
+
+    summary->updated_neighbor = false;
+    summary->lost_neighbor = false;
+    summary->removed = false;
+    summary->lost_bi = false;
+    summary->updated_quality = false;
+    summary->updated_quality_threshold = false;
+    summary->deleted_2hop = 0;
+    summary->missed_hellos = 0;
+    summary->missed_hacks = 0;
 
     return summary;
 }
@@ -905,10 +1043,10 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
         int seq_cmp = compare_seq(hello->seq, NE_getNeighborSEQ(neigh), state->args->ignore_zero_seq);
         assert(seq_cmp >= 0);
 
-        summary->lost_messages = (seq_cmp - 1 - prev_missed_hellos);
-        assert(summary->lost_messages >= 0);
+        summary->missed_hellos = (seq_cmp - 1 - prev_missed_hellos);
+        assert(summary->missed_hellos >= 0);
 
-        state->stats.missed_hellos += summary->lost_messages;
+        state->stats.missed_hellos += summary->missed_hellos;
 
         NE_setNeighborSEQ(neigh, hello->seq);
 
@@ -930,7 +1068,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
         NT_addNeighbor(state->neighbors, neigh);
 
         summary->new_neighbor = summary->rebooted ? false : true;
-        summary->lost_messages = 0;
+        summary->missed_hellos = 0;
 
         struct timespec t;
         milli_to_timespec(&t, hello->period*1000);
@@ -942,7 +1080,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
     // Update Link Quality
     double old_rx_lq = NE_getRxLinkQuality(neigh);
-    double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 1, summary->lost_messages, summary->new_neighbor, &state->current_time);
+    double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 1, summary->missed_hellos, summary->new_neighbor, &state->current_time);
     NE_setRxLinkQuality(neigh, new_rx_lq);
 
     double lq_delta = fabs(old_rx_lq - new_rx_lq);
@@ -977,15 +1115,15 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     if( summary->new_neighbor ) {
         DF_notifyNewNeighbor(state, neigh);
 
-        scheduleNeighborChange(state, true, false, false, false);
+        scheduleNeighborChange(state, summary, NULL, NULL, false);
 
         insertIntoWindow(NT_getInstability(state->neighbors), &state->current_time, 1.0);
     } else if( summary->updated_quality || summary->updated_traffic || summary->rebooted ) {
         summary->updated_neighbor = true;
         DF_notifyUpdateNeighbor(state, neigh);
 
-        if( summary->updated_quality_threshold || summary->updated_traffic_threshold ) {
-            scheduleNeighborChange(state, false, false, true, false);
+        if( summary->updated_quality_threshold || summary->updated_traffic_threshold || summary->rebooted ) {
+            scheduleNeighborChange(state, summary, NULL, NULL, false);
         }
 
         // insertIntoWindow(NT_getStability(state->neighbors), &state->current_time);
@@ -1049,7 +1187,6 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         // Check if the neighbor became symmetric (or bi)
                         summary->became_bi = NE_getNeighborType(neigh, &state->current_time) != BI_NEIGH;
                         if( summary->became_bi ) {
-                            summary->updated_neighbor = true;
 
                             // Log
                             #ifdef DEBUG_DISCOVERY
@@ -1062,7 +1199,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                             ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "BECAME BI", str);
                             #endif
 
-                            scheduleNeighborChange(state, false, false, true, false);
+                            // scheduleNeighborChange(state, false, false, true, false);
                         }
 
                         // Update Tx expiration timestamp
@@ -1079,7 +1216,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                             summary->updated_quality = true;
 
                             if( lq_delta >= state->args->lq_threshold ) {
-                                scheduleNeighborChange(state, false, false, true, false);
+                                // scheduleNeighborChange(state, false, false, true, false);
 
                                 summary->updated_quality_threshold = true;
                             }
@@ -1187,9 +1324,9 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
                         #endif
 
-                        scheduleNeighborChange(state, false, false, true, false);
+                        // scheduleNeighborChange(state, false, false, true, false);
 
-                        summary->updated_neighbor = true;
+                        // summary->updated_neighbor = true;
                     }
                 }
 
@@ -1204,7 +1341,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         TwoHopNeighbor* removed = NE_removeTwoHopNeighbor(neigh, hack->dest_process_id);
                         if(removed) {
                             free(removed);
-                            summary->removed_two_hop_neighbor = true;
+                            summary->lost_two_hop_neighbor = true;
                             //summary->updated_neighbor = true;
                         }
                     }
@@ -1214,8 +1351,14 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
         // The neighbor is not know. Ignore the HACK
     }
 
-    if( summary->updated_neighbor || summary->updated_two_hop_neighbor || summary->added_two_hop_neighbor || summary->removed_two_hop_neighbor ) {
+    summary->updated_neighbor = summary->became_bi || summary->lost_bi || summary->updated_quality;
+
+    if( summary->updated_neighbor || summary->updated_two_hop_neighbor || summary->added_two_hop_neighbor || summary->lost_two_hop_neighbor ) {
         DF_notifyUpdateNeighbor(state, neigh);
+
+        if( summary->became_bi || summary->lost_bi || summary->updated_quality_threshold || summary->updated_two_hop_neighbor || summary->added_two_hop_neighbor || summary->lost_two_hop_neighbor ) {
+            scheduleNeighborChange(state, NULL, summary, NULL, false);
+        }
     }
 
     // Re-schedule neigh timer
@@ -1287,8 +1430,10 @@ void DF_piggybackDiscovery(discovery_framework_state* state, YggMessage* msg) {
 
     }
 
-    ScheduleSummary ss = {true, false, false, false};
-    bool send = (hello || hacks) ? DA_createDiscoveryMessage(state->args->algorithm, state->myID, &state->current_time, state->neighbors, &ss, hello, hacks, n_hacks, buffer + sizeof(piggyback_size), &piggyback_size) : false;
+    bool send = false;
+    if( hello || hacks ) {
+        send = DA_createDiscoveryMessage(state->args->algorithm, state->myID, &state->current_time, state->neighbors, PIGGYBACK_MSG, &msg, hello, hacks, n_hacks, buffer + sizeof(piggyback_size), &piggyback_size);
+    }
 
     if( send ) {
         memcpy(buffer, &piggyback_size, sizeof(piggyback_size));

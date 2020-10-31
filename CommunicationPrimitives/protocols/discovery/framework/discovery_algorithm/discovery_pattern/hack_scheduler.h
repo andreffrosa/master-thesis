@@ -35,7 +35,7 @@ typedef enum {
     UNICAST_HACK_REPLY
 } HackReplyType;
 
-HackScheduler* newHackScheduler(HackSchedulerType hack_type, PiggybackType piggyback_type, bool periodic, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor);
+HackScheduler* newHackScheduler(HackSchedulerType hack_type, PiggybackType piggyback_type, bool periodic, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 void destroyHackScheduler(HackScheduler* hack_sh);
 
@@ -43,13 +43,13 @@ HackScheduler* NoHACK();
 
 HackScheduler* PiggybackHACK(PiggybackType piggyback_type);
 
-HackScheduler* PeriodicHACK(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor);
+HackScheduler* PeriodicHACK(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
-HackScheduler* HybridHACK(PiggybackType piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor);
+HackScheduler* HybridHACK(PiggybackType piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 HackScheduler* ReplyHACK(HackReplyType reply_type);
 
-void HACK_update(HackScheduler* hack_sh, HackSchedulerType hack_type, PiggybackType piggyback_type, bool periodic, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor);
+void HACK_update(HackScheduler* hack_sh, HackSchedulerType hack_type, PiggybackType piggyback_type, bool periodic, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 bool HACK_isPeriodic(HackScheduler* hack_sh);
 
@@ -62,6 +62,12 @@ bool HACK_newNeighbor(HackScheduler* hack_sh);
 bool HACK_lostNeighbor(HackScheduler* hack_sh);
 
 bool HACK_updateNeighbor(HackScheduler* hack_sh);
+
+bool HACK_new2HopNeighbor(HackScheduler* hack_sh);
+
+bool HACK_lost2HopNeighbor(HackScheduler* hack_sh);
+
+bool HACK_update2HopNeighbor(HackScheduler* hack_sh);
 
 HackSchedulerType HACK_getType(HackScheduler* hack_sh);
 

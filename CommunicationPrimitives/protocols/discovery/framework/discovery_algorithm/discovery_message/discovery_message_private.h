@@ -16,7 +16,7 @@
 
 #include "discovery_message.h"
 
-typedef bool (*d_msg_create_message)(ModuleState*, unsigned char*, struct timespec*, NeighborsTable*, ScheduleSummary*, HelloMessage*, HackMessage*, byte, byte*, unsigned short*);
+typedef bool (*d_msg_create_message)(ModuleState*, unsigned char*, struct timespec*, NeighborsTable*, MessageType, void*, HelloMessage*, HackMessage*, byte, byte*, unsigned short*);
 
 typedef bool (*d_msg_process_message)(ModuleState*, void*, unsigned char*, struct timespec*, NeighborsTable*, bool, WLANAddr*, byte*, unsigned short);
 
