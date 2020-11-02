@@ -1135,15 +1135,15 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
         int seq_cmp = compare_seq(hello->seq, NE_getNeighborSEQ(neigh), state->args->ignore_zero_seq);
         assert(seq_cmp >= 0);
 
-        summary->missed_hellos = (seq_cmp - 1 - prev_missed_hellos);
-        assert(summary->missed_hellos >= 0);
+        int missed_hellos = (seq_cmp - 1 - prev_missed_hellos);
+        assert(missed_hellos >= 0);
 
-        state->stats.missed_hellos += summary->missed_hellos;
+        summary->missed_hellos = missed_hellos;
+        state->stats.missed_hellos += missed_hellos;
 
         NE_setNeighborSEQ(neigh, hello->seq);
 
         summary->period_changed = NE_getNeighborHelloPeriod(neigh) != hello->period;
-
         if( summary->period_changed ) {
             NE_setNeighborHelloPeriod(neigh, hello->period);
         }
@@ -1265,11 +1265,15 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     //assert(seq_cmp >= 0);
 
                     unsigned int prev_missed_hacks = compute_missed(state->args->hack_misses, NE_getNeighborHackPeriod(neigh)*1000, NE_getNeighborTxExpTime(neigh), NE_getLastNeighborTimer(neigh));
-                    summary->missed_hacks = (seq_cmp - 1 - prev_missed_hacks);
-                    state->stats.missed_hacks += summary->missed_hacks;
+
+                    int missed_hacks = (seq_cmp - 1 - prev_missed_hacks);
+                    assert( missed_hacks >= 0 );
+                    summary->missed_hacks = missed_hacks;
+                    state->stats.missed_hacks += missed_hacks;
 
                     summary->new_hack = seq_cmp > 0;
-                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq == dec_seq(state->my_seq, state->args->ignore_zero_seq);
+                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq >= dec_seq(state->my_seq, state->args->ignore_zero_seq);
+
                     if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
                         NE_setNeighborHSEQ(neigh, hack->seq);
 

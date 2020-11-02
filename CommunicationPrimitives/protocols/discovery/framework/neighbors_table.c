@@ -167,7 +167,7 @@ NeighborEntry* newNeighborEntry(WLANAddr* mac_addr, unsigned char* id, unsigned 
     neigh->hack_period_s = 0;
 
     // Timestamps
-    copy_timespec(&neigh->last_neighbor_timer, &zero_timespec);
+    copy_timespec(&neigh->last_neighbor_timer, found_time);
     copy_timespec(&neigh->found_time, found_time);
     copy_timespec(&neigh->deleted_time, &zero_timespec);
     copy_timespec(&neigh->rx_exp_time, rx_exp_time);

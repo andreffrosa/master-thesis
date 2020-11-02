@@ -85,8 +85,8 @@ f_args.neigh_validity_s = 15;
         OLSRDiscoveryMessage()                              // Discovery Message
     );
     f_args->neigh_hold_time_s = 10;
-    f_args->max_jitter_ms = 300;
-    f_args->period_margin_ms = 300;
+    f_args->max_jitter_ms = 500;
+    f_args->period_margin_ms = 500;
 
     f_args->hello_misses = 3;
     f_args->hack_misses = 2;
