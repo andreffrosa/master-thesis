@@ -656,6 +656,8 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
                 }
             }
         }
+        summary->lost_two_hop_neighbor = summary->deleted_2hop > 0;
+
         // printf("deleted %u 2-hop neighs\n", deleted_two_hop);
 
         //if( deleted_two_hop > 0 ) {
@@ -701,10 +703,10 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
 
     summary->updated_neighbor = summary->lost_bi || summary->updated_quality;
 
-    if( summary->updated_neighbor || summary->deleted_2hop > 0 ) {
+    if( summary->updated_neighbor || summary->lost_two_hop_neighbor ) {
         DF_notifyUpdateNeighbor(state, neigh);
 
-        if( summary->lost_bi || summary->updated_quality_threshold || summary->deleted_2hop > 0 ) {
+        if( summary->lost_bi || summary->updated_quality_threshold || summary->lost_two_hop_neighbor ) {
             scheduleNeighborChange(state, NULL, NULL, summary, false);
         }
     }
@@ -728,6 +730,85 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
     free(summary);
 
     return summary->removed;
+}
+
+void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh) {
+    assert(neigh);
+
+    struct timespec* rx_exp_time = NE_getNeighborRxExpTime(neigh);
+    struct timespec* tx_exp_time = NE_getNeighborTxExpTime(neigh);
+
+    unsigned long next_timer = 0;
+
+    // Check if rx not expired
+    if( compare_timespec(rx_exp_time, &state->current_time) > 0 ) {
+
+            // Compute missed hellos
+            unsigned long hello_period = NE_getNeighborHelloPeriod(neigh)*1000;
+            unsigned int hello_misses = state->args->hello_misses;
+
+            unsigned int missed_hellos = compute_missed(hello_misses, hello_period, rx_exp_time, &state->current_time);
+
+            unsigned long next_hello_miss =  compute_next_moment(rx_exp_time, &state->current_time, hello_misses, missed_hellos, hello_period);
+
+            // Check if tx not expired
+            if( compare_timespec(tx_exp_time, &state->current_time) > 0 ) {
+                unsigned long hack_period = NE_getNeighborHackPeriod(neigh)*1000;
+                unsigned int hack_misses = state->args->hack_misses;
+
+                unsigned int missed_hacks = compute_missed(hack_misses, hack_period, tx_exp_time, &state->current_time);
+
+                unsigned long next_hack_miss = compute_next_moment(tx_exp_time, &state->current_time, hack_misses, missed_hacks, hack_period);
+
+                next_timer = lMin(next_hello_miss, next_hack_miss);
+            } else {
+                next_timer = next_hello_miss;
+            }
+
+            // 2-hop Neighs GC + compute next expiration
+            struct timespec min_exp;
+            bool first = true;
+            hash_table* ht = NE_getTwoHopNeighbors(neigh);
+            void* iterator = NULL;
+            hash_table_item* hit = NULL;
+            while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
+                TwoHopNeighbor* nn = (TwoHopNeighbor*)hit->value;
+                if( compare_timespec(&nn->expiration, &state->current_time) < 0 ) {
+                    first = false;
+                    next_timer = 0;
+                    break;
+                } else {
+                    if( first || compare_timespec(&nn->expiration, &min_exp) < 0 ) {
+                        first = false;
+                        copy_timespec(&min_exp, &nn->expiration);
+                    }
+                }
+            }
+
+            subtract_timespec(&min_exp, &min_exp, &state->current_time);
+            unsigned long nn_exp =  timespec_to_milli(&min_exp);
+
+            next_timer = lMin(next_timer, nn_exp);
+        } else {
+            // Neighbor is dead
+            if( !NE_isDeleted(neigh) ) {
+                next_timer = 0;
+            } else {
+                if( compare_timespec(NE_getNeighborRemovalTime(neigh), &state->current_time) <= 0 ) {
+                    next_timer = 0;
+                } else {
+                    struct timespec aux;
+                    subtract_timespec(&aux, NE_getNeighborRemovalTime(neigh), &state->current_time);
+                    next_timer = timespec_to_milli(&aux);
+                }
+            }
+        }
+
+        // TODO: compare with old timer old timer
+        CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
+        struct timespec t;
+        milli_to_timespec(&t, next_timer);
+        SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
 }
 
 void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
@@ -760,13 +841,17 @@ void scheduleReply(discovery_framework_state* state, HelloMessage* hello) {
 void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
     assert( state->neighbor_change_timer_active );
 
-    bool other = state->neighbor_change_summary.other;
-    bool new_neighbor = state->neighbor_change_summary.new_neighbor;
-    bool lost_neighbor = state->neighbor_change_summary.lost_neighbor;
-    bool updated_neighbor = state->neighbor_change_summary.updated_neighbor;
-    bool new_2hop_neighbor = state->neighbor_change_summary.added_two_hop_neighbor;
-    bool lost_2hop_neighbor = state->neighbor_change_summary.lost_two_hop_neighbor;
-    bool updated_2hop_neighbor = state->neighbor_change_summary.updated_two_hop_neighbor;
+    NeighborChangeSummary* summary = &state->neighbor_change_summary;
+
+    bool other = summary->other;
+
+    bool new_neighbor = summary->new_neighbor;
+    bool lost_neighbor = summary->lost_neighbor;
+    bool updated_neighbor = summary->updated_neighbor;
+
+    bool new_2hop_neighbor = summary->added_two_hop_neighbor;
+    bool lost_2hop_neighbor = summary->lost_two_hop_neighbor;
+    bool updated_2hop_neighbor = summary->updated_two_hop_neighbor;
 
     DiscoveryAlgorithm* alg = state->args->algorithm;
 
@@ -809,7 +894,7 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
     #ifdef DEBUG_DISCOVERY
     char str[200];
     sprintf(str, "HELLO=[%s] HACK=[%s]", (send_hello ? "yes" : "no"), (send_hack ? "yes" : "no"));
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR CHANGE TIMER", str);
+    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR-CHANGE TIMER", str);
     #endif
 }
 
@@ -817,19 +902,66 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
 
     // state->stats.updated_neighbors++;
 
+    // Update Neighbor Change Summary
+    NeighborChangeSummary* summary = &state->neighbor_change_summary;
+
+    if( hello_summary ) {
+        summary->new_neighbor |= hello_summary->new_neighbor;
+        summary->updated_neighbor |= hello_summary->updated_neighbor;
+        summary->rebooted |= hello_summary->rebooted;
+        summary->hello_period_changed |= hello_summary->period_changed;
+        summary->updated_quality |= hello_summary->updated_quality;
+        summary->updated_quality_threshold |= hello_summary->updated_quality_threshold;
+        // summary->updated_traffic |= hello_summary->updated_traffic;
+        // summary->updated_traffic_threshold |= hello_summary->updated_traffic_threshold;
+        // summary->missed_hellos += hello_summary->misseds_hellos;
+        }
+
+    if( hack_summary ) {
+        summary->updated_neighbor |= hack_summary->updated_neighbor;
+        // summary->missed_hacks += hack_summary->missed_hacks;
+        summary->became_bi |= hack_summary->became_bi;
+        summary->lost_bi |= hack_summary->lost_bi;
+        summary->hack_period_changed |= hack_summary->period_changed;
+        summary->updated_quality |= hack_summary->updated_quality;
+        summary->updated_quality_threshold |= hack_summary->updated_quality_threshold;
+        summary->updated_two_hop_neighbor |= hack_summary->updated_two_hop_neighbor;
+        summary->added_two_hop_neighbor |= hack_summary->added_two_hop_neighbor;
+        summary->lost_two_hop_neighbor |= hack_summary->lost_two_hop_neighbor;
+    }
+
+    if( neighbor_timer_summary ) {
+        summary->updated_neighbor |= neighbor_timer_summary->updated_neighbor;
+        summary->lost_neighbor |= neighbor_timer_summary->lost_neighbor;
+        summary->removed |= neighbor_timer_summary->removed;
+        summary->lost_bi |= neighbor_timer_summary->lost_bi;
+        summary->updated_quality |= neighbor_timer_summary->updated_quality;
+        summary->updated_quality_threshold |= neighbor_timer_summary->updated_quality_threshold;
+        //summary->deleted_2hop += neighbor_timer_summary->deleted_2hop;
+        //summary->missed_hellos  += neighbor_timer_summary->missed_hellos;
+        //summary->missed_hacks  += neighbor_timer_summary->missed_hacks;
+
+        //summary->updated_two_hop_neighbor |= neighbor_timer_summary->updated_two_hop_neighbor;
+        summary->lost_two_hop_neighbor |= neighbor_timer_summary->lost_two_hop_neighbor;
+    }
+
+    //if( other ) {
+        summary->other |= other;
+    //}
+
     DiscoveryAlgorithm* alg = state->args->algorithm;
 
     // New schedule
     if( !state->neighbor_change_timer_active ) {
-        bool other = state->neighbor_change_summary.other;
-        bool new_neighbor = state->neighbor_change_summary.new_neighbor;
-        bool lost_neighbor = state->neighbor_change_summary.lost_neighbor;
+        bool other = summary->other;
 
-        bool updated_neighbor = state->neighbor_change_summary.updated_neighbor;
+        bool new_neighbor = summary->new_neighbor;
+        bool lost_neighbor = summary->lost_neighbor;
+        bool updated_neighbor = summary->updated_neighbor;
 
-        bool new_2hop_neighbor = state->neighbor_change_summary.added_two_hop_neighbor;
-        bool lost_2hop_neighbor = state->neighbor_change_summary.lost_two_hop_neighbor;
-        bool updated_2hop_neighbor = state->neighbor_change_summary.updated_two_hop_neighbor;
+        bool new_2hop_neighbor = summary->added_two_hop_neighbor;
+        bool lost_2hop_neighbor = summary->lost_two_hop_neighbor;
+        bool updated_2hop_neighbor = summary->updated_two_hop_neighbor;
 
         bool send_hello = other || \
         (DA_HelloNewNeighbor(alg) && new_neighbor) || \
@@ -883,49 +1015,6 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
             SetTimer(&t_, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
         }
     }
-
-    // Update Neighbor Change Summary
-    if( hello_summary ) {
-        state->neighbor_change_summary.new_neighbor |= hello_summary->new_neighbor;
-        state->neighbor_change_summary.updated_neighbor |= hello_summary->updated_neighbor;
-        state->neighbor_change_summary.rebooted |= hello_summary->rebooted;
-        state->neighbor_change_summary.hello_period_changed |= hello_summary->period_changed;
-        state->neighbor_change_summary.updated_quality |= hello_summary->updated_quality;
-        state->neighbor_change_summary.updated_quality_threshold |= hello_summary->updated_quality_threshold;
-        // state->neighbor_change_summary.updated_traffic |= hello_summary->updated_traffic;
-        // state->neighbor_change_summary.updated_traffic_threshold |= hello_summary->updated_traffic_threshold;
-        // state->neighbor_change_summary.missed_hellos += hello_summary->misseds_hellos;
-    }
-
-    if( hack_summary ) {
-        state->neighbor_change_summary.updated_neighbor |= hack_summary->updated_neighbor;
-        // state->neighbor_change_summary.missed_hacks += hack_summary->missed_hacks;
-        state->neighbor_change_summary.became_bi |= hack_summary->became_bi;
-        state->neighbor_change_summary.lost_bi |= hack_summary->lost_bi;
-        state->neighbor_change_summary.hack_period_changed |= hack_summary->period_changed;
-        state->neighbor_change_summary.updated_quality |= hack_summary->updated_quality;
-        state->neighbor_change_summary.updated_quality_threshold |= hack_summary->updated_quality_threshold;
-        state->neighbor_change_summary.updated_two_hop_neighbor |= hack_summary->updated_two_hop_neighbor;
-        state->neighbor_change_summary.added_two_hop_neighbor |= hack_summary->added_two_hop_neighbor;
-        state->neighbor_change_summary.lost_two_hop_neighbor |= hack_summary->lost_two_hop_neighbor;
-    }
-
-    if( neighbor_timer_summary ) {
-        state->neighbor_change_summary.updated_neighbor |= neighbor_timer_summary->updated_neighbor;
-        state->neighbor_change_summary.lost_neighbor |= neighbor_timer_summary->lost_neighbor;
-        state->neighbor_change_summary.removed |= neighbor_timer_summary->removed;
-        state->neighbor_change_summary.lost_bi |= neighbor_timer_summary->lost_bi;
-        state->neighbor_change_summary.updated_quality |= neighbor_timer_summary->updated_quality;
-        state->neighbor_change_summary.updated_quality_threshold |= neighbor_timer_summary->updated_quality_threshold;
-        state->neighbor_change_summary.deleted_2hop += neighbor_timer_summary->deleted_2hop;
-        //state->neighbor_change_summary.missed_hellos  += neighbor_timer_summary->missed_hellos;
-        //state->neighbor_change_summary.missed_hacks  += neighbor_timer_summary->missed_hacks;
-    }
-
-    //if( other ) {
-        state->neighbor_change_summary.other |= other;
-    //}
-
 }
 
 HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr) {
@@ -1105,10 +1194,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
     // Re-schedule neighbor timer
     if( summary->period_changed ) {
-        CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
-
-        bool removed = DF_uponNeighborTimer(state, neigh);
-        assert(!removed);
+        scheduleNeighborTimer(state, neigh);
     }
 
     // Notify
@@ -1361,10 +1447,8 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
         }
     }
 
-    // Re-schedule neigh timer
-    CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
-    bool removed = DF_uponNeighborTimer(state, neigh);
-    assert(!removed);
+    // Re-schedule neighbor timer
+    scheduleNeighborTimer(state, neigh);
 
     return summary;
 }

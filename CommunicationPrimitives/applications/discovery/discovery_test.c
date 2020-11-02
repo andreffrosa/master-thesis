@@ -78,10 +78,11 @@ f_args.neigh_validity_s = 15;
  // TODO: isto depende de alg para alg, devia ser part do alg e não da framework
 
     f_args->algorithm = newDiscoveryAlgorithm(
-        EchoDiscovery(BROADCAST_HACK_REPLY, true, false),   // Discovery Pattern
+        PeriodicJointDiscovery(true, true, true, true, true, true),
+        //EchoDiscovery(BROADCAST_HACK_REPLY, true, false),   // Discovery Pattern
         StaticDiscoveryPeriod(5, 5),                        // Discovery Period
         EMALinkQuality(0.5, 0.85, 5, 5),                    // LinkQuality
-        SimpleDiscoveryMessage()                            // Discovery Message
+        OLSRDiscoveryMessage()                              // Discovery Message
     );
     f_args->neigh_hold_time_s = 10;
     f_args->max_jitter_ms = 300;

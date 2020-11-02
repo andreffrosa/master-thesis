@@ -51,6 +51,19 @@ static void OLSR_destroyAttrs(ModuleState* state, void* d_msg_attrs) {
 static bool OLSR_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
 
+    bool recompute_mprs = false, send = true;
+    if( msg_type == NEIGHBOR_CHANGE_MSG ) {
+        NeighborChangeSummary* s = (NeighborChangeSummary*)aux_info;
+
+        recompute_mprs = s->new_neighbor || s->updated_neighbor || s->lost_neighbor || s->updated_two_hop_neighbor || s->added_two_hop_neighbor || s->lost_two_hop_neighbor;
+
+        if( recompute_mprs ) {
+            printf("\n\n\t\t\t%s\n\n", "RECOMPUTE MPRS");
+
+            // if !changed e alteração é só 2 hops -> não enviar
+        }
+    }
+
     byte* ptr = buffer;
 
     // Serialize Hello
@@ -68,7 +81,8 @@ static bool OLSR_createMessage(ModuleState* state, unsigned char* myID, struct t
         ptr += sizeof(HackMessage);
         *size += sizeof(HackMessage);
 
-        NeighborEntry* neigh = NT_getNeighbor(neighbors, hacks[i].src_process_id);
+        NeighborEntry* neigh = NT_getNeighbor(neighbors, hacks[i].dest_process_id);
+        assert(neigh);
         OLSRAttrs* neigh_attrs = NE_getMessageAttributes(neigh);
 
         if( hacks[i].neigh_type != BI_NEIGH ) {
@@ -106,7 +120,8 @@ static bool OLSR_processMessage(ModuleState* state, void* f_state, unsigned char
     memcpy(&hello, ptr, sizeof(HelloMessage));
     ptr += sizeof(HelloMessage);
 
-    deliverHello(f_state, &hello, mac_addr);
+    HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr);
+    free(summary);
 
     // Deserialize Hacks
     byte n_hacks = ptr[0];
@@ -119,7 +134,8 @@ static bool OLSR_processMessage(ModuleState* state, void* f_state, unsigned char
             memcpy(&hacks[i], ptr, sizeof(HackMessage));
             ptr += sizeof(HackMessage);
 
-            deliverHack(f_state, &hacks[i]);
+            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i]);
+            free(summary);
 
             byte aux;
             memcpy(&aux, ptr, sizeof(aux));
@@ -128,6 +144,7 @@ static bool OLSR_processMessage(ModuleState* state, void* f_state, unsigned char
 
             if( uuid_compare(hacks[i].dest_process_id, myID) == 0 ) {
                 NeighborEntry* neigh = NT_getNeighbor(neighbors, hacks[i].src_process_id);
+                assert(neigh);
                 OLSRAttrs* neigh_attrs = NE_getMessageAttributes(neigh);
 
                 if( mpr_type == FLOODING_MPR || mpr_type == FLOOD_ROUTE_MPR ) {

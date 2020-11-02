@@ -102,6 +102,8 @@ void DF_uponWindowsTimer(discovery_framework_state* state);
 
 bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh);
 
+void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh);
+
 void scheduleHelloTimer(discovery_framework_state* state, bool now);
 
 void scheduleHackTimer(discovery_framework_state* state, bool now);

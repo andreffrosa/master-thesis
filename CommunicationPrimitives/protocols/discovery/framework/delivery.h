@@ -52,9 +52,14 @@ typedef struct NeighborTimerSummary_ {
     bool lost_bi;
     bool updated_quality;
     bool updated_quality_threshold;
-    unsigned int deleted_2hop;
     int missed_hellos;
     int missed_hacks;
+
+    unsigned int deleted_2hop;
+
+    //bool updated_two_hop_neighbor;
+    //bool added_two_hop_neighbor;
+    bool lost_two_hop_neighbor;
 } NeighborTimerSummary;
 
 typedef enum {
@@ -73,6 +78,8 @@ typedef struct NeighborChangeSummary_ {
     bool added_two_hop_neighbor;
     bool lost_two_hop_neighbor;
 
+    //unsigned int deleted_2hop;
+
     bool other;
 
     bool removed;
@@ -83,7 +90,6 @@ typedef struct NeighborChangeSummary_ {
     bool hack_period_changed;
     bool updated_quality;
     bool updated_quality_threshold;
-    unsigned int deleted_2hop;
 } NeighborChangeSummary;
 
 HelloDeliverSummary* newHelloDeliverSummary();
