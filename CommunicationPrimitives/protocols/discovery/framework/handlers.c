@@ -1272,7 +1272,8 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     state->stats.missed_hacks += missed_hacks;
 
                     summary->new_hack = seq_cmp > 0;
-                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && hack->seq >= dec_seq(state->my_seq, state->args->ignore_zero_seq);
+                    int seq_cmp2 = compare_seq(hack->seq, dec_seq(state->my_seq, state->args->ignore_zero_seq), state->args->ignore_zero_seq);
+                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && seq_cmp2 >= 0;
 
                     if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
                         NE_setNeighborHSEQ(neigh, hack->seq);
