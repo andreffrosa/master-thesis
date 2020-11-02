@@ -1264,16 +1264,16 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     int seq_cmp = compare_seq(hack->seq, NE_getNeighborHSEQ(neigh), state->args->ignore_zero_seq);
                     //assert(seq_cmp >= 0);
 
-                    unsigned int prev_missed_hacks = compute_missed(state->args->hack_misses, NE_getNeighborHackPeriod(neigh)*1000, NE_getNeighborTxExpTime(neigh), NE_getLastNeighborTimer(neigh));
-
-                    int missed_hacks = (seq_cmp - 1 - prev_missed_hacks);
-                    assert( missed_hacks >= 0 );
-                    summary->missed_hacks = missed_hacks;
-                    state->stats.missed_hacks += missed_hacks;
-
                     summary->new_hack = seq_cmp > 0;
                     int seq_cmp2 = compare_seq(hack->seq, dec_seq(state->my_seq, state->args->ignore_zero_seq), state->args->ignore_zero_seq);
                     summary->repeated_yet_fresh_hack = seq_cmp == 0 && seq_cmp2 >= 0;
+
+                    unsigned int prev_missed_hacks = compute_missed(state->args->hack_misses, NE_getNeighborHackPeriod(neigh)*1000, NE_getNeighborTxExpTime(neigh), NE_getLastNeighborTimer(neigh));
+
+                    int missed_hacks = summary->new_hack ? (seq_cmp - 1 - prev_missed_hacks) : 0.0;
+                    assert( missed_hacks >= 0 );
+                    summary->missed_hacks = missed_hacks;
+                    state->stats.missed_hacks += missed_hacks;
 
                     if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
                         NE_setNeighborHSEQ(neigh, hack->seq);
