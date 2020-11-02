@@ -798,7 +798,7 @@ sprintf(ptr, "%s\n", line_str);
             sprintf(seq_str, "%hu", nneigh->hseq);
             align_str(seq_str, seq_str, 5, "R");
 
-            type_str = nneigh->is_symmetric ? "S" : "A";
+            type_str = nneigh->is_symmetric ? "B" : "U";
 
             sprintf(rx_lq_str, "%0.3f", nneigh->rx_lq);
             sprintf(tx_lq_str, "%0.3f", nneigh->tx_lq);
