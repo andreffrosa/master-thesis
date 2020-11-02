@@ -703,23 +703,24 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
 
     summary->updated_neighbor = summary->lost_bi || summary->updated_quality;
 
-    if( summary->updated_neighbor || summary->lost_two_hop_neighbor ) {
-        DF_notifyUpdateNeighbor(state, neigh);
-
-        if( summary->lost_bi || summary->updated_quality_threshold || summary->lost_two_hop_neighbor ) {
-            scheduleNeighborChange(state, NULL, NULL, summary, false);
-        }
-    }
-
-    if( summary->lost_neighbor ) {
-        DF_notifyLostNeighbor(state, neigh);
-
-        scheduleNeighborChange(state, NULL, NULL, summary, false);
-
-        // TODO: count as instability?
-    }
-
     if( !summary->removed ) {
+
+        if( summary->updated_neighbor || summary->lost_two_hop_neighbor ) {
+            DF_notifyUpdateNeighbor(state, neigh);
+
+            if( summary->lost_bi || summary->updated_quality_threshold || summary->lost_two_hop_neighbor ) {
+                scheduleNeighborChange(state, NULL, NULL, summary, false);
+            }
+        }
+
+        if( summary->lost_neighbor ) {
+            DF_notifyLostNeighbor(state, neigh);
+
+            scheduleNeighborChange(state, NULL, NULL, summary, false);
+
+            // TODO: count as instability?
+        }
+
         // printf("next timer %lu\n", next_timer);
 
         struct timespec t;
@@ -727,9 +728,11 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
         SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
     }
 
+    bool removed = summary->removed;
+
     free(summary);
 
-    return summary->removed;
+    return removed;
 }
 
 void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh) {
