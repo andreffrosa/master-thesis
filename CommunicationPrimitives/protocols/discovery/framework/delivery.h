@@ -40,6 +40,13 @@ typedef struct HackDeliverSummary_ {
     bool updated_quality;
     bool updated_quality_threshold;
 
+    bool updated_2hop_quality;
+    bool updated_2hop_quality_threshold;
+    bool updated_2hop_traffic;
+    bool updated_2hop_traffic_threshold;
+    bool became_bi_2hop;
+    bool lost_bi_2hop;
+
     bool updated_two_hop_neighbor;
     bool added_two_hop_neighbor;
     bool lost_two_hop_neighbor;
