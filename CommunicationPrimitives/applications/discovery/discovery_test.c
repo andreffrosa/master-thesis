@@ -81,7 +81,7 @@ f_args.neigh_validity_s = 15;
         PeriodicJointDiscovery(true, true, true, true, true, true),
         //EchoDiscovery(BROADCAST_HACK_REPLY, true, false),   // Discovery Pattern
         StaticDiscoveryPeriod(5, 5),                        // Discovery Period
-        EMALinkQuality(0.5, 0.85, 5, 5),                    // LinkQuality
+        EMALinkQuality(0.5, 0.7, 5, 5),                    // LinkQuality
         OLSRDiscoveryMessage()                              // Discovery Message
     );
     f_args->neigh_hold_time_s = 10;

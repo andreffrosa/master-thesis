@@ -28,16 +28,40 @@
 
 #include "utility/seq.h"
 
-static unsigned int compute_missed(unsigned int misses, unsigned long period, struct timespec* exp_time, struct timespec* moment) {
+static unsigned int compute_missed(unsigned int misses, unsigned long period_ms, struct timespec* exp_time, struct timespec* moment) {
+    assert( compare_timespec(exp_time, moment) >= 0 );
+    struct timespec start_time;
+    milli_to_timespec(&start_time, period_ms*misses);
+    subtract_timespec(&start_time, exp_time, &start_time);
+    //assert( compare_timespec(moment, &start_time) >= 0 );
+    if( compare_timespec(moment, &start_time) < 0 ) {
+        return 0;
+    }
 
     struct timespec aux;
     subtract_timespec(&aux, exp_time, moment);
     unsigned long remaining = timespec_to_milli(&aux);
 
-    return (unsigned int)(misses - (((double)remaining) / period));
+    unsigned int missed = (unsigned int)(misses - (((double)remaining) / period_ms));
+
+    /*
+char exp_time_str[50], moment_str[50], start_time_str[50];
+    sprintf(exp_time_str, "{%lu, %lu}", exp_time->tv_sec, exp_time->tv_nsec);
+    sprintf(moment_str, "{%lu, %lu}", moment->tv_sec, moment->tv_nsec);
+    sprintf(start_time_str, "{%lu, %lu}", start_time.tv_sec, start_time.tv_nsec);
+    printf("\n\nmisses=%u period_ms=%lu exp_time=%s moment=%s start_time=%s remaining=%lu missed=%u\n\n", misses, period_ms, exp_time_str, moment_str, start_time_str, remaining, missed);
+
+*/
+
+
+    assert(missed <= misses );
+
+    return missed;
 }
 
 static unsigned long compute_next_moment(struct timespec* exp_time, struct timespec* moment, unsigned int misses, unsigned int missed, unsigned long period) {
+    assert( compare_timespec(exp_time, moment) >= 0 );
+
     struct timespec remaining;
     subtract_timespec(&remaining, exp_time, moment);
 
@@ -1128,19 +1152,20 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     }
 
     if( neigh ) {
-        NE_setNeighborRxExpTime(neigh, &rx_exp_time);
-
         unsigned int prev_missed_hellos = compute_missed(state->args->hello_misses, NE_getNeighborHelloPeriod(neigh)*1000, NE_getNeighborRxExpTime(neigh), NE_getLastNeighborTimer(neigh));
 
         int seq_cmp = compare_seq(hello->seq, NE_getNeighborSEQ(neigh), state->args->ignore_zero_seq);
         assert(seq_cmp >= 0);
 
-        int missed_hellos = (seq_cmp - 1 - prev_missed_hellos);
+        int missed_hellos = seq_cmp > 0 ? (seq_cmp - 1 - prev_missed_hellos) : 0.0;
         assert(missed_hellos >= 0);
+
+        //printf("\n\n\t\tHELLO: seq_cmp=%d missed_hellos=%d prev_missed_hellos=%u\n\n", seq_cmp, missed_hellos, prev_missed_hellos);
 
         summary->missed_hellos = missed_hellos;
         state->stats.missed_hellos += missed_hellos;
 
+        NE_setNeighborRxExpTime(neigh, &rx_exp_time);
         NE_setNeighborSEQ(neigh, hello->seq);
 
         summary->period_changed = NE_getNeighborHelloPeriod(neigh) != hello->period;
@@ -1268,15 +1293,22 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     int seq_cmp2 = compare_seq(hack->seq, dec_seq(state->my_seq, state->args->ignore_zero_seq), state->args->ignore_zero_seq);
                     summary->repeated_yet_fresh_hack = seq_cmp == 0 && seq_cmp2 >= 0;
 
-                    unsigned int prev_missed_hacks = compute_missed(state->args->hack_misses, NE_getNeighborHackPeriod(neigh)*1000, NE_getNeighborTxExpTime(neigh), NE_getLastNeighborTimer(neigh));
+                    unsigned int prev_missed_hacks = 0;
+                    int missed_hacks = 0;
 
-                    int missed_hacks = summary->new_hack ? (seq_cmp - 1 - prev_missed_hacks) : 0.0;
-                    assert( missed_hacks >= 0 );
+                    bool first_hack = compare_timespec(NE_getNeighborTxExpTime(neigh), (struct timespec*)&zero_timespec) == 0;
+
+                    if( !first_hack ) {
+                        prev_missed_hacks = compute_missed(state->args->hack_misses, NE_getNeighborHackPeriod(neigh)*1000, NE_getNeighborTxExpTime(neigh), NE_getLastNeighborTimer(neigh));
+
+                        missed_hacks = summary->new_hack ? (seq_cmp - 1 - prev_missed_hacks) : 0.0;
+                        assert( missed_hacks >= 0 );
+                    }
+
                     summary->missed_hacks = missed_hacks;
                     state->stats.missed_hacks += missed_hacks;
 
                     if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
-                        NE_setNeighborHSEQ(neigh, hack->seq);
 
                         // Check if the neighbor became symmetric (or bi)
                         summary->became_bi = NE_getNeighborType(neigh, &state->current_time) != BI_NEIGH;
@@ -1295,6 +1327,8 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                             // scheduleNeighborChange(state, false, false, true, false);
                         }
+
+                        NE_setNeighborHSEQ(neigh, hack->seq);
 
                         // Update Tx expiration timestamp
                         NE_setNeighborTxExpTime(neigh, &hack_exp_time);

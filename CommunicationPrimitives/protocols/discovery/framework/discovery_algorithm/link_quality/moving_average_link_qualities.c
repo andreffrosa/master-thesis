@@ -64,7 +64,7 @@ static double compute_quality(ModuleState* state, void* lq_attrs, double previou
 
         // printf("Computed Quality: %f\n", quality);
 
-        printf("\n\n\t\tCompute LQ: lost=%d received=%d old_lq=%f new_lq=%f\n\n", lost, received, previous_link_quality, quality);
+        //printf("\n\n\t\tCompute LQ: lost=%d received=%d old_lq=%f new_lq=%f\n\n", lost, received, previous_link_quality, quality);
 
         return quality;
     }
