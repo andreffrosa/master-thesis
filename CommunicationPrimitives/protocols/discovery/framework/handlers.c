@@ -28,6 +28,8 @@
 
 #include "utility/seq.h"
 
+#define EPSILON 0.01
+
 static unsigned int compute_missed(unsigned int misses, unsigned long period_ms, struct timespec* exp_time, struct timespec* moment) {
     assert( compare_timespec(exp_time, moment) >= 0 );
     struct timespec start_time;
@@ -578,7 +580,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
             NE_setRxLinkQuality(neigh, new_rx_lq);
 
             double lq_delta = fabs(old_rx_lq - new_rx_lq);
-            if( lq_delta > 0.0 ) {
+            if( lq_delta > EPSILON ) {
                 summary->updated_quality = true;
 
                 if( lq_delta >= state->args->lq_threshold ) {
@@ -1238,7 +1240,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     NE_setRxLinkQuality(neigh, new_rx_lq);
 
     double lq_delta = fabs(old_rx_lq - new_rx_lq);
-    if( lq_delta > 0.0 ) {
+    if( lq_delta > EPSILON ) {
         summary->updated_quality = true;
 
         if( lq_delta >= state->args->lq_threshold ) {
@@ -1248,7 +1250,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
     // Update traffic
     double traffic_delta = fabs(NE_getOutTraffic(neigh) - hello->traffic);
-    if( traffic_delta > 0.0 ) {
+    if( traffic_delta > EPSILON ) {
         summary->updated_traffic = true;
 
         if( traffic_delta >= state->args->traffic_threshold ) {
@@ -1378,7 +1380,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         NE_setTxLinkQuality(neigh, new_tx_lq);
 
                         double lq_delta = fabs(old_tx_lq - new_tx_lq);
-                        if( lq_delta > 0.0 ) {
+                        if( lq_delta > EPSILON ) {
                             summary->updated_neighbor = true;
                             summary->updated_quality = true;
 
@@ -1419,7 +1421,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                         double rx_lq_delta = fabs(nn->rx_lq - hack->rx_lq);
                         double tx_lq_delta = fabs(nn->tx_lq - hack->tx_lq);
-                        if( rx_lq_delta > 0.0 || tx_lq_delta > 0.0 ) {
+                        if( rx_lq_delta > EPSILON || tx_lq_delta > EPSILON ) {
                             summary->updated_2hop_quality = true;
 
                             if( rx_lq_delta >= state->args->lq_threshold || tx_lq_delta >= state->args->lq_threshold ) {
@@ -1430,7 +1432,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         nn->tx_lq = hack->tx_lq;
 
                         double traffic_delta = fabs(nn->traffic - hack->traffic);
-                        if( traffic_delta > 0.0 ) {
+                        if( traffic_delta > EPSILON ) {
                             summary->updated_2hop_traffic = true;
 
                             if( traffic_delta >= state->args->traffic_threshold ) {
@@ -1521,7 +1523,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
         if( summary->became_bi || summary->lost_bi || summary->updated_quality_threshold || (summary->became_bi_2hop || summary->lost_bi_2hop || summary->updated_2hop_quality_threshold || summary->updated_2hop_traffic_threshold) || summary->added_two_hop_neighbor || summary->lost_two_hop_neighbor ) {
             scheduleNeighborChange(state, NULL, summary, NULL, false);
 
-            printf("\n\nHACK scheduleNeighborChange %d %d %d %d %d %d %d %d %d %d\n", summary->became_bi, summary->lost_bi, summary->updated_quality_threshold, summary->updated_two_hop_neighbor, summary->added_two_hop_neighbor, summary->lost_two_hop_neighbor, summary->became_bi_2hop, summary->lost_bi_2hop, summary->updated_2hop_quality, summary->updated_2hop_traffic);
+            //printf("\n\nHACK scheduleNeighborChange %d %d %d %d %d %d %d %d %d %d\n", summary->became_bi, summary->lost_bi, summary->updated_quality_threshold, summary->updated_two_hop_neighbor, summary->added_two_hop_neighbor, summary->lost_two_hop_neighbor, summary->became_bi_2hop, summary->lost_bi_2hop, summary->updated_2hop_quality, summary->updated_2hop_traffic);
         }
     }
 
