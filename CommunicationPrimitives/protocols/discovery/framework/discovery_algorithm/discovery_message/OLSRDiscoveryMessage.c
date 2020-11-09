@@ -357,6 +357,12 @@ static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID
     return compute_mprs(false, neighbors, myID, current_time);
 }
 
+static void delete_n1_item(hash_table_item* hit, void* aux) {
+    N1_Tuple* n1_tuple = (N1_Tuple*)hit->value;
+    list_delete(n1_tuple->ns);
+    free(n1_tuple);
+}
+
 static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time) {
     hash_table* n1 = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
     list* n2 = list_init();
@@ -391,7 +397,8 @@ static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned ch
 
     list* mprs = compute_multipoint_relays(n1, n2, NULL);
 
-    // TODO: destroy
+    hash_table_delete_custom(n1, &delete_n1_item, NULL);
+    list_delete(n2);
 
     return mprs;
 }
