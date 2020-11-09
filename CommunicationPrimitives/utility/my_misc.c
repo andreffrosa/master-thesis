@@ -96,14 +96,16 @@ unsigned char popMessageType(YggMessage* msg) {
 }
 
 
+/*
 list* get_bidirectional_stable_neighbors(graph* neighborhood, unsigned char* id) {
     list* neighbors = list_init();
 
-    /*printf("GET BI NEIGHS:\n");
-    char neigh_str[UUID_STR_LEN+1];
-    neigh_str[UUID_STR_LEN] = '\0';
-    char neigh2_str[UUID_STR_LEN+1];
-    neigh2_str[UUID_STR_LEN] = '\0';*/
+    // printf("GET BI NEIGHS:\n");
+    // char neigh_str[UUID_STR_LEN+1];
+    // neigh_str[UUID_STR_LEN] = '\0';
+    // char neigh2_str[UUID_STR_LEN+1];
+    // neigh2_str[UUID_STR_LEN] = '\0';
+
 
     graph_node* node = graph_find_node(neighborhood, id);
     //if(node != NULL) {
@@ -138,6 +140,10 @@ list* get_bidirectional_stable_neighbors(graph* neighborhood, unsigned char* id)
     return neighbors;
 }
 
+*/
+
+
+/*
 list* compute_mprs(graph* neighborhood, unsigned char* myID) {
 
     list* mprs = list_init();
@@ -308,6 +314,9 @@ list* compute_mprs(graph* neighborhood, unsigned char* myID) {
 
     return mprs;
 }
+*/
+
+
 
 int is_memory_zero(const void* addr, unsigned long size) {
 

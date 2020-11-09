@@ -48,9 +48,11 @@ typedef struct _edge_label {
     bool pending;
 } edge_label;
 
-list* get_bidirectional_stable_neighbors(graph* neighborhood, unsigned char* id);
+/*list* get_bidirectional_stable_neighbors(graph* neighborhood, unsigned char* id);
 
 list* compute_mprs(graph* neighborhood, unsigned char* myID);
+
+*/
 
 int is_memory_zero(const void* addr, unsigned long size);
 

@@ -1833,7 +1833,30 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
     free(ev);
 }
 
+void DF_notifyEvent(char* type, void* buffer, unsigned int size) {
+    //discovery_framework_state* state
 
+    assert(type);
+
+    YggEvent* ev = malloc(sizeof(YggEvent));
+    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
+
+    // Append type
+    unsigned int str_len = strlen(type);
+    YggEvent_addPayload(ev, &str_len, sizeof(unsigned int));
+    YggEvent_addPayload(ev, type, str_len);
+
+    // Append Payload
+    YggEvent_addPayload(ev, buffer, size);
+
+    #ifdef DEBUG_DISCOVERY
+    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, type, "");
+    #endif
+
+    deliverEvent(ev);
+    YggEvent_freePayload(ev);
+    free(ev);
+}
 
 
 

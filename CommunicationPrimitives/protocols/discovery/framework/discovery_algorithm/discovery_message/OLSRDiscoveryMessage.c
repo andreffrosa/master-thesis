@@ -1,3 +1,4 @@
+
 /*********************************************************
  * This code was written in the context of the Lightkone
  * European project.
@@ -15,6 +16,9 @@
 
 #include <assert.h>
 
+#include "utility/my_misc.h"
+#include "utility/olsr_utils.h"
+
 typedef enum {
     NULL_MPR,
     FLOODING_MPR,
@@ -29,6 +33,13 @@ typedef struct _OLSRAttrs {
     bool routing_mpr_selector; // N_mpr_selector
     // bool advertised;
 } OLSRAttrs;
+
+typedef struct _OLSRState {
+    list* flooding_mprs;
+    list* routing_mprs;
+    list* flooding_mpr_selectors;
+    list* routing_mpr_selectors;
+} OLSRState;
 
 static void* OLSR_createAttrs(ModuleState* state) {
     OLSRAttrs* attrs = malloc(sizeof(OLSRAttrs));
@@ -48,21 +59,127 @@ static void OLSR_destroyAttrs(ModuleState* state, void* d_msg_attrs) {
 }
 */
 
-static bool OLSR_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time);
+static list* compute_broadcast_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time);
+static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time);
+
+static NeighMPRType getMPRType(bool flooding_mpr, bool routing_mpr) {
+    if( flooding_mpr && !routing_mpr ) {
+        return FLOODING_MPR;
+    } else if( !flooding_mpr && routing_mpr ) {
+        return ROUTING_MPR;
+    } else if( flooding_mpr && routing_mpr ) {
+        return FLOOD_ROUTE_MPR;
+    } else {
+        return NULL_MPR;
+    }
+}
+
+static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors) {
+    printf("\n\n\t\t\t%s\n\n", "RECOMPUTE MPRS");
+
+    bool changed = false;
+
+    list* new_flooding_mprs = compute_broadcast_mprs(neighbors, myID, current_time);
+    list* new_routing_mprs = compute_routing_mprs(neighbors, myID, current_time);
+
+    if( !list_equal(new_flooding_mprs, state->flooding_mprs, &equalID) ) {
+        list* old = state->flooding_mprs;
+        state->flooding_mprs = new_flooding_mprs;
+        list_delete(old);
+
+        changed = true;
+    } else {
+        list_delete(new_flooding_mprs);
+        //changed = false;
+    }
+
+    if( !list_equal(new_routing_mprs, state->routing_mprs, &equalID) ) {
+        list* old = state->routing_mprs;
+        state->routing_mprs = new_routing_mprs;
+        list_delete(old);
+
+        changed = true;
+    } else {
+        list_delete(new_routing_mprs);
+        //changed = false;
+    }
+
+    if( changed ) {
+        // Notify
+        unsigned int size = 2*sizeof(unsigned int) + (state->flooding_mprs->size + state->routing_mprs->size)*sizeof(uuid_t);
+        byte buffer[size];
+        byte* ptr = buffer;
+
+        memcpy(ptr, &state->flooding_mprs->size, sizeof(unsigned int));
+        ptr += sizeof(unsigned int);
+
+        for( list_item* it = state->flooding_mprs->head; it; it = it->next ) {
+            unsigned char* id = (unsigned char*)it->data;
+
+            memcpy(ptr, id, sizeof(uuid_t));
+            ptr += sizeof(uuid_t);
+        }
+
+        memcpy(ptr, &state->routing_mprs->size, sizeof(unsigned int));
+        ptr += sizeof(unsigned int);
+
+        for( list_item* it = state->routing_mprs->head; it; it = it->next ) {
+            unsigned char* id = (unsigned char*)it->data;
+
+            memcpy(ptr, id, sizeof(uuid_t));
+            ptr += sizeof(uuid_t);
+        }
+        DF_notifyEvent("MPRS", buffer, size);
+
+        //////////////////////////////////////
+
+
+        // Refresh Neighbor's Attributes
+        void* iterator = NULL;
+        NeighborEntry* current_neigh = NULL;
+        OLSRAttrs* neigh_attrs = NULL;
+        while( (current_neigh = NT_nextNeighbor(neighbors, &iterator)) ) {
+            neigh_attrs = NE_getMessageAttributes(current_neigh);
+
+            if( NE_getNeighborType(current_neigh, current_time) == BI_NEIGH ) {
+                neigh_attrs->flooding_mpr = list_find_item(state->flooding_mprs, &equalID, NE_getNeighborID(current_neigh)) != NULL;
+                neigh_attrs->routing_mpr = list_find_item(state->routing_mprs, &equalID, NE_getNeighborID(current_neigh)) != NULL;
+            } else {
+                neigh_attrs->flooding_mpr = false;
+                neigh_attrs->routing_mpr = false;
+                neigh_attrs->flooding_mpr_selector = false;
+                neigh_attrs->routing_mpr_selector = false;
+            }
+        }
+    }
+
+    return changed;
+}
+
+static bool OLSR_createMessage(ModuleState* m_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
 
-    bool recompute_mprs = false, send = true;
+    OLSRState* state = (OLSRState*)m_state->vars;
+
+    // Recompute mprs if necessary
     if( msg_type == NEIGHBOR_CHANGE_MSG ) {
         NeighborChangeSummary* s = (NeighborChangeSummary*)aux_info;
 
-        recompute_mprs = s->new_neighbor || s->updated_neighbor || s->lost_neighbor || s->updated_two_hop_neighbor || s->added_two_hop_neighbor || s->lost_two_hop_neighbor;
+        bool one_hop_change = s->new_neighbor || s->updated_neighbor || s->lost_neighbor;
+        bool two_hop_change = s->updated_two_hop_neighbor || s->added_two_hop_neighbor || s->lost_two_hop_neighbor;
 
-        if( recompute_mprs ) {
-            printf("\n\n\t\t\t%s\n\n", "RECOMPUTE MPRS");
+        if( one_hop_change || two_hop_change ) {
+            bool changed = recompute_mprs(state, myID, current_time, neighbors);
 
-            // if !changed e alteração é só 2 hops -> não enviar
+            // if the mprs didn't change and the changes where only at two hop neighbors and is not periodic, then don't send a message
+            if( !changed && !one_hop_change && two_hop_change ) {
+                return false;
+            }
         }
     }
+
+    // Serialize Message
 
     byte* ptr = buffer;
 
@@ -85,24 +202,7 @@ static bool OLSR_createMessage(ModuleState* state, unsigned char* myID, struct t
         assert(neigh);
         OLSRAttrs* neigh_attrs = NE_getMessageAttributes(neigh);
 
-        if( hacks[i].neigh_type != BI_NEIGH ) {
-            neigh_attrs->flooding_mpr = false;
-            neigh_attrs->flooding_mpr_selector = false;
-            neigh_attrs->routing_mpr = false;
-            neigh_attrs->routing_mpr_selector = false;
-        }
-
-        NeighMPRType mpr_type;
-        if( neigh_attrs->flooding_mpr && !neigh_attrs->routing_mpr ) {
-            mpr_type = FLOODING_MPR;
-        } else if( !neigh_attrs->flooding_mpr && neigh_attrs->routing_mpr ) {
-            mpr_type = ROUTING_MPR;
-        } else if( neigh_attrs->flooding_mpr && neigh_attrs->routing_mpr ) {
-            mpr_type = FLOOD_ROUTE_MPR;
-        } else {
-            mpr_type = NULL_MPR;
-        }
-
+        NeighMPRType mpr_type = getMPRType(neigh_attrs->flooding_mpr, neigh_attrs->routing_mpr);
         byte aux = mpr_type;
         memcpy(ptr, &aux, sizeof(aux));
         ptr += sizeof(aux);
@@ -112,7 +212,11 @@ static bool OLSR_createMessage(ModuleState* state, unsigned char* myID, struct t
     return true;
 }
 
-static bool OLSR_processMessage(ModuleState* state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {
+
+static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {
+
+    OLSRState* state = (OLSRState*)m_state->vars;
+
     byte* ptr = buffer;
 
     // Deserialize Hello
@@ -122,6 +226,8 @@ static bool OLSR_processMessage(ModuleState* state, void* f_state, unsigned char
 
     HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr);
     free(summary);
+
+    bool changed_mpr_selectors = false;
 
     // Deserialize Hacks
     byte n_hacks = ptr[0];
@@ -149,28 +255,143 @@ static bool OLSR_processMessage(ModuleState* state, void* f_state, unsigned char
 
                 if( mpr_type == FLOODING_MPR || mpr_type == FLOOD_ROUTE_MPR ) {
                     neigh_attrs->flooding_mpr_selector = true;
+
+                    if( list_find_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neigh)) == NULL ) {
+                        void* x = malloc(sizeof(uuid_t));
+                        uuid_copy(x, NE_getNeighborID(neigh));
+                        list_add_item_to_tail(state->flooding_mpr_selectors, x);
+
+                        changed_mpr_selectors = true;
+                    }
                 } else {
                     neigh_attrs->flooding_mpr_selector = false;
+
+                    void* aux = list_remove_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neigh));
+                    if(aux) {
+                        free(aux);
+                        changed_mpr_selectors = true;
+                    }
                 }
 
                 if( mpr_type == ROUTING_MPR || mpr_type == FLOOD_ROUTE_MPR ) {
                     neigh_attrs->routing_mpr_selector = true;
+
+                    if( list_find_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(neigh)) == NULL ) {
+                        void* x = malloc(sizeof(uuid_t));
+                        uuid_copy(x, NE_getNeighborID(neigh));
+                        list_add_item_to_tail(state->routing_mpr_selectors, x);
+
+                        changed_mpr_selectors = true;
+                    }
                 } else {
                     neigh_attrs->routing_mpr_selector = false;
+
+                    void* aux = list_remove_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(neigh));
+                    if(aux) {
+                        free(aux);
+                        changed_mpr_selectors = true;
+                    }
                 }
             }
         }
     }
 
+    // Notify
+    if( changed_mpr_selectors ) {
+        unsigned int size = 2*sizeof(unsigned int) + (state->flooding_mpr_selectors->size + state->routing_mpr_selectors->size)*sizeof(uuid_t);
+        byte buffer[size];
+        byte* ptr = buffer;
+
+        memcpy(ptr, &state->flooding_mpr_selectors->size, sizeof(unsigned int));
+        ptr += sizeof(unsigned int);
+
+        for( list_item* it = state->flooding_mpr_selectors->head; it; it = it->next ) {
+            unsigned char* id = (unsigned char*)it->data;
+
+            memcpy(ptr, id, sizeof(uuid_t));
+            ptr += sizeof(uuid_t);
+        }
+
+        memcpy(ptr, &state->routing_mpr_selectors->size, sizeof(unsigned int));
+        ptr += sizeof(unsigned int);
+
+        for( list_item* it = state->routing_mpr_selectors->head; it; it = it->next ) {
+            unsigned char* id = (unsigned char*)it->data;
+
+            memcpy(ptr, id, sizeof(uuid_t));
+            ptr += sizeof(uuid_t);
+        }
+
+        DF_notifyEvent("MPR SELECTORS", buffer, size);
+    }
+
     return false;
 }
 
-/*
-static void OLSR_destructor(ModuleState* state) {
-    // TODO
+static void OLSR_destructor(ModuleState* m_state) {
+    OLSRState* state = (OLSRState*)m_state->vars;
+
+    list_delete(state->flooding_mprs);
+    list_delete(state->flooding_mpr_selectors);
+    list_delete(state->routing_mprs);
+    list_delete(state->routing_mpr_selectors);
+
+    free(state);
 }
-*/
 
 DiscoveryMessage* OLSRDiscoveryMessage() {
-    return newDiscoveryMessage(NULL, NULL, &OLSR_createMessage, &OLSR_processMessage, &OLSR_createAttrs, NULL, NULL);
+    OLSRState* state = malloc(sizeof(OLSRState));
+    state->flooding_mprs = list_init();
+    state->flooding_mpr_selectors = list_init();
+    state->routing_mprs = list_init();
+    state->routing_mpr_selectors = list_init();
+
+    return newDiscoveryMessage(NULL, state, &OLSR_createMessage, &OLSR_processMessage, &OLSR_createAttrs, NULL, &OLSR_destructor);
+}
+
+static list* compute_broadcast_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time) {
+    return compute_mprs(true, neighbors, myID, current_time);
+}
+
+static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time) {
+    return compute_mprs(false, neighbors, myID, current_time);
+}
+
+static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time) {
+    hash_table* n1 = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
+    list* n2 = list_init();
+
+    void* iterator = NULL;
+    NeighborEntry* current_neigh = NULL;
+    while ( (current_neigh = NT_nextNeighbor(neighbors, &iterator)) ) {
+        if( NE_getNeighborType(current_neigh, current_time) == BI_NEIGH /* && willingness > NEVER*/ ) {
+
+            // Iterate through the 2 hop neighbors
+            list* ns = list_init();
+
+            hash_table* nneighs = NE_getTwoHopNeighbors(current_neigh);
+            void* iterator2 = NULL;
+            hash_table_item* hit = NULL;
+            TwoHopNeighbor* current_2hop_neigh = NULL;
+            while ( (hit = hash_table_iterator_next(nneighs, &iterator2)) ) {
+                current_2hop_neigh = (TwoHopNeighbor*)hit->value;
+
+                if( current_2hop_neigh->is_symmetric && uuid_compare(current_2hop_neigh->id, myID) != 0 && list_find_item(n2, &equalN2Tuple, current_2hop_neigh->id) == NULL ) {
+                    N2_Tuple* n2_tuple = newN2Tuple(current_2hop_neigh->id, current_2hop_neigh->rx_lq); // lq from 1 hop to 2 hops
+                    list_add_item_to_tail(n2, n2_tuple);
+                }
+            }
+
+            double lq = broadcast ? NE_getTxLinkQuality(current_neigh) : NE_getRxLinkQuality(current_neigh);
+            N1_Tuple* n1_tuple = newN1Tuple(NE_getNeighborID(current_neigh), lq, DEFAULT_WILLINGNESS, ns);
+            void* old = hash_table_insert(n1, n1_tuple->id, n1_tuple);
+            assert(old == NULL);
+        }
+    }
+
+    list* mprs = compute_multipoint_relays(n1, n2, NULL);
+
+    // TODO: destroy
+
+    return mprs;
 }
