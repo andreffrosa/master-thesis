@@ -105,8 +105,7 @@ f_args.neigh_validity_s = 15;
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_UPDATE);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_LOST);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, WINDOWS_EVENT);
-    //app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, MPR_SET);
-    //app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, MPRS_SET);
+    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
 
     queue_t* inBox = registerApp(myApp);
 
@@ -194,7 +193,7 @@ static void processNotification(YggEvent* notification) {
     id[UUID_STR_LEN] = '\0';
 	unsigned char* ptr = notification->payload;
 
-    if(notification->notification_id != WINDOWS_EVENT) {
+    if(notification->notification_id != WINDOWS_EVENT && notification->notification_id != WINDOWS_EVENT) {
 		uuid_unparse(ptr, id);
 	}
 
@@ -225,6 +224,58 @@ ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN +
 	} else if(notification->notification_id == NEIGHBOR_LOST) {
 		ygg_log(APP_NAME, "NEIGHBOR LOST", id);
 	} else if(notification->notification_id == WINDOWS_EVENT) {
+		/*ygg_log("DISCOVERY TEST APP", "NEIGHBORHOOD UPDATE", id);
+
+        char* str;
+    	printAnnounce(notification->payload, notification->length, -1, &str);
+    	printf("%s\n%s", "Serialized Announce", str);
+    	free(str);*/
+        ygg_log(APP_NAME, "WINDOWS", "");
+	}
+
+    else if(notification->notification_id == GENERIC_DISCOVERY_EVENT) {
+
+        unsigned int str_len = 0;
+        void* ptr = NULL;
+        ptr = YggEvent_readPayload(notification, ptr, &str_len, sizeof(unsigned int));
+
+        char type[str_len+1];
+        ptr = YggEvent_readPayload(notification, ptr, type, str_len*sizeof(char));
+        type[str_len] = '\0';
+
+        printf("TYPE: %s\n", type);
+
+        if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
+
+                printf("FLOODING\n");
+                unsigned int amount = 0;
+                ptr = YggEvent_readPayload(notification, ptr, &amount, sizeof(unsigned int));
+
+                for(int i = amount; i < amount; i++) {
+                    uuid_t id;
+                    ptr = YggEvent_readPayload(notification, ptr, id, sizeof(uuid_t));
+
+                    char id_str[UUID_STR_LEN+1];
+                    id_str[UUID_STR_LEN] = '\0';
+                    uuid_unparse(id, id_str);
+                    printf("%s\n", id_str);
+                }
+
+                printf("ROUTING\n");
+                amount = 0;
+                ptr = YggEvent_readPayload(notification, ptr, &amount, sizeof(unsigned int));
+
+                for(int i = amount; i < amount; i++) {
+                    uuid_t id;
+                    ptr = YggEvent_readPayload(notification, ptr, id, sizeof(uuid_t));
+
+                    char id_str[UUID_STR_LEN+1];
+                    id_str[UUID_STR_LEN] = '\0';
+                    uuid_unparse(id, id_str);
+                    printf("%s\n", id_str);
+                }
+        }
+
 		/*ygg_log("DISCOVERY TEST APP", "NEIGHBORHOOD UPDATE", id);
 
         char* str;
