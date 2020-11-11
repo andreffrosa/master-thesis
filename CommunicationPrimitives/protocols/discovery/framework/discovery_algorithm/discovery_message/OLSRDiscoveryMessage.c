@@ -76,12 +76,13 @@ static NeighMPRType getMPRType(bool flooding_mpr, bool routing_mpr) {
 }
 
 static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors) {
-    printf("\n\n\t\t\t%s\n\n", "RECOMPUTE MPRS");
 
     bool changed = false;
 
     list* new_flooding_mprs = compute_broadcast_mprs(neighbors, myID, current_time);
     list* new_routing_mprs = compute_routing_mprs(neighbors, myID, current_time);
+
+    printf("\n\n\t\t\tRECOMPUTE MPRS Flooding %d -> %d Routing %d -> %d \n\n", state->flooding_mprs->size, new_flooding_mprs->size, state->routing_mprs->size, new_routing_mprs->size);
 
     if( !list_equal(new_flooding_mprs, state->flooding_mprs, &equalID) ) {
         list* old = state->flooding_mprs;

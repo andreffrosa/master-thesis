@@ -31,6 +31,7 @@
 #include "utility/my_math.h"
 #include "utility/my_time.h"
 #include "utility/my_sys.h"
+#include "utility/my_misc.h"
 
 #define APP_ID 400
 #define APP_NAME "DISCOVERY FRAMEWORK APP"
@@ -39,7 +40,7 @@ static void processNotification(YggEvent* notification);
 
 int main(int argc, char* argv[]) {
 
-    assert(argc == 3);
+    assert(argc >= 3);
 
     int ix = atoi(argv[1]);
     char interface[10];
@@ -106,6 +107,14 @@ f_args.neigh_validity_s = 15;
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_LOST);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, WINDOWS_EVENT);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
+
+    bool use_overlay = argc == 4;
+    if( use_overlay ) {
+        char* overlay_path = argv[3];
+        topology_manager_args* t_args = load_overlay(overlay_path, hostname);
+        registerYggProtocol(PROTO_TOPOLOGY_MANAGER, topologyManager_init, t_args);
+		topology_manager_args_destroy(t_args);
+    }
 
     queue_t* inBox = registerApp(myApp);
 
