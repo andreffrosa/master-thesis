@@ -938,6 +938,7 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
 
     //
     NeighborChangeSummary summary;
+    memset(&summary, 0, sizeof(summary));
 
     if( hello_summary ) {
         summary.new_neighbor = hello_summary->new_neighbor;
