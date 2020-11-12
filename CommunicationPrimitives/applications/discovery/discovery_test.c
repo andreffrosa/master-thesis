@@ -85,9 +85,9 @@ f_args.neigh_validity_s = 15;
         EMALinkQuality(0.5, 0.7, 5, 5),                    // LinkQuality
         OLSRDiscoveryMessage()                              // Discovery Message
     );
-    f_args->neigh_hold_time_s = 10;
+    f_args->neigh_hold_time_s = 15;
     f_args->max_jitter_ms = 500;
-    f_args->period_margin_ms = 500;
+    f_args->period_margin_ms = 700;
 
     f_args->hello_misses = 3;
     f_args->hack_misses = 2;
@@ -97,9 +97,9 @@ f_args.neigh_validity_s = 15;
     f_args->lq_threshold = 0.3;
     f_args->traffic_threshold = 0.5;
     f_args->n_buckets = 5;
-    f_args->bucket_duration_s = 6;
+    f_args->bucket_duration_s = 10;
     f_args->window_notify_period_s = 0;
-    f_args->window_type = "ema 0.75";
+    f_args->window_type = "ema 0.70";
 
 	registerProtocol(DISCOVERY_FRAMEWORK_PROTO_ID, &discovery_framework_init, (void*) f_args);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);

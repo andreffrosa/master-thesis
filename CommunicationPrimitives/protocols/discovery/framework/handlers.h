@@ -143,6 +143,8 @@ void DF_createHack(discovery_framework_state* state, HackMessage* hack, Neighbor
 
 void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, byte* n_hacks, NeighborsTable* neighbors);
 
+bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info);
+
 void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh);
 
 void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* neigh);

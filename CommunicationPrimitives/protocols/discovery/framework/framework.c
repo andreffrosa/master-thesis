@@ -152,7 +152,7 @@ static bool processMessage(discovery_framework_state* f_state, YggMessage* msg) 
 
     // UpStream message
     if(msg->Proto_id == DISCOVERY_FRAMEWORK_PROTO_ID) {
-        // Check if there is piggybacked discovery messages
+        // Check if there are piggybacked discovery messages
         unsigned short piggyback_size = 0;
         memcpy(&piggyback_size, msg->data + sizeof(unsigned short), sizeof(piggyback_size));
 
@@ -161,24 +161,19 @@ static bool processMessage(discovery_framework_state* f_state, YggMessage* msg) 
 
         assert( piggyback_size == *((unsigned char*)buffer) );
 
+        // Has discovery message
         if( piggyback_size > 0 ) {
-            // Has an Hello
-            DF_processMessage(f_state, buffer + sizeof(piggyback_size), piggyback_size, true, &msg->srcAddr);
+            bool piggybacked = msg->Proto_id != DISCOVERY_FRAMEWORK_PROTO_ID;
+
+            DF_processMessage(f_state, buffer + sizeof(piggyback_size), piggyback_size, piggybacked, &msg->srcAddr);
         }
 
-        // Destination is this protocol
-        if(msg->Proto_id == DISCOVERY_FRAMEWORK_PROTO_ID) {
-            if( msg->dataLen > 0 ) {
-                DF_processMessage(f_state, (byte*)msg->data, msg->dataLen, false, &msg->srcAddr);
-            }
-
-            processed = true;
-        }
         // Destination is other protocol
-        else {
+        if(msg->Proto_id != DISCOVERY_FRAMEWORK_PROTO_ID) {
             filterAndDeliver(msg);
-            processed = true;
         }
+
+        processed = true;
     }
     // DownStream msg
     else {
