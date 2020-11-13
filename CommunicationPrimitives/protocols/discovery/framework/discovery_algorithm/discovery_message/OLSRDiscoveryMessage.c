@@ -112,7 +112,8 @@ static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespe
         byte buffer[size];
         byte* ptr = buffer;
 
-        memcpy(ptr, &state->flooding_mprs->size, sizeof(unsigned int));
+        unsigned int aux = state->flooding_mprs->size;
+        memcpy(ptr, &aux, sizeof(unsigned int));
         ptr += sizeof(unsigned int);
 
         for( list_item* it = state->flooding_mprs->head; it; it = it->next ) {
@@ -122,7 +123,8 @@ static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespe
             ptr += sizeof(uuid_t);
         }
 
-        memcpy(ptr, &state->routing_mprs->size, sizeof(unsigned int));
+        aux = state->routing_mprs->size;
+        memcpy(ptr, &aux, sizeof(unsigned int));
         ptr += sizeof(unsigned int);
 
         for( list_item* it = state->routing_mprs->head; it; it = it->next ) {
@@ -131,6 +133,7 @@ static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespe
             memcpy(ptr, id, sizeof(uuid_t));
             ptr += sizeof(uuid_t);
         }
+
         DF_notifyEvent("MPRS", buffer, size);
 
         //////////////////////////////////////
@@ -168,7 +171,7 @@ static bool OLSR_createMessage(ModuleState* m_state, unsigned char* myID, struct
         NeighborChangeSummary* s = (NeighborChangeSummary*)aux_info;
 
         bool one_hop_change = s->new_neighbor || s->updated_neighbor || s->lost_neighbor;
-        bool two_hop_change = s->updated_two_hop_neighbor || s->added_two_hop_neighbor || s->lost_two_hop_neighbor;
+        bool two_hop_change = s->updated_2hop_neighbor || s->added_2hop_neighbor || s->lost_2hop_neighbor;
 
         if( one_hop_change || two_hop_change ) {
             bool changed = recompute_mprs(state, myID, current_time, neighbors);
@@ -303,7 +306,8 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
         byte buffer[size];
         byte* ptr = buffer;
 
-        memcpy(ptr, &state->flooding_mpr_selectors->size, sizeof(unsigned int));
+        unsigned int aux = state->flooding_mpr_selectors->size;
+        memcpy(ptr, &aux, sizeof(unsigned int));
         ptr += sizeof(unsigned int);
 
         for( list_item* it = state->flooding_mpr_selectors->head; it; it = it->next ) {
@@ -313,7 +317,8 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
             ptr += sizeof(uuid_t);
         }
 
-        memcpy(ptr, &state->routing_mpr_selectors->size, sizeof(unsigned int));
+        aux = state->routing_mpr_selectors->size;
+        memcpy(ptr, &aux, sizeof(unsigned int));
         ptr += sizeof(unsigned int);
 
         for( list_item* it = state->routing_mpr_selectors->head; it; it = it->next ) {

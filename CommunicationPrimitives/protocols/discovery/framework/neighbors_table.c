@@ -807,6 +807,8 @@ sprintf(ptr, "%s\n", line_str);
             timespec_to_string(&aux_t, rx_exp_str, 6, 1);
             align_str(rx_exp_str, rx_exp_str, 6, "CR");
 
+            sprintf(traffic_str, "%0.3f" , nneigh->traffic);
+
             char c = uuid_compare(myID, nneigh->id) == 0 ? '+' : '-';
 
             sprintf(ptr, " %c   %s                       %s   %s                 %s   %s    %s             %s  \n",

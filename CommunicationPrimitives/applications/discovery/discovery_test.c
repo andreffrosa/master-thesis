@@ -94,9 +94,9 @@ f_args.neigh_validity_s = 15;
 
     f_args->ignore_zero_seq = true;
 
-    f_args->lq_epsilon = 0.01;
+    f_args->lq_epsilon = 0.05;
     f_args->lq_threshold = 0.3;
-    f_args->traffic_epsilon = 0.1;
+    f_args->traffic_epsilon = 0.25;
     f_args->traffic_threshold = 1.0;
 
     f_args->n_buckets = 5;
@@ -263,7 +263,7 @@ ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN +
                 unsigned int amount = 0;
                 ptr = YggEvent_readPayload(notification, ptr, &amount, sizeof(unsigned int));
 
-                for(int i = amount; i < amount; i++) {
+                for(int i = 0; i < amount; i++) {
                     uuid_t id;
                     ptr = YggEvent_readPayload(notification, ptr, id, sizeof(uuid_t));
 
@@ -277,7 +277,7 @@ ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN +
                 amount = 0;
                 ptr = YggEvent_readPayload(notification, ptr, &amount, sizeof(unsigned int));
 
-                for(int i = amount; i < amount; i++) {
+                for(int i = 0; i < amount; i++) {
                     uuid_t id;
                     ptr = YggEvent_readPayload(notification, ptr, id, sizeof(uuid_t));
 
@@ -294,6 +294,6 @@ ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN +
     	printAnnounce(notification->payload, notification->length, -1, &str);
     	printf("%s\n%s", "Serialized Announce", str);
     	free(str);*/
-        ygg_log(APP_NAME, "WINDOWS", "");
+        //ygg_log(APP_NAME, "WINDOWS", "");
 	}
 }

@@ -47,9 +47,9 @@ typedef struct HackDeliverSummary_ {
     bool became_bi_2hop;
     bool lost_bi_2hop;
 
-    bool updated_two_hop_neighbor;
-    bool added_two_hop_neighbor;
-    bool lost_two_hop_neighbor;
+    bool updated_2hop_neighbor;
+    bool added_2hop_neighbor;
+    bool lost_2hop_neighbor;
 } HackDeliverSummary;
 
 typedef struct NeighborTimerSummary_ {
@@ -64,9 +64,9 @@ typedef struct NeighborTimerSummary_ {
 
     unsigned int deleted_2hop;
 
-    //bool updated_two_hop_neighbor;
-    //bool added_two_hop_neighbor;
-    bool lost_two_hop_neighbor;
+    //bool updated_2hop_neighbor;
+    //bool added_2hop_neighbor;
+    bool lost_2hop_neighbor;
 } NeighborTimerSummary;
 
 typedef enum {
@@ -81,9 +81,9 @@ typedef struct NeighborChangeSummary_ {
     bool updated_neighbor;
     bool lost_neighbor;
 
-    bool updated_two_hop_neighbor;
-    bool added_two_hop_neighbor;
-    bool lost_two_hop_neighbor;
+    bool updated_2hop_neighbor;
+    bool added_2hop_neighbor;
+    bool lost_2hop_neighbor;
 
     //unsigned int deleted_2hop;
 
