@@ -809,9 +809,9 @@ sprintf(ptr, "%s\n", line_str);
 
             sprintf(traffic_str, "%0.3f" , nneigh->traffic);
 
-            char c = uuid_compare(myID, nneigh->id) == 0 ? '+' : '-';
+            char c = uuid_compare(myID, nneigh->id) == 0 ? '*' : ' ';
 
-            sprintf(ptr, " %c   %s                       %s   %s                 %s   %s    %s             %s  \n",
+            sprintf(ptr, "     %c   %s                   %s   %s                 %s   %s    %s             %s  \n",
                     c, id_str, seq_str, type_str, rx_lq_str, tx_lq_str, traffic_str, rx_exp_str);
             ptr += strlen(ptr);
         }
