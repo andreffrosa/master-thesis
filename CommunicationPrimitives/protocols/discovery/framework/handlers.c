@@ -1036,7 +1036,7 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
 
         if( send_hello || send_hack ) {
 
-            printf("\n\nSCHEDULE NEIGHBOR CHANGE: send_hello=%c send_hack=%c\n\n", (send_hello?'T':'F'), (send_hack?'T':'F'));
+            // printf("\n\nSCHEDULE NEIGHBOR CHANGE: send_hello=%c send_hack=%c\n\n", (send_hello?'T':'F'), (send_hack?'T':'F'));
 
             state->neighbor_change_timer_active = true;
             copy_timespec(&state->set_neighbor_change_time, &state->current_time);
@@ -1220,7 +1220,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
         int missed_hellos = seq_cmp > 0 ? (seq_cmp - 1 - prev_missed_hellos) : 0.0;
         assert(missed_hellos >= 0);
 
-        printf("\n\n\t\tHELLO: seq_cmp=%d missed_hellos=%d prev_missed_hellos=%u\n\n", seq_cmp, missed_hellos, prev_missed_hellos);
+        //printf("\n\n\t\tHELLO: seq_cmp=%d missed_hellos=%d prev_missed_hellos=%u\n\n", seq_cmp, missed_hellos, prev_missed_hellos);
 
         summary->missed_hellos = missed_hellos;
         state->stats.missed_hellos += missed_hellos;
@@ -1301,7 +1301,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
         if( summary->updated_quality_threshold || summary->updated_traffic_threshold || summary->rebooted ) {
             scheduleNeighborChange(state, summary, NULL, NULL, false);
 
-            printf("\n\nHELLO scheduleNeighborChange\n");
+            //printf("\n\nHELLO scheduleNeighborChange\n");
         }
 
         // insertIntoWindow(NT_getStability(state->neighbors), &state->current_time);
@@ -1769,7 +1769,7 @@ void DF_uponWindowsTimer(discovery_framework_state* state) {
 
 void DF_printNeighbors(discovery_framework_state* state) {
     char* str = NULL;
-    printf("\n%s\n", NT_print(state->neighbors, &str, &state->current_time, state->args->window_type, state->myID, &state->myAddr, state->my_seq));
+    printf("[NEIGHBORS TABLE]\n%s\n", NT_print(state->neighbors, &str, &state->current_time, state->args->window_type, state->myID, &state->myAddr, state->my_seq));
     free(str);
 }
 
