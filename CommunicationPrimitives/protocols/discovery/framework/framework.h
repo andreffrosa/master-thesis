@@ -52,12 +52,15 @@ typedef struct _discovery_framework_args {
 
     unsigned long neigh_hold_time_s;
     unsigned long max_jitter_ms;
-    unsigned long period_margin_ms; // TODO
+    unsigned long period_margin_ms;
 
     bool ignore_zero_seq;
 
+    double lq_epsilon;
     double lq_threshold;
     double traffic_threshold;
+    double traffic_epsilon;
+
     unsigned int n_buckets;
     unsigned int bucket_duration_s;
     unsigned int window_notify_period_s;

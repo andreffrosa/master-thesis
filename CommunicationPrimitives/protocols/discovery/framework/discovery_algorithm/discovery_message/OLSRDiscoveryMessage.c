@@ -385,7 +385,11 @@ static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned ch
 
                 if( current_2hop_neigh->is_symmetric && uuid_compare(current_2hop_neigh->id, myID) != 0 && list_find_item(n2, &equalN2Tuple, current_2hop_neigh->id) == NULL ) {
                     N2_Tuple* n2_tuple = newN2Tuple(current_2hop_neigh->id, current_2hop_neigh->rx_lq); // lq from 1 hop to 2 hops
-                    list_add_item_to_tail(n2, n2_tuple);
+                    list_add_item_to_tail(ns, n2_tuple);
+
+                    unsigned char* id = malloc(sizeof(uuid_t));
+                    uuid_copy(id, current_2hop_neigh->id);
+                    list_add_item_to_tail(n2, id);
                 }
             }
 

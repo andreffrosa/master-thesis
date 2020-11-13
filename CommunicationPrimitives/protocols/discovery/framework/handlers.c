@@ -28,8 +28,6 @@
 
 #include "utility/seq.h"
 
-#define EPSILON 0.01
-
 static unsigned int compute_missed(unsigned int misses, unsigned long period_ms, struct timespec* exp_time, struct timespec* moment) {
     assert( compare_timespec(exp_time, moment) >= 0 );
 
@@ -55,7 +53,6 @@ char exp_time_str[50], moment_str[50], start_time_str[50];
     printf("\n\nmisses=%u period_ms=%lu exp_time=%s moment=%s start_time=%s remaining=%lu missed=%u\n\n", misses, period_ms, exp_time_str, moment_str, start_time_str, remaining, missed);
 
 */
-
 
     assert(missed <= misses );
 
@@ -353,17 +350,22 @@ void DF_uponHelloTimer(discovery_framework_state* state, bool periodic, bool sen
             }
 
             bool sent = false;
-            if( periodic ) {
-                sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
-            } else {
+            //  if( periodic ) {
+    sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
+            /*
+} else {
                 void* aux_info = &state->neighbor_change_summary;
                 sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, NEIGHBOR_CHANGE_MSG, aux_info);
             }
+*/
+
+
 
             if( sent ) {
                 if(piggyback_hack) {
                     state->stats.piggybacked_hacks += n_hacks;
                 }
+
             }
 
             // Re-schedule
@@ -440,7 +442,7 @@ void DF_uponHackTimer(discovery_framework_state* state, bool periodic) {
 
             // Re-schedule
             scheduleHackTimer(state, false);
-            
+
             #ifdef DEBUG_DISCOVERY
             char aux_str[30];
             if( piggyback_hello )
@@ -557,10 +559,11 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
             // Update Link Quality
             double old_rx_lq = NE_getRxLinkQuality(neigh);
             double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 0, lost, false, &state->current_time);
-            NE_setRxLinkQuality(neigh, new_rx_lq);
+            // NE_setRxLinkQuality(neigh, new_rx_lq);
 
             double lq_delta = fabs(old_rx_lq - new_rx_lq);
-            if( lq_delta > EPSILON ) {
+            if( lq_delta > state->args->lq_epsilon ) {
+                NE_setRxLinkQuality(neigh, new_rx_lq);
                 summary->updated_quality = true;
 
                 if( lq_delta >= state->args->lq_threshold ) {
@@ -880,13 +883,47 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
     (DA_HackLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
     (DA_HackUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
 
-    //bool sent_hello = false, sent_hack = false;
+    YggMessage msg;
+    YggMessage_initBcast(&msg, DISCOVERY_FRAMEWORK_PROTO_ID);
 
+    WLANAddr* bcast_addr = getBroadcastAddr();
+
+    HelloMessage hello_;
+    HelloMessage* hello = &hello_;
+    if( send_hello ) {
+        DF_createHello(state, hello, false);
+    }
+
+    unsigned char n_hacks = 0;
+    HackMessage* hacks = NULL;
+
+    if( send_hack ) {
+        DF_createHackBatch(state, &hacks, &n_hacks, state->neighbors);
+    }
+
+    void* aux_info = &state->neighbor_change_summary;
+    bool send = DF_createMessage(state, &msg, hello, hacks, n_hacks, bcast_addr, NEIGHBOR_CHANGE_MSG, aux_info);
+
+    free(bcast_addr);
+
+    if( hacks ) {
+        free(hacks);
+    }
+
+    if( send ) {
+        // Insert into dispatcher queue
+        DF_dispatchMessage(state->dispatcher_queue, &msg);
+
+        state->stats.discovery_messages++;
+    }
+
+    /*
     if( send_hello ) {
         if( compare_timespec(&state->set_neighbor_change_time, &state->last_hello_time) > 0 ) {
             CancelTimer(state->hello_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID);
             copy_timespec(&state->next_hello_time, &state->current_time);
             DF_uponHelloTimer(state, false, send_hack);
+
             //sent_hello = true;
             //sent_hack = send_hack;
         }
@@ -900,6 +937,9 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
             //sent_hack = true;
         }
     }
+*/
+
+
 
     state->neighbor_change_timer_active = false;
     memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
@@ -1218,10 +1258,11 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     // Update Link Quality
     double old_rx_lq = NE_getRxLinkQuality(neigh);
     double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 1, summary->missed_hellos, summary->new_neighbor, &state->current_time);
-    NE_setRxLinkQuality(neigh, new_rx_lq);
+    // NE_setRxLinkQuality(neigh, new_rx_lq);
 
     double lq_delta = fabs(old_rx_lq - new_rx_lq);
-    if( lq_delta > EPSILON ) {
+    if( lq_delta > state->args->lq_epsilon ) {
+        NE_setRxLinkQuality(neigh, new_rx_lq);
         summary->updated_quality = true;
 
         if( lq_delta >= state->args->lq_threshold ) {
@@ -1231,14 +1272,15 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
     // Update traffic
     double traffic_delta = fabs(NE_getOutTraffic(neigh) - hello->traffic);
-    if( traffic_delta > EPSILON ) {
+    if( traffic_delta > state->args->traffic_epsilon ) {
+        NE_setOutTraffic(neigh, hello->traffic);
         summary->updated_traffic = true;
 
         if( traffic_delta >= state->args->traffic_threshold ) {
             summary->updated_traffic_threshold = true;
         }
     }
-    NE_setOutTraffic(neigh, hello->traffic);
+    // NE_setOutTraffic(neigh, hello->traffic);
 
     // Re-schedule neighbor timer
     if( summary->period_changed ) {
@@ -1358,11 +1400,11 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         // Update Link Quality
                         double old_tx_lq = NE_getTxLinkQuality(neigh);
                         double new_tx_lq = hack->rx_lq;
-                        NE_setTxLinkQuality(neigh, new_tx_lq);
+                        // NE_setTxLinkQuality(neigh, new_tx_lq);
 
                         double lq_delta = fabs(old_tx_lq - new_tx_lq);
-                        if( lq_delta > EPSILON ) {
-                            summary->updated_neighbor = true;
+                        if( lq_delta > state->args->lq_epsilon ) {
+                            NE_setTxLinkQuality(neigh, new_tx_lq);
                             summary->updated_quality = true;
 
                             if( lq_delta >= state->args->lq_threshold ) {
@@ -1402,25 +1444,28 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                         double rx_lq_delta = fabs(nn->rx_lq - hack->rx_lq);
                         double tx_lq_delta = fabs(nn->tx_lq - hack->tx_lq);
-                        if( rx_lq_delta > EPSILON || tx_lq_delta > EPSILON ) {
+                        if( rx_lq_delta > state->args->lq_epsilon || tx_lq_delta > state->args->lq_epsilon ) {
+                            nn->rx_lq = hack->rx_lq;
+                            nn->tx_lq = hack->tx_lq;
                             summary->updated_2hop_quality = true;
 
                             if( rx_lq_delta >= state->args->lq_threshold || tx_lq_delta >= state->args->lq_threshold ) {
                                 summary->updated_2hop_quality_threshold = true;
                             }
                         }
-                        nn->rx_lq = hack->rx_lq;
-                        nn->tx_lq = hack->tx_lq;
+                        // nn->rx_lq = hack->rx_lq;
+                        // nn->tx_lq = hack->tx_lq;
 
                         double traffic_delta = fabs(nn->traffic - hack->traffic);
-                        if( traffic_delta > EPSILON ) {
+                        if( traffic_delta > state->args->traffic_epsilon ) {
+                            nn->traffic = hack->traffic;
                             summary->updated_2hop_traffic = true;
 
                             if( traffic_delta >= state->args->traffic_threshold ) {
                                 summary->updated_2hop_traffic_threshold = true;
                             }
                         }
-                        nn->traffic = hack->traffic;
+                        // nn->traffic = hack->traffic;
 
                         copy_timespec(&nn->expiration, &hack_exp_time);
                     }

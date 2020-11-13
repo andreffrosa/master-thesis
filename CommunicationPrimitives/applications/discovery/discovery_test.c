@@ -94,12 +94,15 @@ f_args.neigh_validity_s = 15;
 
     f_args->ignore_zero_seq = true;
 
+    f_args->lq_epsilon = 0.01;
     f_args->lq_threshold = 0.3;
-    f_args->traffic_threshold = 0.5;
+    f_args->traffic_epsilon = 0.1;
+    f_args->traffic_threshold = 1.0;
+
     f_args->n_buckets = 5;
     f_args->bucket_duration_s = 10;
     f_args->window_notify_period_s = 0;
-    f_args->window_type = "ema 0.70";
+    f_args->window_type = "ema 0.65";
 
 	registerProtocol(DISCOVERY_FRAMEWORK_PROTO_ID, &discovery_framework_init, (void*) f_args);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);
