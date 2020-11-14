@@ -558,7 +558,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
             // NE_setRxLinkQuality(neigh, new_rx_lq);
 
             double lq_delta = fabs(old_rx_lq - new_rx_lq);
-            if( lq_delta >= state->args->lq_epsilon || new_rx_lq == 1.0 || new_rx_lq == 0.0 ) {
+            if( lq_delta >= state->args->lq_epsilon || (lq_delta > 0 && (new_rx_lq == 1.0 || new_rx_lq == 0.0)) ) {
                 NE_setRxLinkQuality(neigh, new_rx_lq);
                 summary->updated_quality = true;
 
@@ -1272,7 +1272,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     // NE_setRxLinkQuality(neigh, new_rx_lq);
 
     double lq_delta = fabs(old_rx_lq - new_rx_lq);
-    if( lq_delta >= state->args->lq_epsilon || new_rx_lq == 1.0 || new_rx_lq == 0.0 ) {
+    if( lq_delta >= state->args->lq_epsilon || (lq_delta > 0 && (new_rx_lq == 1.0 || new_rx_lq == 0.0)) ) {
         NE_setRxLinkQuality(neigh, new_rx_lq);
         summary->updated_quality = true;
 
@@ -1283,7 +1283,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
     // Update traffic
     double traffic_delta = fabs(NE_getOutTraffic(neigh) - hello->traffic);
-    if( traffic_delta >= state->args->traffic_epsilon || hello->traffic == 0.0 ) {
+    if( traffic_delta >= state->args->traffic_epsilon || (traffic_delta > 0 && hello->traffic == 0.0) ) {
         NE_setOutTraffic(neigh, hello->traffic);
         summary->updated_traffic = true;
 
@@ -1430,7 +1430,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         // NE_setTxLinkQuality(neigh, new_tx_lq);
 
                         double lq_delta = fabs(old_tx_lq - new_tx_lq);
-                        if( lq_delta >= state->args->lq_epsilon || new_tx_lq == 1.0 || new_tx_lq == 0.0 ) {
+                        if( lq_delta >= state->args->lq_epsilon || (lq_delta > 0 && (new_tx_lq == 1.0 || new_tx_lq == 0.0)) ) {
                             //printf("\nupdated_quality: old_tx_lq %f new_tx_lq %f lq_delta %f\n", old_tx_lq,  new_tx_lq, lq_delta);
 
                             NE_setTxLinkQuality(neigh, new_tx_lq);
@@ -1473,7 +1473,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                         double rx_lq_delta = fabs(nn->rx_lq - hack->rx_lq);
                         double tx_lq_delta = fabs(nn->tx_lq - hack->tx_lq);
-                        if( rx_lq_delta >= state->args->lq_epsilon || tx_lq_delta >= state->args->lq_epsilon || hack->rx_lq == 1.0 || hack->rx_lq == 0.0 || hack->tx_lq == 1.0 || hack->tx_lq == 0.0) {
+                        if( rx_lq_delta >= state->args->lq_epsilon || tx_lq_delta >= state->args->lq_epsilon || (rx_lq_delta > 0.0 && (hack->rx_lq == 1.0 || hack->rx_lq == 0.0)) || (tx_lq_delta > 0 && (hack->tx_lq == 1.0 || hack->tx_lq == 0.0))) {
                             // printf("\nupdated_2hop_quality: old_rx_lq %f new_rx_lq %f rx_lq_delta %f old_tx_lq %f new_tx_lq %f tx_lq_delta %f\n", nn->rx_lq, hack->rx_lq, rx_lq_delta, nn->tx_lq, hack->tx_lq, tx_lq_delta);
 
                             nn->rx_lq = hack->rx_lq;
@@ -1488,7 +1488,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         // nn->tx_lq = hack->tx_lq;
 
                         double traffic_delta = fabs(nn->traffic - hack->traffic);
-                        if( traffic_delta >= state->args->traffic_epsilon || hack->traffic == 0.0) {
+                        if( traffic_delta >= state->args->traffic_epsilon || (traffic_delta > 0 && hack->traffic == 0.0)) {
                             // printf("\nupdated_2hop_traffic: old_traffic %f new_traffic %f traffic_delta %f\n", nn->traffic, hack->traffic, traffic_delta);
 
                             nn->traffic = hack->traffic;
