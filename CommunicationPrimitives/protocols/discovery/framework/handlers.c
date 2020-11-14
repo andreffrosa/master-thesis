@@ -1203,9 +1203,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
                 id_str[UUID_STR_LEN] = '\0';
                 uuid_unparse(hello->process_id, id_str);
 
-                char str[200];
-                sprintf(str, "%s", id_str);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", str);
+                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
                 #endif
             }
         }
@@ -1217,7 +1215,24 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
         int seq_cmp = compare_seq(hello->seq, NE_getNeighborSEQ(neigh), state->args->ignore_zero_seq);
         assert(seq_cmp >= 0);
 
-        int missed_hellos = seq_cmp > 0 ? (seq_cmp - 1 - prev_missed_hellos) : 0.0;
+        int missed_hellos = 0;
+        if( seq_cmp > 0 ) {
+            if( prev_missed_hellos <= seq_cmp - 1 ) {
+                missed_hellos = seq_cmp - 1 - prev_missed_hellos;
+            } else {
+                missed_hellos = 0;
+
+                // Log
+                // #ifdef DEBUG_DISCOVERY
+                char str[200];
+                sprintf(str, "prev_missed_hellos=%u   seq_cmp-1=%d", missed_hellos, seq_cmp-1);
+                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO SEQ ERROR", str);
+                // #endif
+            }
+        } else {
+            missed_hellos = 0;
+        }
+        // int missed_hellos = seq_cmp > 0 ? (seq_cmp - 1 - prev_missed_hellos) : 0.0;
         assert(missed_hellos >= 0);
 
         //printf("\n\n\t\tHELLO: seq_cmp=%d missed_hellos=%d prev_missed_hellos=%u\n\n", seq_cmp, missed_hellos, prev_missed_hellos);
@@ -1365,9 +1380,25 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     if( !first_hack ) {
                         prev_missed_hacks = compute_missed(state->args->hack_misses, NE_getNeighborHackPeriod(neigh)*1000, NE_getNeighborTxExpTime(neigh), NE_getLastNeighborTimer(neigh));
 
-                        missed_hacks = summary->new_hack ? (seq_cmp - 1 - prev_missed_hacks) : 0.0;
-                        assert( missed_hacks >= 0 );
+                        if( seq_cmp > 0 ) {
+                            if( prev_missed_hacks <= seq_cmp - 1 ) {
+                                missed_hacks = seq_cmp - 1 - prev_missed_hacks;
+                            } else {
+                                missed_hacks = 0;
+
+                                // Log
+                                // #ifdef DEBUG_DISCOVERY
+                                char str[200];
+                                sprintf(str, "prev_missed_hacks=%u   seq_cmp-1=%d", missed_hacks, seq_cmp-1);
+                                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK SEQ ERROR", str);
+                                // #endif
+                            }
+                        } else {
+                            missed_hacks = 0;
+                        }
                     }
+                    //missed_hacks = summary->new_hack ? (seq_cmp - 1 - prev_missed_hacks) : 0.0;
+                    assert( missed_hacks >= 0 );
 
                     summary->missed_hacks = missed_hacks;
                     state->stats.missed_hacks += missed_hacks;
