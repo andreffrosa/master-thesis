@@ -69,6 +69,7 @@ bool DA_HackUpdate2HopNeighbor(DiscoveryAlgorithm* alg);
 
 HelloSchedulerType DA_getHackType(DiscoveryAlgorithm* alg);
 
+/*
 byte DA_getHelloPeriod(DiscoveryAlgorithm* alg);
 
 byte DA_getHackPeriod(DiscoveryAlgorithm* alg);
@@ -76,6 +77,19 @@ byte DA_getHackPeriod(DiscoveryAlgorithm* alg);
 byte DA_computeNextHelloPeriod(DiscoveryAlgorithm* alg, unsigned long elapsed_time_ms, NeighborsTable* neighbors);
 
 byte DA_computeNextHackPeriod(DiscoveryAlgorithm* alg, unsigned long elapsed_time_ms, NeighborsTable* neighbors);
+*/
+
+byte DA_getHelloAnnouncePeriod(DiscoveryAlgorithm* alg);
+
+byte DA_getHelloTransmitPeriod(DiscoveryAlgorithm* alg, struct timespec* current_time);
+
+byte DA_getHackAnnouncePeriod(DiscoveryAlgorithm* alg);
+
+byte DA_getHackTransmitPeriod(DiscoveryAlgorithm* alg, struct timespec* current_time);
+
+byte DA_computeNextHelloPeriod(DiscoveryAlgorithm* alg, unsigned long elapsed_time_ms, unsigned int transition_period_n, NeighborsTable* neighbors, struct timespec* current_time);
+
+byte DA_computeNextHackPeriod(DiscoveryAlgorithm* alg, unsigned long elapsed_time_ms, unsigned int transition_period_n, NeighborsTable* neighbors, struct timespec* current_time);
 
 double DA_computeLinkQuality(DiscoveryAlgorithm* alg, void* lq_attrs, double previous_link_quality, unsigned int received, unsigned int lost, bool init, struct timespec* current_time);
 

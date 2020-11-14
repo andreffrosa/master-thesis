@@ -21,6 +21,9 @@ typedef byte (*next_period_function)(const char* type, byte previous_period_s, u
 typedef struct _DiscoveryPeriod {
     byte hello_period_s;
     byte hack_period_s;
+    byte old_hello_period_s;
+    byte old_hack_period_s;
+    struct timespec transition_time; 
     next_period_function compute_next_period;
 } DiscoveryPeriod;
 

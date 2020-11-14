@@ -129,13 +129,13 @@ void DF_createHello(discovery_framework_state* state, HelloMessage* hello, bool 
     struct timespec aux;
     subtract_timespec(&aux, &state->current_time, &state->last_hello_time);
     unsigned long elapsed_time_ms = timespec_to_milli(&aux);
-    DA_computeNextHelloPeriod(state->args->algorithm, elapsed_time_ms, state->neighbors);
+    DA_computeNextHelloPeriod(state->args->algorithm, elapsed_time_ms, state->args->announce_transition_period_n, state->neighbors, &state->current_time);
 
     // Create Hello
     initHelloMessage(hello,
         state->myID,
         state->my_seq,
-        DA_getHelloPeriod(state->args->algorithm),
+        DA_getHelloAnnouncePeriod(state->args->algorithm),
         computeWindow(NT_getOutTraffic(state->neighbors), &state->current_time, state->args->window_type, "sum", true),
         request_replies
     );
@@ -157,7 +157,7 @@ void DF_createHack(discovery_framework_state* state, HackMessage* hack, Neighbor
         struct timespec aux;
         subtract_timespec(&aux, &state->current_time, &state->last_hack_time);
         unsigned long elapsed_time_ms = timespec_to_milli(&aux);
-        DA_computeNextHackPeriod(state->args->algorithm, elapsed_time_ms, state->neighbors);
+        DA_computeNextHackPeriod(state->args->algorithm, elapsed_time_ms, state->args->announce_transition_period_n, state->neighbors, &state->current_time);
     }
 
     // Create Standard Hack
@@ -166,7 +166,7 @@ void DF_createHack(discovery_framework_state* state, HackMessage* hack, Neighbor
         NE_getNeighborSEQ(neigh),
         NE_getRxLinkQuality(neigh),
         NE_getTxLinkQuality(neigh),
-        DA_getHackPeriod(state->args->algorithm),
+        DA_getHackAnnouncePeriod(state->args->algorithm),
         NE_getOutTraffic(neigh),
         NE_getNeighborType(neigh, &state->current_time));
 
@@ -193,7 +193,7 @@ void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, b
         struct timespec aux;
         subtract_timespec(&aux, &state->current_time, &state->last_hack_time);
         unsigned long elapsed_time_ms = timespec_to_milli(&aux);
-        DA_computeNextHackPeriod(state->args->algorithm, elapsed_time_ms, state->neighbors);
+        DA_computeNextHackPeriod(state->args->algorithm, elapsed_time_ms, state->args->announce_transition_period_n, state->neighbors, &state->current_time);
 
         void* iterator = NULL;
         NeighborEntry* current_neigh = NULL;
@@ -202,13 +202,11 @@ void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, b
             DF_createHack(state, current_hack++, current_neigh, false);
         }
     } /*
-else {
+    else {
         // Re-schedule
         scheduleHackTimer(state, false);
     }
-*/
-
-
+    */
 }
 
 bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info) {
@@ -256,7 +254,7 @@ void scheduleHelloTimer(discovery_framework_state* state, bool now) {
 
         unsigned long jitter = (unsigned long)(randomProb()*state->args->max_jitter_ms);
 
-        unsigned long t = now ? jitter : DA_getHelloPeriod(state->args->algorithm)*1000 - jitter - state->args->period_margin_ms;
+        unsigned long t = now ? jitter : DA_getHelloTransmitPeriod(state->args->algorithm, &state->current_time)*1000 - jitter - state->args->period_margin_ms;
 
         struct timespec t_ = {0};
         milli_to_timespec(&t_, t);
@@ -294,7 +292,7 @@ void scheduleHackTimer(discovery_framework_state* state, bool now) {
 
         unsigned long jitter = (unsigned long)(randomProb()*state->args->max_jitter_ms);
 
-        unsigned long t = now ? jitter : DA_getHackPeriod(state->args->algorithm)*1000 - jitter - state->args->period_margin_ms;
+        unsigned long t = now ? jitter : DA_getHackTransmitPeriod(state->args->algorithm, &state->current_time)*1000 - jitter - state->args->period_margin_ms;
 
         struct timespec t_ = {0};
         milli_to_timespec(&t_, t);
@@ -351,15 +349,13 @@ void DF_uponHelloTimer(discovery_framework_state* state, bool periodic, bool sen
 
             bool sent = false;
             //  if( periodic ) {
-    sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
+                sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
             /*
-} else {
+            } else {
                 void* aux_info = &state->neighbor_change_summary;
                 sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, NEIGHBOR_CHANGE_MSG, aux_info);
             }
-*/
-
-
+            */
 
             if( sent ) {
                 if(piggyback_hack) {
@@ -562,7 +558,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
             // NE_setRxLinkQuality(neigh, new_rx_lq);
 
             double lq_delta = fabs(old_rx_lq - new_rx_lq);
-            if( lq_delta >= state->args->lq_epsilon ) {
+            if( lq_delta >= state->args->lq_epsilon || new_rx_lq == 1.0 || new_rx_lq == 0.0 ) {
                 NE_setRxLinkQuality(neigh, new_rx_lq);
                 summary->updated_quality = true;
 
@@ -1276,7 +1272,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     // NE_setRxLinkQuality(neigh, new_rx_lq);
 
     double lq_delta = fabs(old_rx_lq - new_rx_lq);
-    if( lq_delta >= state->args->lq_epsilon ) {
+    if( lq_delta >= state->args->lq_epsilon || new_rx_lq == 1.0 || new_rx_lq == 0.0 ) {
         NE_setRxLinkQuality(neigh, new_rx_lq);
         summary->updated_quality = true;
 
@@ -1287,7 +1283,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
     // Update traffic
     double traffic_delta = fabs(NE_getOutTraffic(neigh) - hello->traffic);
-    if( traffic_delta >= state->args->traffic_epsilon ) {
+    if( traffic_delta >= state->args->traffic_epsilon || hello->traffic == 0.0 ) {
         NE_setOutTraffic(neigh, hello->traffic);
         summary->updated_traffic = true;
 
@@ -1434,8 +1430,8 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         // NE_setTxLinkQuality(neigh, new_tx_lq);
 
                         double lq_delta = fabs(old_tx_lq - new_tx_lq);
-                        if( lq_delta >= state->args->lq_epsilon ) {
-                            printf("\nupdated_quality: old_tx_lq %f new_tx_lq %f lq_delta %f\n", old_tx_lq,  new_tx_lq, lq_delta);
+                        if( lq_delta >= state->args->lq_epsilon || new_tx_lq == 1.0 || new_tx_lq == 0.0 ) {
+                            //printf("\nupdated_quality: old_tx_lq %f new_tx_lq %f lq_delta %f\n", old_tx_lq,  new_tx_lq, lq_delta);
 
                             NE_setTxLinkQuality(neigh, new_tx_lq);
                             summary->updated_quality = true;
@@ -1477,8 +1473,8 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                         double rx_lq_delta = fabs(nn->rx_lq - hack->rx_lq);
                         double tx_lq_delta = fabs(nn->tx_lq - hack->tx_lq);
-                        if( rx_lq_delta >= state->args->lq_epsilon || tx_lq_delta >= state->args->lq_epsilon ) {
-                            printf("\nupdated_2hop_quality: old_rx_lq %f new_rx_lq %f rx_lq_delta %f old_tx_lq %f new_tx_lq %f tx_lq_delta %f\n", nn->rx_lq, hack->rx_lq, rx_lq_delta, nn->tx_lq, hack->tx_lq, tx_lq_delta);
+                        if( rx_lq_delta >= state->args->lq_epsilon || tx_lq_delta >= state->args->lq_epsilon || hack->rx_lq == 1.0 || hack->rx_lq == 0.0 || hack->tx_lq == 1.0 || hack->tx_lq == 0.0) {
+                            // printf("\nupdated_2hop_quality: old_rx_lq %f new_rx_lq %f rx_lq_delta %f old_tx_lq %f new_tx_lq %f tx_lq_delta %f\n", nn->rx_lq, hack->rx_lq, rx_lq_delta, nn->tx_lq, hack->tx_lq, tx_lq_delta);
 
                             nn->rx_lq = hack->rx_lq;
                             nn->tx_lq = hack->tx_lq;
@@ -1492,8 +1488,8 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         // nn->tx_lq = hack->tx_lq;
 
                         double traffic_delta = fabs(nn->traffic - hack->traffic);
-                        if( traffic_delta >= state->args->traffic_epsilon ) {
-                            printf("\nupdated_2hop_traffic: old_traffic %f new_traffic %f traffic_delta %f\n", nn->traffic, hack->traffic, traffic_delta);
+                        if( traffic_delta >= state->args->traffic_epsilon || hack->traffic == 0.0) {
+                            // printf("\nupdated_2hop_traffic: old_traffic %f new_traffic %f traffic_delta %f\n", nn->traffic, hack->traffic, traffic_delta);
 
                             nn->traffic = hack->traffic;
                             summary->updated_2hop_traffic = true;
@@ -1583,7 +1579,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
     if( summary->updated_neighbor || summary->updated_2hop_neighbor || summary->added_2hop_neighbor || summary->lost_2hop_neighbor ) {
         DF_notifyUpdateNeighbor(state, neigh);
 
-        printf("\n\nHACK %d %d %d %d %d %d %d %d %d %d\n", summary->became_bi, summary->lost_bi, summary->updated_quality, summary->updated_2hop_neighbor, summary->added_2hop_neighbor, summary->lost_2hop_neighbor, summary->became_bi_2hop, summary->lost_bi_2hop, summary->updated_2hop_quality, summary->updated_2hop_traffic);
+        //printf("\n\nHACK %d %d %d %d %d %d %d %d %d %d\n", summary->became_bi, summary->lost_bi, summary->updated_quality, summary->updated_2hop_neighbor, summary->added_2hop_neighbor, summary->lost_2hop_neighbor, summary->became_bi_2hop, summary->lost_bi_2hop, summary->updated_2hop_quality, summary->updated_2hop_traffic);
 
         if( summary->became_bi || summary->lost_bi || summary->updated_quality_threshold || (summary->became_bi_2hop || summary->lost_bi_2hop || summary->updated_2hop_quality_threshold || summary->updated_2hop_traffic_threshold) || summary->added_2hop_neighbor || summary->lost_2hop_neighbor ) {
             scheduleNeighborChange(state, NULL, summary, NULL, false);

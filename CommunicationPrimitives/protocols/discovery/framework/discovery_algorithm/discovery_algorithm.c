@@ -138,6 +138,7 @@ HelloSchedulerType DA_getHackType(DiscoveryAlgorithm* alg) {
     return HACK_getType(DP_getHackScheduler(alg->d_pattern));
 }
 
+/*
 byte DA_getHelloPeriod(DiscoveryAlgorithm* alg) {
     assert(alg);
     return DP_getHelloPeriod(alg->d_period);
@@ -156,6 +157,37 @@ byte DA_computeNextHelloPeriod(DiscoveryAlgorithm* alg, unsigned long elapsed_ti
 byte DA_computeNextHackPeriod(DiscoveryAlgorithm* alg, unsigned long elapsed_time_ms, NeighborsTable* neighbors) {
     assert(alg);
     return DP_computeNextHackPeriod(alg->d_period, elapsed_time_ms, neighbors);
+}
+*/
+
+byte DA_getHelloAnnouncePeriod(DiscoveryAlgorithm* alg) {
+    assert(alg);
+    return DP_getHelloAnnouncePeriod(alg->d_period);
+}
+
+byte DA_getHelloTransmitPeriod(DiscoveryAlgorithm* alg, struct timespec* current_time) {
+    assert(alg);
+    return DP_getHelloTransmitPeriod(alg->d_period, current_time);
+}
+
+byte DA_getHackAnnouncePeriod(DiscoveryAlgorithm* alg) {
+    assert(alg);
+    return DP_getHackAnnouncePeriod(alg->d_period);
+}
+
+byte DA_getHackTransmitPeriod(DiscoveryAlgorithm* alg, struct timespec* current_time) {
+    assert(alg);
+    return DP_getHackTransmitPeriod(alg->d_period, current_time);
+}
+
+byte DA_computeNextHelloPeriod(DiscoveryAlgorithm* alg, unsigned long elapsed_time_ms, unsigned int transition_period_n, NeighborsTable* neighbors, struct timespec* current_time) {
+    assert(alg);
+    return DP_computeNextHackPeriod(alg->d_period, elapsed_time_ms, transition_period_n, neighbors, current_time);
+}
+
+byte DA_computeNextHackPeriod(DiscoveryAlgorithm* alg, unsigned long elapsed_time_ms, unsigned int transition_period_n, NeighborsTable* neighbors, struct timespec* current_time) {
+    assert(alg);
+    return DP_computeNextHackPeriod(alg->d_period, elapsed_time_ms, transition_period_n, neighbors, current_time);
 }
 
 double DA_computeLinkQuality(DiscoveryAlgorithm* alg, void* lq_attrs, double previous_link_quality, unsigned int received, unsigned int lost, bool init, struct timespec* current_time) {

@@ -85,12 +85,14 @@ f_args.neigh_validity_s = 15;
         EMALinkQuality(0.5, 0.7, 5, 5),                    // LinkQuality
         OLSRDiscoveryMessage()                              // Discovery Message
     );
+    f_args->hello_misses = 3;
+    f_args->hack_misses = 2;
+
+    f_args->announce_transition_period_n = 3;
+
     f_args->neigh_hold_time_s = 15;
     f_args->max_jitter_ms = 500;
     f_args->period_margin_ms = 700;
-
-    f_args->hello_misses = 3;
-    f_args->hack_misses = 2;
 
     f_args->ignore_zero_seq = true;
 

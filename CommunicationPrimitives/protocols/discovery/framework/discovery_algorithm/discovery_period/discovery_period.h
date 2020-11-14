@@ -20,13 +20,21 @@ typedef struct _DiscoveryPeriod DiscoveryPeriod;
 
 void destroyDiscoveryPeriod(DiscoveryPeriod* discovery_period);
 
-byte DP_getHelloPeriod(DiscoveryPeriod* discovery_period);
+// byte DP_getHelloPeriod(DiscoveryPeriod* discovery_period);
 
-byte DP_getHackPeriod(DiscoveryPeriod* discovery_period);
+// byte DP_getHackPeriod(DiscoveryPeriod* discovery_period);
 
-byte DP_computeNextHelloPeriod(DiscoveryPeriod* discovery_period, unsigned long elapsed_time_ms, NeighborsTable* neighbors);
+byte DP_getHelloAnnouncePeriod(DiscoveryPeriod* discovery_period);
 
-byte DP_computeNextHackPeriod(DiscoveryPeriod* discovery_period, unsigned long elapsed_time_ms, NeighborsTable* neighbors);
+byte DP_getHelloTransmitPeriod(DiscoveryPeriod* discovery_period, struct timespec* current_time);
+
+byte DP_getHackAnnouncePeriod(DiscoveryPeriod* discovery_period);
+
+byte DP_getHackTransmitPeriod(DiscoveryPeriod* discovery_period, struct timespec* current_time);
+
+byte DP_computeNextHelloPeriod(DiscoveryPeriod* discovery_period, unsigned long elapsed_time_ms, unsigned int transition_period_n, NeighborsTable* neighbors, struct timespec* current_time);
+
+byte DP_computeNextHackPeriod(DiscoveryPeriod* discovery_period, unsigned long elapsed_time_ms, unsigned int transition_period_n, NeighborsTable* neighbors, struct timespec* current_time);
 
 DiscoveryPeriod* StaticDiscoveryPeriod(byte initial_hello_period_s, byte initial_hack_period_s);
 

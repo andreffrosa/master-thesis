@@ -53,6 +53,7 @@ typedef struct _discovery_framework_args {
     unsigned long neigh_hold_time_s;
     unsigned long max_jitter_ms;
     unsigned long period_margin_ms;
+    unsigned int announce_transition_period_n;
 
     bool ignore_zero_seq;
 
