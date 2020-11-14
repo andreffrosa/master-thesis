@@ -1807,7 +1807,7 @@ void DF_printNeighbors(discovery_framework_state* state) {
     NT_print(state->neighbors, &str, &state->current_time, state->args->window_type, state->myID, &state->myAddr, state->my_seq);
 
     char str2[strlen(str)+1];
-    sprintf(str2, "\n%s\n", str);
+    sprintf(str2, "\n%s", str);
 
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORS TABLE", str2);
 

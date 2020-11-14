@@ -98,8 +98,8 @@ f_args.neigh_validity_s = 15;
 
     f_args->lq_epsilon = 0.05;
     f_args->lq_threshold = 0.3;
-    f_args->traffic_epsilon = 0.25;
-    f_args->traffic_threshold = 1.0;
+    f_args->traffic_epsilon = 0.5;
+    f_args->traffic_threshold = 5.0;
 
     f_args->n_buckets = 5;
     f_args->bucket_duration_s = 10;
