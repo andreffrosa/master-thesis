@@ -138,9 +138,9 @@ static bool processTimer(discovery_framework_state* f_state, YggTimer* timer) {
         DF_uponNeighborTimer(f_state, neigh);
         return true;
     }
-    // Windows Timer
-    else if( timer->timer_type == WINDOWS_TIMER ) {
-        DF_uponWindowsTimer(f_state);
+    // Discovery Environment Timer
+    else if( timer->timer_type == DISCOVERY_ENVIRONMENT_TIMER ) {
+        DF_uponDiscoveryEnvironmentTimer(f_state);
         return true;
     }
 

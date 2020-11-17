@@ -1,5 +1,5 @@
 /*********************************************************
- * This code was written in the context of the Lightkone
+ * This code was written in the context of the Ligneighborskone
  * European project.
  * Code is of the authorship of NOVA (NOVA LINCS @ DI FCT
  * NOVA University of Lisbon)
@@ -22,21 +22,17 @@
 #include <assert.h>
 
 typedef struct _NeighborsTable {
-    hash_table* ht;
-
-    Window* out_traffic;
-    Window* instability;
-    // TODO: colocar informação sobre o neigh atual? out_traffic, ect?
+    hash_table* neighbors;
 } NeighborsTable;
 
 typedef struct _NeighborEntry {
     // Ids
     uuid_t id;
     WLANAddr mac_addr;
-    //unsigned short version;
     unsigned short seq;
     unsigned short hseq;
 
+    // Periods
     unsigned long hello_period_s;
     unsigned long hack_period_s;
 
@@ -75,15 +71,17 @@ typedef struct _NeighborEntry {
 } NeighborEntry;
 
 
-NeighborsTable* newNeighborsTable(unsigned int n_bucket, unsigned int bucket_duration_s) {
-    NeighborsTable* neighbors = malloc(sizeof(NeighborsTable));
+NeighborsTable* newNeighborsTable(/*unsigned int n_bucket, unsigned int bucket_duration_s*/) {
+    NeighborsTable* nt = malloc(sizeof(NeighborsTable));
 
-    neighbors->ht = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
+    nt->neighbors = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
-    neighbors->out_traffic = newWindow(n_bucket, bucket_duration_s);
-    neighbors->instability = newWindow(n_bucket, bucket_duration_s);
+    /*
+    nt->out_traffic = newWindow(n_bucket, bucket_duration_s);
+    nt->instability = newWindow(n_bucket, bucket_duration_s);
+    */
 
-    return neighbors;
+    return nt;
 }
 
 static void deleteNeighborEntry_custom(hash_table_item* it, void* args) {
@@ -104,47 +102,50 @@ static void deleteNeighborEntry_custom(hash_table_item* it, void* args) {
     }
 }
 
-void destroyNeighborsTable(NeighborsTable* neighbors, void (*lq_destroy)(void*, void*), void (*msg_destroy)(void*, void*), void* lqm, void* d_message) {
-    if(neighbors) {
+void destroyNeighborsTable(NeighborsTable* nt, void (*lq_destroy)(void*, void*), void (*msg_destroy)(void*, void*), void* lqm, void* d_message) {
+    if(nt) {
+        hash_table_delete_custom(nt->neighbors, &deleteNeighborEntry_custom, (void*[]){lq_destroy, msg_destroy, lqm, d_message});
 
-        hash_table_delete_custom(neighbors->ht, &deleteNeighborEntry_custom, (void*[]){lq_destroy, msg_destroy, lqm, d_message});
+        /*
+        destroyWindow(nt->out_traffic);
+        destroyWindow(nt->instability);
+        */
 
-        destroyWindow(neighbors->out_traffic);
-        destroyWindow(neighbors->instability);
-
-        free(neighbors);
+        free(nt);
     }
 }
 
-Window* NT_getOutTraffic(NeighborsTable* neighbors) {
-    assert(neighbors);
-    return neighbors->out_traffic;
+/*
+Window* NT_getOutTraffic(NeighborsTable* nt) {
+    assert(nt);
+    return nt->out_traffic;
 }
 
-Window* NT_getInstability(NeighborsTable* neighbors) {
-    assert(neighbors);
-    return neighbors->instability;
+Window* NT_getInstability(NeighborsTable* nt) {
+    assert(nt);
+    return nt->instability;
+}
+*/
+
+unsigned int NT_getSize(NeighborsTable* nt) {
+    return nt->neighbors->n_items;
 }
 
-unsigned int NT_getSize(NeighborsTable* neighbors) {
-    return neighbors->ht->n_items;
-}
-
-void NT_addNeighbor(NeighborsTable* neighbors, NeighborEntry* neigh) {
-    assert(neighbors);
-    void* old = hash_table_insert(neighbors->ht, neigh->id, neigh);
+void NT_addNeighbor(NeighborsTable* nt, NeighborEntry* neigh) {
+    assert(nt);
+    void* old = hash_table_insert(nt->neighbors, neigh->id, neigh);
     assert(old == NULL);
 }
 
-NeighborEntry* NT_getNeighbor(NeighborsTable* neighbors, unsigned char* neigh_id) {
-    assert(neighbors);
-    return (NeighborEntry*)hash_table_find_value(neighbors->ht, neigh_id);
+NeighborEntry* NT_getNeighbor(NeighborsTable* nt, unsigned char* neigh_id) {
+    assert(nt);
+    return (NeighborEntry*)hash_table_find_value(nt->neighbors, neigh_id);
 }
 
-NeighborEntry* NT_removeNeighbor(NeighborsTable* neighbors, unsigned char* neigh_id) {
-    assert(neighbors);
+NeighborEntry* NT_removeNeighbor(NeighborsTable* nt, unsigned char* neigh_id) {
+    assert(nt);
 
-    hash_table_item* it = hash_table_remove(neighbors->ht, neigh_id);
+    hash_table_item* it = hash_table_remove(nt->neighbors, neigh_id);
     if(it) {
         NeighborEntry* entry = (NeighborEntry*)it->value;
         free(it);
@@ -481,23 +482,23 @@ void NE_updateNeighborVersion(NeighborEntry* neigh, unsigned short version) {
     double_list_item* next_it;
 } NeighsIterator;
 
-NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator) {
+NeighborEntry* NT_nextNeighbor(NeighborsTable* nt, void** iterator) {
     NeighsIterator** it_ = (NeighsIterator**)iterator;
     if(*it_ == NULL) {
         *it_ = malloc(sizeof(NeighsIterator));
         (*it_)->index = 0;
-        (*it_)->next_it = neighbors->ht->array_size > 0 ? neighbors->ht->array[0]->head : NULL;
+        (*it_)->next_it = nt->nt->array_size > 0 ? nt->nt->array[0]->head : NULL;
     }
 
     NeighsIterator* it = *it_;
 
-    for(int i = it->index; i < neighbors->ht->array_size; i++) {
-        double_list_item* dli = it->index == i ? it->next_it : neighbors->ht->array[i]->head;
+    for(int i = it->index; i < nt->nt->array_size; i++) {
+        double_list_item* dli = it->index == i ? it->next_it : nt->nt->array[i]->head;
         for(; dli; dli = dli->next) {
             it->index = i;
             it->next_it = dli->next;
 
-            //printf("iterator [%d/%d] %d\n", i, neighbors->ht->array_size, neighbors->ht->array[i]->size);
+            //printf("iterator [%d/%d] %d\n", i, nt->nt->array_size, nt->nt->array[i]->size);
 
             return (NeighborEntry*)(((hash_table_item*)dli->data)->value);
         }
@@ -508,8 +509,8 @@ NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator) {
     return NULL;
 }*/
 
-NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator) {
-    hash_table_item* item = hash_table_iterator_next(neighbors->ht, iterator);
+NeighborEntry* NT_nextNeighbor(NeighborsTable* nt, void** iterator) {
+    hash_table_item* item = hash_table_iterator_next(nt->neighbors, iterator);
     if(item) {
         return (NeighborEntry*)(item->value);
     } else {
@@ -629,7 +630,7 @@ bool removeNeighborNeigh(NeighborEntry* neigh, unsigned char* nn_id) {
 */
 
 
-char* NT_print(NeighborsTable* neighbors, char** str, struct timespec* current_time, char* window_type, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq) {
+char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq) {
     char* header = " # |                 ID                   |"
                    "        MAC        |  SEQ  | T |"
                    "   PERIODS   |"
@@ -645,23 +646,24 @@ char line_str[line_size];
 
     unsigned int nneighs = 0;
     void* iterator = NULL;
-    for(NeighborEntry* current_neigh = NT_nextNeighbor(neighbors, &iterator); current_neigh; current_neigh = NT_nextNeighbor(neighbors, &iterator)) {
+    for(NeighborEntry* current_neigh = NT_nextNeighbor(nt, &iterator); current_neigh; current_neigh = NT_nextNeighbor(nt, &iterator)) {
         nneighs = lMax(nneighs, NE_getTwoHopNeighbors(current_neigh)->n_items);
     }
 
-    unsigned long buffer_size = NT_getSize(neighbors)*(line_size*(nneighs+1)) + 3*line_size;
+    unsigned long buffer_size = NT_getSize(nt)*(line_size*(nneighs+1)) + 3*line_size;
 
     char* buffer = malloc(buffer_size);
     char* ptr = buffer;
 
     // Print myself
-    char id_str[UUID_STR_LEN+1];
+    /*char id_str[UUID_STR_LEN+1];
     uuid_unparse(myID, id_str);
     id_str[UUID_STR_LEN] = '\0';
 
     char addr_str[20];
     wlan2asc(myMAC, addr_str);
     align_str(addr_str, addr_str, 17, "CL");
+
 
     double out_traffic = computeWindow(NT_getOutTraffic(neighbors), current_time, window_type, "sum", true);
 
@@ -675,6 +677,7 @@ char line_str[line_size];
 
     sprintf(ptr, "%s    %s    %hu    out: %0.3f msgs/s in: %0.3f msgs/s    %0.3f churn    %u neighbors \n", id_str, addr_str, my_seq, out_traffic, in_traffic, instability, NT_getSize(neighbors));
     ptr += strlen(ptr);
+*/
 
     // Print Column Headers
     sprintf(ptr, "%s", header);
@@ -689,7 +692,7 @@ sprintf(ptr, "%s\n", line_str);
     // Print each neighbor
     unsigned int counter = 0;
     iterator = NULL;
-    for(NeighborEntry* current_neigh = NT_nextNeighbor(neighbors, &iterator); current_neigh; current_neigh = NT_nextNeighbor(neighbors, &iterator)) {
+    for(NeighborEntry* current_neigh = NT_nextNeighbor(nt, &iterator); current_neigh; current_neigh = NT_nextNeighbor(nt, &iterator)) {
 
         char id_str[UUID_STR_LEN+1];
         uuid_unparse(NE_getNeighborID(current_neigh), id_str);

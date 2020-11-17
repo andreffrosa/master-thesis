@@ -26,6 +26,7 @@
 #include "data_structures/double_list.h"
 
 #include "neighbors_table.h"
+#include "discovery_environment.h"
 
 #include "framework.h"
 
@@ -38,6 +39,7 @@ typedef struct discovery_framework_state_ {
     WLANAddr myAddr;                            // Current node address
     unsigned short my_seq;                      //
     NeighborsTable* neighbors;  	            // Table of neighbors
+    DiscoveryEnvironment* environment;          //
 
     // HELLO Timer
     bool hello_timer_active;                    //
@@ -58,7 +60,8 @@ typedef struct discovery_framework_state_ {
     //struct timespec next_neighbor_change_time;  //
     NeighborChangeSummary neighbor_change_summary;
 
-    uuid_t windows_timer_id;                    //
+    uuid_t discovery_environment_timer_id;                    //
+
     discovery_stats stats;       	            // Framework's stats
 
     /*
@@ -98,9 +101,9 @@ void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_pa
 
 void DF_uponNeighborChangesTimer(discovery_framework_state* state);
 
-void DF_uponWindowsTimer(discovery_framework_state* state);
-
 bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh);
+
+void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state);
 
 void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh);
 
@@ -144,6 +147,8 @@ void DF_createHack(discovery_framework_state* state, HackMessage* hack, Neighbor
 void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, byte* n_hacks, NeighborsTable* neighbors);
 
 bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info);
+
+void DF_notifyDiscoveryEnvironment(discovery_framework_state* state);
 
 void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh);
 

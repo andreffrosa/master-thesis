@@ -51,10 +51,9 @@ char exp_time_str[50], moment_str[50], start_time_str[50];
     sprintf(moment_str, "{%lu, %lu}", moment->tv_sec, moment->tv_nsec);
     sprintf(start_time_str, "{%lu, %lu}", start_time.tv_sec, start_time.tv_nsec);
     printf("\n\nmisses=%u period_ms=%lu exp_time=%s moment=%s start_time=%s remaining=%lu missed=%u\n\n", misses, period_ms, exp_time_str, moment_str, start_time_str, remaining, missed);
-
 */
 
-    assert(missed <= misses );
+    assert(missed <= misses);
 
     return missed;
 }
@@ -84,7 +83,9 @@ void DF_init(discovery_framework_state* state) {
     memcpy(state->myAddr.data, getMyWLANAddr()->data, WLAN_ADDR_LEN);
     state->my_seq = 0;
 
-    state->neighbors = newNeighborsTable(state->args->n_buckets, state->args->bucket_duration_s);
+    state->neighbors = newNeighborsTable();
+
+    state->environment = newDiscoveryEnvironment(state->args->traffic_n_bucket, state->args->traffic_bucket_duration_s, state->args->churn_n_bucket, state->args->churn_bucket_duration_s);
 
     // Hello Timer
     genUUID(state->hello_timer_id);
@@ -109,14 +110,13 @@ void DF_init(discovery_framework_state* state) {
     // Stats
 	memset(&state->stats, 0, sizeof(discovery_stats));
 
-    // Windows Timer
-    genUUID(state->windows_timer_id);
-    if(state->args->window_notify_period_s > 0) {
+    // Discovery Environment Timer
+    genUUID(state->discovery_environment_timer_id);
+    if(state->args->discov_env_refresh_period_s > 0) {
         struct timespec t_ = {0};
-        milli_to_timespec(&t_, state->args->window_notify_period_s*1000);
-        SetPeriodicTimer(&t_, state->windows_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, WINDOWS_TIMER);
+        milli_to_timespec(&t_, state->args->discov_env_refresh_period_s*1000);
+        SetPeriodicTimer(&t_, state->discovery_environment_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_TIMER);
     }
-
 }
 
 void DF_createHello(discovery_framework_state* state, HelloMessage* hello, bool request_replies) {
@@ -131,12 +131,15 @@ void DF_createHello(discovery_framework_state* state, HelloMessage* hello, bool 
     unsigned long elapsed_time_ms = timespec_to_milli(&aux);
     DA_computeNextHelloPeriod(state->args->algorithm, elapsed_time_ms, state->args->announce_transition_period_n, state->neighbors, &state->current_time);
 
+    DF_uponDiscoveryEnvironmentTimer(state); // Update and notify if necessary
+    double out_traffic = DE_getOutTraffic(state->environment);
+
     // Create Hello
     initHelloMessage(hello,
         state->myID,
         state->my_seq,
         DA_getHelloAnnouncePeriod(state->args->algorithm),
-        computeWindow(NT_getOutTraffic(state->neighbors), &state->current_time, state->args->window_type, "sum", true),
+        out_traffic,
         request_replies
     );
 
@@ -740,6 +743,58 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
     return removed;
 }
 
+void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state) {
+
+    bool changed = false;
+
+    unsigned int n_neighbors = 0;
+    double neighbors_density = 0.0;
+    double in_traffic = 0.0;
+    void* iterator = NULL;
+    for(NeighborEntry* current_neigh = NT_nextNeighbor(state->neighbors, &iterator); current_neigh; current_neigh = NT_nextNeighbor(state->neighbors, &iterator)) {
+        if( NE_getNeighborType(current_neigh, &state->current_time) != LOST_NEIGH ) {
+            in_traffic += NE_getOutTraffic(current_neigh);
+            n_neighbors++;
+            neighbors_density += NE_getTwoHopNeighbors(current_neigh)->n_items;
+        }
+    }
+
+    if( n_neighbors > 0 ) {
+        neighbors_density += n_neighbors;
+        neighbors_density /= n_neighbors;
+    }
+
+    changed |= DE_setInTraffic(state->environment, in_traffic, state->args->traffic_epsilon);
+
+    changed |= DE_computeOutTraffic(state->environment, &state->current_time, state->args->traffic_window_type, state->args->traffic_epsilon);
+
+    changed |= DE_computeNewNeighborsFlux(state->environment, &state->current_time, state->args->churn_window_type, state->args->churn_epsilon);
+
+    changed |= DE_computeLostNeighborsFlux(state->environment, &state->current_time, state->args->churn_window_type, state->args->churn_epsilon);
+
+    changed |= DE_setNNeighbors(state->environment, n_neighbors);
+
+    changed |= DE_setNeigbhorsDensity(state->environment, neighbors_density, state->args->neigh_density_epsilon);
+
+    if( changed ) {
+        // Log
+        #ifdef DEBUG_DISCOVERY
+        char* str = NULL;
+
+        NE_print(state->environment, &str);
+
+        char str2[strlen(str)+1];
+        sprintf(str2, "\n%s", str);
+
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "DISCOVERY ENVIRONMENT", str2);
+
+        free(str);
+        #endif
+
+        DF_notifyDiscoveryEnvironment(state);
+    }
+}
+
 void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh) {
     assert(neigh);
 
@@ -1304,7 +1359,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
         scheduleNeighborChange(state, summary, NULL, NULL, false);
 
-        insertIntoWindow(NT_getInstability(state->neighbors), &state->current_time, 1.0);
+        DE_registerNewNeighbor(state->environment, &state->current_time);
     } else if( summary->updated_quality || summary->updated_traffic || summary->rebooted ) {
         summary->updated_neighbor = true;
         DF_notifyUpdateNeighbor(state, neigh);
@@ -1632,7 +1687,7 @@ bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMe
             state->stats.total_hacks += n_hacks;
         }
 
-        insertIntoWindow(NT_getOutTraffic(state->neighbors), &state->current_time, 1.0);
+        DE_registerOutTraffic(state->environment, &state->current_time);
     } else {
         buffer_size = 0;
 
@@ -1751,6 +1806,22 @@ void changeAlgorithm(discovery_framework_state* state, DiscoveryAlgorithm* new_a
 }
 */
 
+void DF_printNeighbors(discovery_framework_state* state) {
+    char* str1 = NULL, *str2 = NULL;
+
+    NE_print(state->environment, &str1);
+
+    NT_print(state->neighbors, &str2, &state->current_time, state->myID, &state->myAddr, state->my_seq);
+
+    char str3[strlen(str1)+strlen(str2)+1];
+    sprintf(str3, "\n%s\n%s", str1, str2);
+
+    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORS TABLE", str3);
+
+    free(str1);
+    free(str2);
+}
+
 void DF_uponStatsRequest(discovery_framework_state* state, YggRequest* req) {
     unsigned short dest = req->proto_origin;
 	YggRequest_init(req, DISCOVERY_FRAMEWORK_PROTO_ID, dest, REPLY, REQ_DISCOVERY_FRAMEWORK_STATS);
@@ -1762,6 +1833,7 @@ void DF_uponStatsRequest(discovery_framework_state* state, YggRequest* req) {
 	YggRequest_freePayload(req);
 }
 
+/*
 void DF_uponWindowsTimer(discovery_framework_state* state) {
 
     YggEvent* ev = malloc(sizeof(YggEvent));
@@ -1801,17 +1873,34 @@ void DF_uponWindowsTimer(discovery_framework_state* state) {
     YggEvent_freePayload(ev);
     free(ev);
 }
+*/
 
-void DF_printNeighbors(discovery_framework_state* state) {
-    char* str = NULL;
-    NT_print(state->neighbors, &str, &state->current_time, state->args->window_type, state->myID, &state->myAddr, state->my_seq);
 
-    char str2[strlen(str)+1];
-    sprintf(str2, "\n%s", str);
+void DF_notifyDiscoveryEnvironment(discovery_framework_state* state) {
+    YggEvent* ev = malloc(sizeof(YggEvent));
+    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
 
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORS TABLE", str2);
+    double in_traffic = DE_getInTraffic(state->environment);
+    YggEvent_addPayload(ev, &in_traffic, sizeof(in_traffic));
 
-    free(str);
+    double out_traffic = DE_getOutTraffic(state->environment);
+    YggEvent_addPayload(ev, &out_traffic, sizeof(out_traffic));
+
+    double new_neighbors_flux = DE_getNewNeighborsFlux(state->environment);
+    YggEvent_addPayload(ev, &new_neighbors_flux, sizeof(new_neighbors_flux));
+
+    double lost_neighbors_flux = DE_getLostNeighborsFlux(state->environment);
+    YggEvent_addPayload(ev, &lost_neighbors_flux, sizeof(lost_neighbors_flux));
+
+    unsigned int n_neighbors = DE_getNNeighbors(state->environment);
+    YggEvent_addPayload(ev, &n_neighbors, sizeof(n_neighbors));
+
+    double neighbors_density = DE_getNeigbhorsDensity(state->environment);
+    YggEvent_addPayload(ev, &neighbors_density, sizeof(neighbors_density));
+
+    deliverEvent(ev);
+    YggEvent_freePayload(ev);
+    free(ev);
 }
 
 void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {

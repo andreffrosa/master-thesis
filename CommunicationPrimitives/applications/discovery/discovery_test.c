@@ -101,16 +101,21 @@ f_args.neigh_validity_s = 15;
     f_args->traffic_epsilon = 0.5;
     f_args->traffic_threshold = 5.0;
 
-    f_args->n_buckets = 5;
-    f_args->bucket_duration_s = 10;
-    f_args->window_notify_period_s = 0;
-    f_args->window_type = "ema 0.65";
+    f_args->discov_env_refresh_period_s = 5;
+    f_args->traffic_n_bucket = 5;
+    f_args->traffic_bucket_duration_s = 10;
+    f_args->churn_n_bucket = 5;
+    f_args->churn_bucket_duration_s = 1;
+    f_args->traffic_window_type = "ema 0.65";
+    f_args->churn_window_type = "ema 0.65";
+    f_args->churn_epsilon = 0.01;
+    f_args->neigh_density_epsilon = 0.01;
 
 	registerProtocol(DISCOVERY_FRAMEWORK_PROTO_ID, &discovery_framework_init, (void*) f_args);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_UPDATE);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_LOST);
-	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, WINDOWS_EVENT);
+	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
 
     bool use_overlay = argc == 4;
@@ -207,46 +212,38 @@ static void processNotification(YggEvent* notification) {
     id[UUID_STR_LEN] = '\0';
 	unsigned char* ptr = notification->payload;
 
-    if(notification->notification_id != WINDOWS_EVENT && notification->notification_id != WINDOWS_EVENT) {
-		uuid_unparse(ptr, id);
-	}
-
 	if(notification->notification_id == NEIGHBOR_FOUND) {
+        uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR FOUND", id);
 
         /*
-    ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN + sizeof(DiscoveryNeighborType);
+        ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN + sizeof(DiscoveryNeighborType);
         unsigned char n_neighs = 0;
         memcpy(&n_neighs, ptr, sizeof(n_neighs));
         printf("neighbors %d\n", n_neighs);
-*/
-
-
-
+        */
 	} else if(notification->notification_id == NEIGHBOR_UPDATE) {
+        uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR UPDATE", id);
 
         /*
-ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN + sizeof(DiscoveryNeighborType);
+        ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN + sizeof(DiscoveryNeighborType);
         unsigned char n_neighs = 0;
         memcpy(&n_neighs, ptr, sizeof(n_neighs));
         printf("neighbors %d\n", n_neighs);
-*/
-
-
-
+        */
 	} else if(notification->notification_id == NEIGHBOR_LOST) {
+        uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR LOST", id);
-	} else if(notification->notification_id == WINDOWS_EVENT) {
+	} else if(notification->notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
 		/*ygg_log("DISCOVERY TEST APP", "NEIGHBORHOOD UPDATE", id);
 
         char* str;
     	printAnnounce(notification->payload, notification->length, -1, &str);
     	printf("%s\n%s", "Serialized Announce", str);
     	free(str);*/
-        ygg_log(APP_NAME, "WINDOWS", "");
+        ygg_log(APP_NAME, "DISCOVERY ENVIRONMENT UPDATE", "");
 	}
-
     else if(notification->notification_id == GENERIC_DISCOVERY_EVENT) {
 
         unsigned int str_len = 0;

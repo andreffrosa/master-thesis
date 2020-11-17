@@ -39,13 +39,15 @@ typedef struct _TwoHopNeighbor {
     struct timespec expiration;
 } TwoHopNeighbor;
 
-NeighborsTable* newNeighborsTable(unsigned int n_bucket, unsigned int bucket_duration_s);
+NeighborsTable* newNeighborsTable();
 
 void destroyNeighborsTable(NeighborsTable* neighbors, void (*lq_destroy)(void*, void*), void (*msg_destroy)(void*, void*), void* lqm, void* d_message);
 
+/*
 Window* NT_getOutTraffic(NeighborsTable* neighbors);
 
 Window* NT_getInstability(NeighborsTable* neighbors);
+*/
 
 unsigned int NT_getSize(NeighborsTable* neighbors);
 
@@ -137,6 +139,6 @@ TwoHopNeighbor* NE_removeTwoHopNeighbor(NeighborEntry* neigh, unsigned char* nn_
 
 TwoHopNeighbor* NE_addTwoHopNeighbor(NeighborEntry* neigh, TwoHopNeighbor* nn);
 
-char* NT_print(NeighborsTable* neighbors, char** str, struct timespec* current_time, char* window_type, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq);
+char* NT_print(NeighborsTable* neighbors, char** str, struct timespec* current_time, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq);
 
 #endif /* _NEIGHBORS_TABLE_H_ */
