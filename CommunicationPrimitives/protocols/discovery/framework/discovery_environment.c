@@ -39,6 +39,13 @@ DiscoveryEnvironment* newDiscoveryEnvironment(unsigned int traffic_n_bucket, uns
     de->new_neighbors_flux_window = newWindow(churn_n_bucket, churn_bucket_duration_s);
     de->lost_neighbors_flux_window = newWindow(churn_n_bucket, churn_bucket_duration_s);
 
+    de->old_in_traffic = 0.0;
+    de->old_out_traffic = 0.0;
+    de->old_new_neighbors_flux = 0.0;
+    de->old_lost_neighbors_flux = 0.0;
+    de->old_n_neighbors = 0;
+    de->old_neighbors_density = 0.0;
+
     return de;
 }
 
@@ -59,7 +66,8 @@ bool DE_computeOutTraffic(DiscoveryEnvironment* de, struct timespec* current_tim
     assert(de);
     double new_out_traffic = computeWindow(de->out_traffic_window, current_time, window_type, "sum", true);
 
-    double delta = abs(new_out_traffic - de->old_out_traffic);
+    double delta = fabs(new_out_traffic - de->old_out_traffic);
+
     if( delta >= epsilon || (delta > 0 && (new_out_traffic == 0.0)) ) {
         de->old_out_traffic = new_out_traffic;
         return true;
@@ -76,7 +84,7 @@ bool DE_computeNewNeighborsFlux(DiscoveryEnvironment* de, struct timespec* curre
     assert(de);
     double new_new_neighbors_flux = computeWindow(de->new_neighbors_flux_window, current_time, window_type, "sum", true);
 
-    double delta = abs(new_new_neighbors_flux - de->old_new_neighbors_flux);
+    double delta = fabs(new_new_neighbors_flux - de->old_new_neighbors_flux);
     if( delta >= epsilon || (delta > 0 && (new_new_neighbors_flux == 0.0)) ) {
         de->old_new_neighbors_flux = new_new_neighbors_flux;
         return true;
@@ -93,7 +101,7 @@ bool DE_computeLostNeighborsFlux(DiscoveryEnvironment* de, struct timespec* curr
     assert(de);
     double new_lost_neighbors_flux = computeWindow(de->lost_neighbors_flux_window, current_time, window_type, "sum", true);
 
-    double delta = abs(new_lost_neighbors_flux - de->old_lost_neighbors_flux);
+    double delta = fabs(new_lost_neighbors_flux - de->old_lost_neighbors_flux);
     if( delta >= epsilon || (delta > 0 && (new_lost_neighbors_flux == 0.0)) ) {
         de->old_lost_neighbors_flux = new_lost_neighbors_flux;
         return true;
@@ -123,7 +131,7 @@ double DE_getLostNeighborsFlux(DiscoveryEnvironment* de) {
 
 bool DE_setInTraffic(DiscoveryEnvironment* de, double new_in_traffic, double epsilon) {
     assert(de);
-    double delta = abs(new_in_traffic - de->old_in_traffic);
+    double delta = fabs(new_in_traffic - de->old_in_traffic);
     if( delta >= epsilon || (delta > 0 && (new_in_traffic == 0.0)) ) {
         de->old_in_traffic = new_in_traffic;
         return true;
@@ -138,8 +146,8 @@ unsigned int DE_getNNeighbors(DiscoveryEnvironment* de) {
 
 bool DE_setNNeighbors(DiscoveryEnvironment* de, unsigned int new_n_neighbors) {
     assert(de);
-    int delta = abs(new_n_neighbors - de->old_n_neighbors);
-    if( delta > 0 ) {
+
+    if( new_n_neighbors != de->old_n_neighbors ) {
         de->old_n_neighbors = new_n_neighbors;
         return true;
     }
@@ -148,7 +156,7 @@ bool DE_setNNeighbors(DiscoveryEnvironment* de, unsigned int new_n_neighbors) {
 
 bool DE_setNeigbhorsDensity(DiscoveryEnvironment* de, double new_neighbors_density, double epsilon) {
     assert(de);
-    double delta = abs(new_neighbors_density - de->old_neighbors_density);
+    double delta = fabs(new_neighbors_density - de->old_neighbors_density);
     if( delta >= epsilon || (delta > 0 && (new_neighbors_density == 0.0)) ) {
         de->old_neighbors_density = new_neighbors_density;
         return true;
@@ -163,11 +171,11 @@ double DE_getNeigbhorsDensity(DiscoveryEnvironment* de) {
 
 char* NE_print(DiscoveryEnvironment* de, char** str) {
 
-    char* buffer = malloc(100*sizeof(char));
+    char* buffer = malloc(300*sizeof(char));
 
-    char* headers = "OUT TRAFFIC | IN TRAFFIC | NEW NEIGHBORS | LOST NEIGHBORS | N NEIGHBORS | NEIGH DENSITY";
+    char* headers = "  OUT TRAFFIC  |  IN TRAFFIC  | NEW NEIGHBORS | LOST NEIGHBORS | N NEIGHBORS | NEIGH DENSITY";
 
-    sprintf(buffer, "%s\n %0.3f msgs/s %0.3f msgs/s    %0.3f %0.3f    %u %0.3f",
+    sprintf(buffer, "%s\n  %0.3f msgs/s   %0.3f msgs/s       %0.3f            %0.3f             %u           %0.3f",
         headers,
         DE_getOutTraffic(de),
         DE_getInTraffic(de),

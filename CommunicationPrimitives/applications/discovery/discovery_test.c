@@ -98,18 +98,18 @@ f_args.neigh_validity_s = 15;
 
     f_args->lq_epsilon = 0.05;
     f_args->lq_threshold = 0.3;
-    f_args->traffic_epsilon = 0.5;
-    f_args->traffic_threshold = 5.0;
+    f_args->traffic_epsilon = 0.25;
+    f_args->traffic_threshold = 1.0;
 
-    f_args->discov_env_refresh_period_s = 5;
+    f_args->discov_env_refresh_period_s = 1;
     f_args->traffic_n_bucket = 5;
-    f_args->traffic_bucket_duration_s = 10;
+    f_args->traffic_bucket_duration_s = 5;
     f_args->churn_n_bucket = 5;
-    f_args->churn_bucket_duration_s = 1;
+    f_args->churn_bucket_duration_s = 5;
     f_args->traffic_window_type = "ema 0.65";
     f_args->churn_window_type = "ema 0.65";
-    f_args->churn_epsilon = 0.01;
-    f_args->neigh_density_epsilon = 0.01;
+    f_args->churn_epsilon = 0.1;
+    f_args->neigh_density_epsilon = 0.1;
 
 	registerProtocol(DISCOVERY_FRAMEWORK_PROTO_ID, &discovery_framework_init, (void*) f_args);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);

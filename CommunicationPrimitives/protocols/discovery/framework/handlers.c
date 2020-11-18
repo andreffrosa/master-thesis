@@ -761,7 +761,7 @@ void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state) {
 
     if( n_neighbors > 0 ) {
         neighbors_density += n_neighbors;
-        neighbors_density /= n_neighbors;
+        neighbors_density /= (n_neighbors+1);
     }
 
     changed |= DE_setInTraffic(state->environment, in_traffic, state->args->traffic_epsilon);
@@ -1809,6 +1809,7 @@ void changeAlgorithm(discovery_framework_state* state, DiscoveryAlgorithm* new_a
 void DF_printNeighbors(discovery_framework_state* state) {
     char* str1 = NULL, *str2 = NULL;
 
+    DF_uponDiscoveryEnvironmentTimer(state); // temp
     NE_print(state->environment, &str1);
 
     NT_print(state->neighbors, &str2, &state->current_time, state->myID, &state->myAddr, state->my_seq);
