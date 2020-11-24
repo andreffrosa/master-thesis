@@ -384,16 +384,18 @@ static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned ch
             hash_table* nneighs = NE_getTwoHopNeighbors(current_neigh);
             void* iterator2 = NULL;
             hash_table_item* hit = NULL;
-            TwoHopNeighbor* current_2hop_neigh = NULL;
+            TwoHopNeighborEntry* current_2hop_neigh = NULL;
             while ( (hit = hash_table_iterator_next(nneighs, &iterator2)) ) {
-                current_2hop_neigh = (TwoHopNeighbor*)hit->value;
+                current_2hop_neigh = (TwoHopNeighborEntry*)hit->value;
 
-                if( current_2hop_neigh->is_symmetric && uuid_compare(current_2hop_neigh->id, myID) != 0 && list_find_item(n2, &equalN2Tuple, current_2hop_neigh->id) == NULL ) {
-                    N2_Tuple* n2_tuple = newN2Tuple(current_2hop_neigh->id, current_2hop_neigh->rx_lq); // lq from 1 hop to 2 hops
+                bool to_add = THNE_isBi(current_2hop_neigh) && uuid_compare(THNE_getID(current_2hop_neigh), myID) != 0 && list_find_item(n2, &equalN2Tuple, THNE_getID(current_2hop_neigh)) == NULL;
+
+                if( to_add ) {
+                    N2_Tuple* n2_tuple = newN2Tuple(THNE_getID(current_2hop_neigh), THNE_getRxLinkQuality(current_2hop_neigh)); // lq from 1 hop to 2 hops
                     list_add_item_to_tail(ns, n2_tuple);
 
                     unsigned char* id = malloc(sizeof(uuid_t));
-                    uuid_copy(id, current_2hop_neigh->id);
+                    uuid_copy(id, THNE_getID(current_2hop_neigh));
                     list_add_item_to_tail(n2, id);
                 }
             }

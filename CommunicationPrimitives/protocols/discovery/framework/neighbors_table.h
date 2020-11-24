@@ -1,5 +1,5 @@
 /*********************************************************
- * This code was written in the context of the Lightkone
+ * This code was written in the context of the Ligneighborskone
  * European project.
  * Code is of the authorship of NOVA (NOVA LINCS @ DI FCT
  * NOVA University of Lisbon)
@@ -19,8 +19,9 @@
 #include "data_structures/hash_table.h"
 #include "utility/window.h"
 
-typedef struct _NeighborsTable NeighborsTable;
-typedef struct _NeighborEntry NeighborEntry;
+typedef struct NeighborsTable_ NeighborsTable;
+typedef struct NeighborEntry_ NeighborEntry;
+typedef struct TwoHopNeighborEntry_ TwoHopNeighborEntry;
 
 typedef enum {
     UNI_NEIGH,
@@ -28,26 +29,9 @@ typedef enum {
     LOST_NEIGH
 } DiscoveryNeighborType;
 
-typedef struct _TwoHopNeighbor {
-    uuid_t id;
-    unsigned short hseq;
-    //DiscoveryNeighborType type; // TODO: or bool?
-    bool is_symmetric;
-    double rx_lq;
-    double tx_lq;
-    double traffic;
-    struct timespec expiration;
-} TwoHopNeighbor;
-
 NeighborsTable* newNeighborsTable();
 
 void destroyNeighborsTable(NeighborsTable* neighbors, void (*lq_destroy)(void*, void*), void (*msg_destroy)(void*, void*), void* lqm, void* d_message);
-
-/*
-Window* NT_getOutTraffic(NeighborsTable* neighbors);
-
-Window* NT_getInstability(NeighborsTable* neighbors);
-*/
 
 unsigned int NT_getSize(NeighborsTable* neighbors);
 
@@ -129,15 +113,41 @@ void* NE_setMessageAttributes(NeighborEntry* neigh, void* msg_attributes);
 
 NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator);
 
-TwoHopNeighbor* newNeighTwoHopNeighbor(unsigned char* id, unsigned short seq, bool is_symmetric, double rx_lq, double tx_lq, double traffic, struct timespec* expiration);
+TwoHopNeighborEntry* newTwoHopNeighborEntry(unsigned char* id, unsigned short seq, bool is_bi, double rx_lq, double tx_lq, double traffic, struct timespec* expiration);
+
+unsigned char* THNE_getID(TwoHopNeighborEntry* two_hop_neigh);
+
+unsigned short THNE_getHSEQ(TwoHopNeighborEntry* two_hop_neigh);
+
+void THNE_setHSEQ(TwoHopNeighborEntry* two_hop_neigh, unsigned short new_hseq);
+
+bool THNE_isBi(TwoHopNeighborEntry* two_hop_neigh);
+
+void THNE_setBi(TwoHopNeighborEntry* two_hop_neigh, bool is_bi);
+
+double THNE_getRxLinkQuality(TwoHopNeighborEntry* two_hop_neigh);
+
+double THNE_getTxLinkQuality(TwoHopNeighborEntry* two_hop_neigh);
+
+void THNE_setRxLinkQuality(TwoHopNeighborEntry* two_hop_neigh, double new_rx_lq);
+
+void THNE_setTxLinkQuality(TwoHopNeighborEntry* two_hop_neigh, double new_tx_lq);
+
+double THNE_getTraffic(TwoHopNeighborEntry* two_hop_neigh);
+
+void THNE_setTraffic(TwoHopNeighborEntry* two_hop_neigh, double new_traffic);
+
+struct timespec* THNE_getExpiration(TwoHopNeighborEntry* two_hop_neigh);
+
+void THNE_setExpiration(TwoHopNeighborEntry* two_hop_neigh, struct timespec* new_expiration);
 
 hash_table* NE_getTwoHopNeighbors(NeighborEntry* neigh);
 
-TwoHopNeighbor* NE_getTwoHopNeighbor(NeighborEntry* neigh, unsigned char* nn_id);
+TwoHopNeighborEntry* NE_getTwoHopNeighborEntry(NeighborEntry* neigh, unsigned char* nn_id);
 
-TwoHopNeighbor* NE_removeTwoHopNeighbor(NeighborEntry* neigh, unsigned char* nn_id);
+TwoHopNeighborEntry* NE_removeTwoHopNeighborEntry(NeighborEntry* neigh, unsigned char* nn_id);
 
-TwoHopNeighbor* NE_addTwoHopNeighbor(NeighborEntry* neigh, TwoHopNeighbor* nn);
+TwoHopNeighborEntry* NE_addTwoHopNeighborEntry(NeighborEntry* neigh, TwoHopNeighborEntry* nn);
 
 char* NT_print(NeighborsTable* neighbors, char** str, struct timespec* current_time, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq);
 

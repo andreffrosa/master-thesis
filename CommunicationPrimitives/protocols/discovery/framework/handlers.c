@@ -651,16 +651,16 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
         void* iterator = NULL;
         hash_table_item* hit = NULL;
         while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
-            TwoHopNeighbor* nn = (TwoHopNeighbor*)hit->value;
-            if( compare_timespec(&nn->expiration, &state->current_time) < 0 ) {
-                hash_table_remove(ht, nn->id);
+            TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+            if( compare_timespec(THNE_getExpiration(nn), &state->current_time) < 0 ) {
+                hash_table_remove(ht, THNE_getID(nn));
                 free(nn);
                 free(hit);
                 summary->deleted_2hop++;
             } else {
-                if( first || compare_timespec(&nn->expiration, &min_exp) < 0 ) {
+                if( first || compare_timespec(THNE_getExpiration(nn), &min_exp) < 0 ) {
                     first = false;
-                    copy_timespec(&min_exp, &nn->expiration);
+                    copy_timespec(&min_exp, THNE_getExpiration(nn));
                 }
             }
         }
@@ -835,15 +835,15 @@ void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neig
             void* iterator = NULL;
             hash_table_item* hit = NULL;
             while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
-                TwoHopNeighbor* nn = (TwoHopNeighbor*)hit->value;
-                if( compare_timespec(&nn->expiration, &state->current_time) < 0 ) {
+                TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+                if( compare_timespec(THNE_getExpiration(nn), &state->current_time) < 0 ) {
                     first = false;
                     next_timer = 0;
                     break;
                 } else {
-                    if( first || compare_timespec(&nn->expiration, &min_exp) < 0 ) {
+                    if( first || compare_timespec(THNE_getExpiration(nn), &min_exp) < 0 ) {
                         first = false;
-                        copy_timespec(&min_exp, &nn->expiration);
+                        copy_timespec(&min_exp, THNE_getExpiration(nn));
                     }
                 }
             }
@@ -1510,29 +1510,30 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                 }
 
                 // Update 2-hop neighborhood (Neighbor's neighbors)
-                TwoHopNeighbor* nn = NE_getTwoHopNeighbor(neigh, hack->dest_process_id);
+                TwoHopNeighborEntry* nn = NE_getTwoHopNeighborEntry(neigh, hack->dest_process_id);
                 if( nn ) {
-                    int seq_cmp = compare_seq(hack->seq, nn->hseq, state->args->ignore_zero_seq);
+                    int seq_cmp = compare_seq(hack->seq, THNE_getHSEQ(nn), state->args->ignore_zero_seq);
 
                     // if fresh hack
                     if( seq_cmp >= 0 ) {
-                        nn->hseq = hack->seq;
+                        THNE_setHSEQ(nn, hack->seq);
 
-                        bool is_symmetric = hack->neigh_type == BI_NEIGH;
-                        if( nn->is_symmetric != is_symmetric ) {
-                            summary->became_bi_2hop = is_symmetric && !nn->is_symmetric;
-                            summary->lost_bi_2hop = !is_symmetric && nn->is_symmetric;
+                        bool is_bi = hack->neigh_type == BI_NEIGH;
+                        if( THNE_isBi(nn) != is_bi ) {
+                            summary->became_bi_2hop = is_bi && !THNE_isBi(nn);
+                            summary->lost_bi_2hop = !is_bi && THNE_isBi(nn);
 
-                            nn->is_symmetric = is_symmetric;
+                            THNE_setBi(nn, is_bi);
                         }
 
-                        double rx_lq_delta = fabs(nn->rx_lq - hack->rx_lq);
-                        double tx_lq_delta = fabs(nn->tx_lq - hack->tx_lq);
+                        double rx_lq_delta = fabs(THNE_getRxLinkQuality(nn) - hack->rx_lq);
+                        double tx_lq_delta = fabs(THNE_getTxLinkQuality(nn) - hack->tx_lq);
                         if( rx_lq_delta >= state->args->lq_epsilon || tx_lq_delta >= state->args->lq_epsilon || (rx_lq_delta > 0.0 && (hack->rx_lq == 1.0 || hack->rx_lq == 0.0)) || (tx_lq_delta > 0 && (hack->tx_lq == 1.0 || hack->tx_lq == 0.0))) {
                             // printf("\nupdated_2hop_quality: old_rx_lq %f new_rx_lq %f rx_lq_delta %f old_tx_lq %f new_tx_lq %f tx_lq_delta %f\n", nn->rx_lq, hack->rx_lq, rx_lq_delta, nn->tx_lq, hack->tx_lq, tx_lq_delta);
 
-                            nn->rx_lq = hack->rx_lq;
-                            nn->tx_lq = hack->tx_lq;
+                            THNE_setRxLinkQuality(nn, hack->rx_lq);
+                            THNE_setTxLinkQuality(nn, hack->tx_lq);
+
                             summary->updated_2hop_quality = true;
 
                             if( rx_lq_delta >= state->args->lq_threshold || tx_lq_delta >= state->args->lq_threshold ) {
@@ -1542,11 +1543,10 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         // nn->rx_lq = hack->rx_lq;
                         // nn->tx_lq = hack->tx_lq;
 
-                        double traffic_delta = fabs(nn->traffic - hack->traffic);
+                        double traffic_delta = fabs(THNE_getTraffic(nn) - hack->traffic);
                         if( traffic_delta >= state->args->traffic_epsilon || (traffic_delta > 0 && hack->traffic == 0.0)) {
                             // printf("\nupdated_2hop_traffic: old_traffic %f new_traffic %f traffic_delta %f\n", nn->traffic, hack->traffic, traffic_delta);
-
-                            nn->traffic = hack->traffic;
+                            THNE_setTraffic(nn, hack->traffic);
                             summary->updated_2hop_traffic = true;
 
                             if( traffic_delta >= state->args->traffic_threshold ) {
@@ -1555,14 +1555,14 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         }
                         // nn->traffic = hack->traffic;
 
-                        copy_timespec(&nn->expiration, &hack_exp_time);
+                        THNE_setExpiration(nn, &hack_exp_time);
                     }
 
                 } else {
                     // Insert new 2-hop neighbor
-                    TwoHopNeighbor* nn = newNeighTwoHopNeighbor(hack->dest_process_id, hack->seq, hack->neigh_type == BI_NEIGH, hack->rx_lq, hack->tx_lq, hack->traffic, &hack_exp_time);
+                    TwoHopNeighborEntry* nn = newTwoHopNeighborEntry(hack->dest_process_id, hack->seq, hack->neigh_type == BI_NEIGH, hack->rx_lq, hack->tx_lq, hack->traffic, &hack_exp_time);
 
-                    TwoHopNeighbor* aux = NE_addTwoHopNeighbor(neigh, nn);
+                    TwoHopNeighborEntry* aux = NE_addTwoHopNeighborEntry(neigh, nn);
                     assert(aux == NULL);
 
                     //summary->updated_neighbor = true;
@@ -1608,14 +1608,14 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                 }
 
                 // Update 2-hop neighborhood
-                TwoHopNeighbor* nn = NE_getTwoHopNeighbor(neigh, hack->dest_process_id);
+                TwoHopNeighborEntry* nn = NE_getTwoHopNeighborEntry(neigh, hack->dest_process_id);
                 if( nn ) {
-                    int seq_cmp = compare_seq(hack->seq, nn->hseq, state->args->ignore_zero_seq);
+                    int seq_cmp = compare_seq(hack->seq, THNE_getHSEQ(nn), state->args->ignore_zero_seq);
 
                     // if fresh hack
                     if( seq_cmp >= 0 ) {
                         // Remove from 2-hop neighborhood
-                        TwoHopNeighbor* removed = NE_removeTwoHopNeighbor(neigh, hack->dest_process_id);
+                        TwoHopNeighborEntry* removed = NE_removeTwoHopNeighborEntry(neigh, hack->dest_process_id);
                         if(removed) {
                             free(removed);
                             summary->lost_2hop_neighbor = true;
@@ -1954,9 +1954,11 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
     double tx_lq = NE_getRxLinkQuality(neigh);
     YggEvent_addPayload(ev, &tx_lq, sizeof(double));
 
+    // TODO: Append traffic?
+
     // Append Neighbor Type
-    byte is_symmetric = NE_getNeighborType(neigh, &state->current_time) == BI_NEIGH;
-    YggEvent_addPayload(ev, &is_symmetric, sizeof(byte));
+    byte is_bi = NE_getNeighborType(neigh, &state->current_time) == BI_NEIGH;
+    YggEvent_addPayload(ev, &is_bi, sizeof(byte));
 
     // Append Neighbors
     hash_table* ht = NE_getTwoHopNeighbors(neigh);
@@ -1966,18 +1968,20 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
     void* iterator = NULL;
     hash_table_item* hit = NULL;
     while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
-        TwoHopNeighbor* nn = (TwoHopNeighbor*)hit->value;
+        TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
 
         // Append Neigh ID
-        YggEvent_addPayload(ev, nn->id, sizeof(uuid_t));
+        YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
 
         // Append Neigh LQ
-        YggEvent_addPayload(ev, &nn->rx_lq, sizeof(double));
-        YggEvent_addPayload(ev, &nn->tx_lq, sizeof(double));
+        double rx_lq = THNE_getRxLinkQuality(nn);
+        YggEvent_addPayload(ev, &rx_lq, sizeof(double));
+        double tx_lq = THNE_getTxLinkQuality(nn);
+        YggEvent_addPayload(ev, &tx_lq, sizeof(double));
 
         // Append Neigh Type
-        is_symmetric = nn->is_symmetric;
-        YggEvent_addPayload(ev, &is_symmetric, sizeof(byte));
+        is_bi = THNE_isBi(nn);
+        YggEvent_addPayload(ev, &is_bi, sizeof(byte));
 
         // TODO: append traffic?
     }
