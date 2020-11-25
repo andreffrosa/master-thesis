@@ -57,33 +57,11 @@ typedef struct discovery_framework_state_ {
     bool neighbor_change_timer_active;          //
     uuid_t neighbor_change_timer_id;            //
     struct timespec set_neighbor_change_time;   //
-    //struct timespec next_neighbor_change_time;  //
     NeighborChangeSummary neighbor_change_summary;
 
     uuid_t discovery_environment_timer_id;                    //
 
     discovery_stats stats;       	            // Framework's stats
-
-    /*
-    //uuid_t announce_timer_id;		        // timer id
-	               //
-    struct timespec last_heartbeat_date;    // Timestamp of the last heartbeat sent (piggybacked or not)
-    struct timespec next_heartbeat_date;    // Timestamp of the next heartbeat to send
-    bool hb_timer_is_expired;
-    bool announce_scheduled;                //
-    list* triggered_events;                 //
-
-    YggMessage cached_announce;
-
-    uuid_t gc_timer_id;			 		    // Garbage Collector timer id
-    bool gc_active;                         //
-
-    uuid_t windows_timer_id;
-    Window* out_traffic, *stability;
-
-    unsigned long heartbeat_period_s;
-*/
-
 } discovery_framework_state;
 
 
@@ -163,47 +141,5 @@ void DF_printNeighbors(discovery_framework_state* state);
 void DF_printStats(discovery_framework_state* state);
 
 void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh);
-
-
-/*
-void scheduleHeartbeat(discovery_framework_state* state, bool now, unsigned long jitter);
-unsigned long scheduleAnnounce(discovery_framework_state* state, bool force);
-
-void changeHeartbeatPeriod(discovery_framework_state* state, unsigned long new_heartbeat_period_s);
-
-void uponHeartbeatTimer(discovery_framework_state* state);
-void uponAnnounceTimer(discovery_framework_state* state);
-void uponWindowsTimer(discovery_framework_state* state);
-void DF_uponGarbageCollectorTimer(discovery_framework_state* state);
-void DF_uponStatsRequest(discovery_framework_state* state, YggRequest* req);
-
-void piggybackHeartbeat(discovery_framework_state* state, YggMessage* msg, bool inc);
-
-void processHeartbeat(discovery_framework_state* state, HeartbeatHeader* hb, YggMessage* announce, bool has_announce);
-
-void DF_dispatchMessage(queue_t* dispatcher_queue, YggMessage* msg);
-
-bool triggerDiscoveryEvent(discovery_framework_state* state, YggEvent* ev, bool private, bool force);
-*/
-
-
-
-/*void uponBroadcastRequest(discovery_framework_state* state, YggRequest* req);
-void uponNewMessage(discovery_framework_state* state, YggMessage* msg);
-void uponTimeout(discovery_framework_state* state, YggTimer* timer);
-
-void init(discovery_framework_state* state);
-void ComputeRetransmissionDelay(discovery_framework_state* state, PendingMessage* p_msg, bool isCopy);
-void changePhase(discovery_framework_state* state, PendingMessage* p_msg);
-void DeliverMessage(discovery_framework_state* state, YggMessage* toDeliver);
-void RetransmitMessage(discovery_framework_state* state, PendingMessage* p_msg, unsigned short ttl);
-void uponBroadcastRequest(discovery_framework_state* state, YggRequest* req);
-void uponNewMessage(discovery_framework_state* state, YggMessage* msg);
-void uponTimeout(discovery_framework_state* state, YggTimer* timer);
-void serializeHeader(discovery_framework_state* state, PendingMessage* p_msg, bcast_header* header, void** context_header, unsigned short ttl);
-void serializeMessage(discovery_framework_state* state, YggMessage* m, PendingMessage* p_msg, unsigned short ttl);
-void deserializeMessage(YggMessage* m, bcast_header* header, void** context_header, YggMessage* toDeliver);
-void runGarbageCollector(discovery_framework_state* state);
-void uponStatsRequest(discovery_framework_state* state, YggRequest* req);*/
 
 #endif /* _DISCOVERY_FRAMEWORK_HANDLERS_H_ */

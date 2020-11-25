@@ -153,32 +153,14 @@ static void processNotification(YggEvent* notification) {
         uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR FOUND", id);
 
-        /*
-        ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN + sizeof(DiscoveryNeighborType);
-        unsigned char n_neighs = 0;
-        memcpy(&n_neighs, ptr, sizeof(n_neighs));
-        printf("neighbors %d\n", n_neighs);
-        */
 	} else if(notification->notification_id == NEIGHBOR_UPDATE) {
         uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR UPDATE", id);
 
-        /*
-        ptr = ((unsigned char*)notification->payload) + sizeof(uuid_t) + WLAN_ADDR_LEN + sizeof(DiscoveryNeighborType);
-        unsigned char n_neighs = 0;
-        memcpy(&n_neighs, ptr, sizeof(n_neighs));
-        printf("neighbors %d\n", n_neighs);
-        */
 	} else if(notification->notification_id == NEIGHBOR_LOST) {
         uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR LOST", id);
 	} else if(notification->notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
-		/*ygg_log("DISCOVERY TEST APP", "NEIGHBORHOOD UPDATE", id);
-
-        char* str;
-    	printAnnounce(notification->payload, notification->length, -1, &str);
-    	printf("%s\n%s", "Serialized Announce", str);
-    	free(str);*/
         ygg_log(APP_NAME, "DISCOVERY ENVIRONMENT UPDATE", "");
 	}
     else if(notification->notification_id == GENERIC_DISCOVERY_EVENT) {

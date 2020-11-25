@@ -183,7 +183,6 @@ static bool processMessage(discovery_framework_state* f_state, YggMessage* msg) 
         DF_piggybackDiscovery(f_state, msg);
 
         // Insert into dispatcher queue
-        // queue_push(f_state->dispatcher_queue, &elem);
         DF_dispatchMessage(f_state->dispatcher_queue, msg);
         processed = true;
     }
@@ -218,8 +217,6 @@ static bool processRequest(discovery_framework_state* f_state, YggRequest* reque
 static bool processEvent(discovery_framework_state* f_state, YggEvent* event) {
 
     if( event->proto_dest == DISCOVERY_FRAMEWORK_PROTO_ID ) {
-        // triggerDiscoveryEvent(f_state, event, true, false);
-
         return false;
     }
     else {

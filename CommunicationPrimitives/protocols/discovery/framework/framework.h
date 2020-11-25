@@ -39,12 +39,6 @@ typedef struct _discovery_stats {
 } discovery_stats;
 
 typedef struct _discovery_framework_args {
-    /*
-    unsigned long initial_heartbeat_period_s;
-    unsigned int hb_misses;
-    bool hb_only_in_announces;
-    */
-
     DiscoveryAlgorithm* algorithm;
 
     unsigned int hello_misses;
@@ -71,16 +65,6 @@ typedef struct _discovery_framework_args {
     char churn_window_type[10];
     double churn_epsilon;
     double neigh_density_epsilon;
-
-    // char* bucket_type;
-
-    // bool flush_events_upon_announce;
-
-	//unsigned long gc_interval_s; // TODO: Aqui ou parte do algorithm?
-    //unsigned long neigh_validity_s;
-
-    //bool process_hb_on_active;
-    //bool reset_hb_timer;
 } discovery_framework_args;
 
 proto_def* discovery_framework_init(void* arg);
@@ -99,17 +83,6 @@ typedef enum {
 	NEIGHBOR_LOST,
     GENERIC_DISCOVERY_EVENT,
     DISCOVERY_ENVIRONMENT_UPDATE,
-    //NEIGHBORHOOD_UPDATE,
-    //IN_TRAFFIC,
-    //OUT_TRAFFIC,
-    //STABILITY,
-    //MISSES,
-    //WINDOWS_EVENT,
-    //REPLY_EVENT,
-    //INIT_EVENT,
-    //HEARTBEAT_EVENT,
-    //MPR_SET,
-    //MPRS_SET,
 	DISCOVERY_EVENT_COUNT
 } DiscoveryEventType;
 
@@ -127,12 +100,5 @@ typedef enum {
     NEIGHBOR_TIMER,
 	DISCOVERY_TIMER_TYPE_COUNT
 } DiscoveryTimerType;
-
-/*
-typedef enum {
-	MSG_BROADCAST_MESSAGE = 0,
-	BCAST_MSG_TYPE_COUNT
-} BcastMessageType;
-*/
 
 #endif /* _DISCOVERY_FRAMEWORK_H_ */

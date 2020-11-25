@@ -16,8 +16,6 @@
 
 #include "Yggdrasil.h"
 
-//#include <time.h>
-
 typedef struct DiscoveryEnvironment_ DiscoveryEnvironment;
 
 DiscoveryEnvironment* newDiscoveryEnvironment(unsigned int traffic_n_bucket, unsigned int traffic_bucket_duration_s, unsigned int churn_n_bucket, unsigned int churn_bucket_duration_s);

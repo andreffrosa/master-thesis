@@ -27,21 +27,6 @@ void initHelloMessage(HelloMessage* hello, unsigned char* process_id, unsigned s
     hello->request_replies = request_replies;
 }
 
-/*
-void pushHelloMessage(HelloMessage* hello, YggMessage* msg);
-    assert(helllo);
-
-    WLANAddr* addr = getBroadcastAddr();
-    pushPayload(msg, (char*)hello, sizeof(HelloMessage), DISCOVERY_FRAMEWORK_PROTO_ID, addr);
-    free(addr);
-}
-
-void popHelloMessage(YggMessage* msg, HelloMessage* hello) {
-    popPayload(msg, (char*)hello, sizeof(HelloMessage));
-}
-*/
-
-
 void initHackMessage(HackMessage* hack, unsigned char* src_process_id, unsigned char* dest_process_id, unsigned short seq, double rx_lq, double tx_lq, byte period, float traffic, byte neigh_type) {
     assert(hack);
 
@@ -54,30 +39,3 @@ void initHackMessage(HackMessage* hack, unsigned char* src_process_id, unsigned 
     hack->traffic = traffic;
     hack->neigh_type = neigh_type;
 }
-
-
-
-
-
-
-
-
-
-/*
-void initHeartbeatHeader(HeartbeatHeader* hb, unsigned char* process_id, unsigned short seq, unsigned long period) {
-    uuid_copy(hb->process_id, process_id);
-    //hb->version = version;
-    hb->seq = seq;
-    hb->period = period;
-}
-
-void pushHeartbeatHeader(YggMessage* msg, HeartbeatHeader* hb) {
-    WLANAddr* addr = getBroadcastAddr();
-    pushPayload(msg, (char*) hb, sizeof(HeartbeatHeader), DISCOVERY_FRAMEWORK_PROTO_ID, addr);
-    free(addr);
-}
-
-void popHeartbeatHeader(YggMessage* msg, HeartbeatHeader* hb) {
-    popPayload(msg, (char*)hb, sizeof(HeartbeatHeader));
-}
-*/
