@@ -41,7 +41,45 @@ void destroyDiscoveryAlgorithm(DiscoveryAlgorithm* alg) {
     }
 }
 
+void DA_setDiscoveryPattern(DiscoveryAlgorithm* alg, DiscoveryPattern* new_d_pattern) {
+    assert(alg && new_d_pattern);
 
+    if( alg->d_pattern ) {
+        destroyDiscoveryPattern(alg->d_pattern);
+    }
+
+    alg->d_pattern = new_d_pattern;
+}
+
+void DA_setDiscoveryPeriod(DiscoveryAlgorithm* alg, DiscoveryPeriod* new_d_period) {
+    assert(alg && new_d_period);
+
+    if( alg->d_period ) {
+        destroyDiscoveryPeriod(alg->d_period);
+    }
+
+    alg->d_period = new_d_period;
+}
+
+void DA_setLinkQuality(DiscoveryAlgorithm* alg, LinkQuality* new_lq_metric) {
+    assert(alg && new_lq_metric);
+
+    if( alg->lq_metric ) {
+        destroyLinkQualityMetric(alg->lq_metric);
+    }
+
+    alg->lq_metric = new_lq_metric;
+}
+
+void DA_setDiscoveryMessage(DiscoveryAlgorithm* alg, DiscoveryMessage* new_d_message) {
+    assert(alg && new_d_message);
+
+    if(alg->d_message) {
+        destroyDiscoveryMessage(alg->d_message);
+    }
+
+    alg->d_message = new_d_message;
+}
 
 bool DA_periodicHello(DiscoveryAlgorithm* alg) {
     assert(alg);

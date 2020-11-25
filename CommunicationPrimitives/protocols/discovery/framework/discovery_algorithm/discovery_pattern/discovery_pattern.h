@@ -44,7 +44,7 @@ DiscoveryPattern* PassiveDiscovery(PiggybackType hello_piggyback_type, Piggyback
  * new neighbor is found.
  * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
  * new neighbor is found.
- * @Param react_to_neighbor_updates : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello should be sent when
  * there is any change in some neighbor.
  */
 DiscoveryPattern* HybridHelloDiscovery(PiggybackType hello_piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
@@ -56,10 +56,10 @@ DiscoveryPattern* HybridHelloDiscovery(PiggybackType hello_piggyback_type, bool 
  * new neighbor is found.
  * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
  * new neighbor is found.
- * @Param react_to_neighbor_updates : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello should be sent when
  * there is any change in some neighbor.
  */
-DiscoveryPattern* PeriodicHelloDiscovery(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_neighbor_updates, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* PeriodicHelloDiscovery(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 /*
  * Hellos are periodically (1-hop) broadcasted. If there are hacks, they are
@@ -68,10 +68,10 @@ DiscoveryPattern* PeriodicHelloDiscovery(bool react_to_new_neighbor, bool react_
  * new neighbor is found.
  * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
  * new neighbor is found.
- * @Param react_to_neighbor_updates : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello should be sent when
  * there is any change in some neighbor.
  */
-DiscoveryPattern* PeriodicJointDiscovery(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_neighbor_updates, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* PeriodicJointDiscovery(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 /*
  * Both Hellos and Hacks are periodically (1-hop) broadcasted, however, in
@@ -80,10 +80,10 @@ DiscoveryPattern* PeriodicJointDiscovery(bool react_to_new_neighbor, bool react_
  * new neighbor is found.
  * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
  * new neighbor is found.
- * @Param react_to_neighbor_updates : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello should be sent when
  * there is any change in some neighbor.
  */
-DiscoveryPattern* PeriodicDisjointDiscovery(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_neighbor_updates, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* PeriodicDisjointDiscovery(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 /*
  * Hellos are piggybacked on regular traffic and are (1-hop) broadcasted if no
@@ -99,10 +99,10 @@ DiscoveryPattern* PeriodicDisjointDiscovery(bool react_to_new_neighbor, bool rea
  * new neighbor is found.
  * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
  * new neighbor is found.
- * @Param react_to_neighbor_updates : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello should be sent when
  * there is any change in some neighbor.
  */
-DiscoveryPattern* HybridDisjointDiscovery(PiggybackType hello_piggyback_type, PiggybackType hack_piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_neighbor_updates, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* HybridDisjointDiscovery(PiggybackType hello_piggyback_type, PiggybackType hack_piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 /*
  * Hellos are periodically (1-hop) broadcasted. Hacks are explicitly immediatly

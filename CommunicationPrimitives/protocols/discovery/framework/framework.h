@@ -67,8 +67,8 @@ typedef struct _discovery_framework_args {
     unsigned int traffic_bucket_duration_s;
     unsigned int churn_n_bucket;
     unsigned int churn_bucket_duration_s;
-    char* traffic_window_type;
-    char* churn_window_type;
+    char traffic_window_type[10];
+    char churn_window_type[10];
     double churn_epsilon;
     double neigh_density_epsilon;
 
@@ -87,7 +87,11 @@ proto_def* discovery_framework_init(void* arg);
 
 void* discovery_framework_main_loop(main_loop_args* args);
 
-discovery_framework_args* new_discovery_framework_args(/*BroadcastAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s*/);
+discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algorithm,     unsigned int hello_misses, unsigned int hack_misses, unsigned long neigh_hold_time_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_transition_period_n, bool ignore_zero_seq, double lq_epsilon, double lq_threshold, double traffic_threshold, double traffic_epsilon, unsigned int discov_env_refresh_period_s, unsigned int traffic_n_bucket, unsigned int traffic_bucket_duration_s, unsigned int churn_n_bucket, unsigned int churn_bucket_duration_s, char* traffic_window_type, char* churn_window_type, double churn_epsilon, double neigh_density_epsilon);
+
+discovery_framework_args* default_discovery_framework_args();
+
+discovery_framework_args* load_discovery_framework_args(const char* file_path);
 
 typedef enum {
 	NEIGHBOR_FOUND,

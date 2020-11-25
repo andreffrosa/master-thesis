@@ -48,68 +48,19 @@ int main(int argc, char* argv[]) {
     char hostname[30];
     sprintf(hostname, "raspi-0%d", ix);
 
-    bool periodic_messages = strcmp("false", argv[2]) == 0 ? false : true;
+    bool periodic_messages = strcmp("false", argv[3]) == 0 ? false : true;
 
 	NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
 
 	// Initialize ygg_runtime
 	ygg_runtime_init_2(ntconf, hostname);
 
-    //const char* pi = getHostname(); // raspi-n
-    //pi = (pi == NULL) ? config.app.hostname : pi;
-
 	// Register this app
 	app_def* myApp = create_application_definition(APP_ID, APP_NAME);
 
     // Register Framework Protocol
-    discovery_framework_args* f_args = malloc(sizeof(discovery_framework_args));
-    //f_args.algorithm = ActiveDiscovery(3000, TopologyAnnounceModule(3), OLSRLinkQuality(0.3, true)); //HybridDiscovery(3000, OLSRLinkQuality(0.3, true)); //ActiveDiscovery(3000, OLSRAnnounceModule(), OLSRLinkQuality(0.3, true)); //PassiveDiscovery(OLSRLinkQuality(0.3, true));
-    /*
-f_args.neigh_validity_s = 15;
-    f_args.neigh_hold_time_s = 6;
-    f_args.max_announce_jitter_ms = 150;
-    f_args.process_hb_on_active = false;
-    f_args.lq_threshold = 0.1;
-    f_args.window_duration_s = 10;
-    f_args.window_notify_period_s = 5;
-    f_args.window_type = "wma";
-    f_args.flush_events_upon_announce = false;
-*/
-
- // TODO: isto depende de alg para alg, devia ser part do alg e não da framework
-
-    f_args->algorithm = newDiscoveryAlgorithm(
-        PeriodicJointDiscovery(true, true, true, true, true, true),
-        //EchoDiscovery(BROADCAST_HACK_REPLY, true, false),   // Discovery Pattern
-        StaticDiscoveryPeriod(5, 5),                        // Discovery Period
-        EMALinkQuality(0.5, 0.7, 5, 5),                    // LinkQuality
-        OLSRDiscoveryMessage()                              // Discovery Message
-    );
-    f_args->hello_misses = 3;
-    f_args->hack_misses = 2;
-
-    f_args->announce_transition_period_n = 3;
-
-    f_args->neigh_hold_time_s = 15;
-    f_args->max_jitter_ms = 500;
-    f_args->period_margin_ms = 700;
-
-    f_args->ignore_zero_seq = true;
-
-    f_args->lq_epsilon = 0.05;
-    f_args->lq_threshold = 0.3;
-    f_args->traffic_epsilon = 0.25;
-    f_args->traffic_threshold = 1.0;
-
-    f_args->discov_env_refresh_period_s = 1;
-    f_args->traffic_n_bucket = 5;
-    f_args->traffic_bucket_duration_s = 5;
-    f_args->churn_n_bucket = 5;
-    f_args->churn_bucket_duration_s = 5;
-    f_args->traffic_window_type = "ema 0.65";
-    f_args->churn_window_type = "ema 0.65";
-    f_args->churn_epsilon = 0.1;
-    f_args->neigh_density_epsilon = 0.1;
+    const char* discovery_configs = argv[2];
+    discovery_framework_args* f_args = load_discovery_framework_args(discovery_configs);
 
 	registerProtocol(DISCOVERY_FRAMEWORK_PROTO_ID, &discovery_framework_init, (void*) f_args);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);
@@ -118,9 +69,9 @@ f_args.neigh_validity_s = 15;
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
 
-    bool use_overlay = argc == 4;
+    bool use_overlay = argc == 5;
     if( use_overlay ) {
-        char* overlay_path = argv[3];
+        char* overlay_path = argv[4];
         topology_manager_args* t_args = load_overlay(overlay_path, hostname);
         registerYggProtocol(PROTO_TOPOLOGY_MANAGER, topologyManager_init, t_args);
 		topology_manager_args_destroy(t_args);
@@ -143,9 +94,6 @@ f_args.neigh_validity_s = 15;
         SetPeriodicTimer(&t, tid, APP_ID, -1);
     }
 
-	/*char str[100];
-	sprintf(str, "%s starting experience with duration %lu + %lu + %lu s\n", pi, config.app.initial_grace_period_s, config.app.exp_duration_s, config.app.final_grace_period_s);
-	ygg_log(APP_NAME, "INIT", str);*/
     ygg_log(APP_NAME, "INIT", "init");
 
 
@@ -154,14 +102,6 @@ f_args.neigh_validity_s = 15;
     getmyId(destination_id);
     destination_id[15] = '\003';
 
-    /*
-    char msg[] = "Ya bina, nao desatina!";
-
-    if(ix == 1) {
-        RouteMessage(destination_id, APP_ID, (unsigned char*)msg, strlen(msg)+1);
-    }
-    */
-
 	queue_t_elem elem;
 	while(1) {
 		queue_pop(inBox, &elem);
@@ -169,10 +109,7 @@ f_args.neigh_validity_s = 15;
 		switch(elem.type) {
 		case YGG_TIMER:
             ; YggMessage m;
-            // getMyWLANAddr()
-            //WLANAddr addr;
-            //str2wlan((char*)addr.data, "b8:27:eb:9a:68:47"); // raspi-2
-            //YggMessage_init(&m, addr.data, APP_ID);
+
 
             YggMessage_initBcast(&m, APP_ID);
             char* str = "msg";
@@ -287,12 +224,5 @@ static void processNotification(YggEvent* notification) {
                 }
         }
 
-		/*ygg_log("DISCOVERY TEST APP", "NEIGHBORHOOD UPDATE", id);
-
-        char* str;
-    	printAnnounce(notification->payload, notification->length, -1, &str);
-    	printf("%s\n%s", "Serialized Announce", str);
-    	free(str);*/
-        //ygg_log(APP_NAME, "WINDOWS", "");
 	}
 }

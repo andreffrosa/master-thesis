@@ -31,6 +31,14 @@ DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, Discovery
 
 void destroyDiscoveryAlgorithm(DiscoveryAlgorithm* alg);
 
+void DA_setDiscoveryPattern(DiscoveryAlgorithm* alg, DiscoveryPattern* new_d_pattern);
+
+void DA_setDiscoveryPeriod(DiscoveryAlgorithm* alg, DiscoveryPeriod* new_d_period);
+
+void DA_setLinkQuality(DiscoveryAlgorithm* alg, LinkQuality* new_lq_metric);
+
+void DA_setDiscoveryMessage(DiscoveryAlgorithm* alg, DiscoveryMessage* new_d_message);
+
 bool DA_periodicHello(DiscoveryAlgorithm* alg);
 
 PiggybackType DA_piggybackHellos(DiscoveryAlgorithm* alg);
