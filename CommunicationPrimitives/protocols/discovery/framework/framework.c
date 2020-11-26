@@ -315,7 +315,7 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
 
     discovery_framework_args* args = default_discovery_framework_args();
 
-    for(list_item* it = order->head->data; it; it = it->next) {
+    for(list_item* it = order->head; it; it = it->next) {
         char* key = (char*)it->data;
         char* value = (char*)hash_table_find_value(configs, key);
 

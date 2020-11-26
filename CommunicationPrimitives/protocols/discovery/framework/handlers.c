@@ -1589,9 +1589,6 @@ bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMe
         pushPayload(msg, (char*)buffer, sizeof(buffer_size) + buffer_size, DISCOVERY_FRAMEWORK_PROTO_ID, addr);
 
         if( hello ) {
-            // Decrement SEQ
-            state->my_seq = dec_seq(state->my_seq, state->args->ignore_zero_seq);
-
             if( DA_periodicHello(state->args->algorithm) ) {
                 // Re-schedule
                 scheduleHelloTimer(state, false);
@@ -1601,7 +1598,12 @@ bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMe
         }
 
         if( hacks ) {
-            if( DA_periodicHack(state->args->algorithm) ) {
+            
+            WLANAddr* bcast_addr = getBroadcastAddr();
+            bool not_unicast = memcmp(addr->data, bcast_addr, WLAN_ADDR_LEN) == 0;
+            free(bcast_addr);
+
+            if( DA_periodicHack(state->args->algorithm) && not_unicast ) {
                 // Re-schedule
                 scheduleHackTimer(state, false);
             }
@@ -1614,6 +1616,11 @@ bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMe
         buffer_size = 0;
 
         pushPayload(msg, (char*)&buffer_size, sizeof(buffer_size), DISCOVERY_FRAMEWORK_PROTO_ID, addr);
+
+        if(hello) {
+            // Decrement SEQ
+            state->my_seq = dec_seq(state->my_seq, state->args->ignore_zero_seq);
+        }
     }
 
     return send;
@@ -1833,7 +1840,9 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
     double tx_lq = NE_getRxLinkQuality(neigh);
     YggEvent_addPayload(ev, &tx_lq, sizeof(double));
 
-    // TODO: Append traffic?
+    // Append Traffic
+    double traffic = NE_getOutTraffic(neigh);
+    YggEvent_addPayload(ev, &traffic, sizeof(double));
 
     // Append Neighbor Type
     byte is_bi = NE_getNeighborType(neigh, &state->current_time) == BI_NEIGH;
@@ -1853,16 +1862,18 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
         YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
 
         // Append Neigh LQ
-        double rx_lq = THNE_getRxLinkQuality(nn);
+        rx_lq = THNE_getRxLinkQuality(nn);
         YggEvent_addPayload(ev, &rx_lq, sizeof(double));
-        double tx_lq = THNE_getTxLinkQuality(nn);
+        tx_lq = THNE_getTxLinkQuality(nn);
         YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+
+        // Append Traffic
+        traffic = THNE_getTraffic(nn);
+        YggEvent_addPayload(ev, &traffic, sizeof(double));
 
         // Append Neigh Type
         is_bi = THNE_isBi(nn);
         YggEvent_addPayload(ev, &is_bi, sizeof(byte));
-
-        // TODO: append traffic?
     }
 
     #ifdef DEBUG_DISCOVERY
