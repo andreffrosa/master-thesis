@@ -637,7 +637,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
         while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
             TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
             if( compare_timespec(THNE_getExpiration(nn), &state->current_time) < 0 ) {
-                hash_table_remove(ht, THNE_getID(nn));
+                hash_table_remove_item(ht, THNE_getID(nn));
                 free(nn);
                 free(hit);
                 summary->deleted_2hop++;
@@ -1598,7 +1598,7 @@ bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMe
         }
 
         if( hacks ) {
-            
+
             WLANAddr* bcast_addr = getBroadcastAddr();
             bool not_unicast = memcmp(addr->data, bcast_addr, WLAN_ADDR_LEN) == 0;
             free(bcast_addr);

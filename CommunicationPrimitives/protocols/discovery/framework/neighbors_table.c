@@ -123,7 +123,7 @@ NeighborEntry* NT_getNeighbor(NeighborsTable* nt, unsigned char* neigh_id) {
 NeighborEntry* NT_removeNeighbor(NeighborsTable* nt, unsigned char* neigh_id) {
     assert(nt);
 
-    hash_table_item* it = hash_table_remove(nt->neighbors, neigh_id);
+    hash_table_item* it = hash_table_remove_item(nt->neighbors, neigh_id);
     if(it) {
         NeighborEntry* entry = (NeighborEntry*)it->value;
         free(it);
@@ -490,7 +490,7 @@ TwoHopNeighborEntry* NE_getTwoHopNeighborEntry(NeighborEntry* neigh, unsigned ch
 TwoHopNeighborEntry* NE_removeTwoHopNeighborEntry(NeighborEntry* neigh, unsigned char* nn_id) {
     assert(neigh);
 
-    hash_table_item* hit = hash_table_remove(neigh->neighs, nn_id);
+    hash_table_item* hit = hash_table_remove_item(neigh->neighs, nn_id);
     if(hit) {
         TwoHopNeighborEntry* aux = hit->value;
         free(hit);
