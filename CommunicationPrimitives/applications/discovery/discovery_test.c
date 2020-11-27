@@ -205,6 +205,23 @@ static void processNotification(YggEvent* notification) {
                     printf("%s\n", id_str);
                 }
         }
+        else if( strcmp(type, "LENWB_NEIGHS") == 0 ) {
+            unsigned int amount = 0;
+            ptr = YggEvent_readPayload(notification, ptr, &amount, sizeof(unsigned int));
+
+            for(int i = 0; i < amount; i++) {
+                uuid_t id;
+                ptr = YggEvent_readPayload(notification, ptr, id, sizeof(uuid_t));
+
+                byte n_neighs = 0;
+                ptr = YggEvent_readPayload(notification, ptr, &n_neighs, sizeof(byte));
+
+                char id_str[UUID_STR_LEN+1];
+                id_str[UUID_STR_LEN] = '\0';
+                uuid_unparse(id, id_str);
+                printf("%s : %u\n", id_str, n_neighs);
+            }
+        }
 
 	}
 }

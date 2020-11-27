@@ -538,6 +538,8 @@ static DiscoveryMessage* parse_d_message(char* value) {
         d_message = SimpleDiscoveryMessage();
     } else if( strcmp(token, (name = "OLSR")) == 0 || strcmp(token, (name = "OLSRDiscoveryMessage")) == 0 ) {
         d_message = SimpleDiscoveryMessage();
+    } else if( strcmp(token, (name = "LENWB")) == 0 || strcmp(token, (name = "LENWBDiscoveryMessage")) == 0 ) {
+        d_message = LENWBDiscoveryMessage();
     } else {
         printf("Unrecognized DiscoveryMessage! \n");
         exit(-1);

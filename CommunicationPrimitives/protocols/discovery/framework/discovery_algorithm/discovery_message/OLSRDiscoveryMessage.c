@@ -34,7 +34,7 @@ typedef struct OLSRAttrs_ {
     // bool advertised;
 } OLSRAttrs;
 
-typedef struct _OLSRState {
+typedef struct OLSRState_ {
     list* flooding_mprs;
     list* routing_mprs;
     list* flooding_mpr_selectors;
@@ -231,11 +231,11 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
     HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr);
     free(summary);
 
-    bool changed_mpr_selectors = false;
-
     // Deserialize Hacks
     byte n_hacks = ptr[0];
     ptr += 1;
+
+    bool changed_mpr_selectors = false;
 
     if( n_hacks > 0 ) {
         HackMessage hacks[n_hacks];
