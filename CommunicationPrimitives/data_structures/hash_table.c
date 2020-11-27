@@ -101,11 +101,13 @@ void* hash_table_insert(hash_table* table, void* key, void* value) {
 	} else {
 		void* aux = item->value;
 		item->value = value;
+        free(item->key);
+        item->key = key;
 		return aux;
 	}
 }
 
-hash_table_item* hash_table_remove(hash_table* table, void* key) {
+hash_table_item* hash_table_remove_item(hash_table* table, void* key) {
 	hash_table_item* result = NULL;
 
 	unsigned int index = table->hash_fun(key) % table->array_size;
@@ -123,6 +125,19 @@ hash_table_item* hash_table_remove(hash_table* table, void* key) {
 		resize(table, table->array_size/2);*/
 
 	return result;
+}
+
+void* hash_table_remove(hash_table* table, void* key) {
+	hash_table_item* hit = hash_table_remove_item(table, key);
+
+	if(hit) {
+        void* value = hit->value;
+        free(hit->key);
+        free(hit);
+        return value;
+    } else {
+        return NULL;
+    }
 }
 
 static void free_hash_table_item(hash_table_item* current, void* args) {

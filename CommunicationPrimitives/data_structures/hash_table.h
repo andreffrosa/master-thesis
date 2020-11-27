@@ -44,7 +44,9 @@ void* hash_table_find_value(hash_table* table, void* key);
 
 void* hash_table_insert(hash_table* table, void* key, void* value);
 
-hash_table_item* hash_table_remove(hash_table* table, void* key);
+hash_table_item* hash_table_remove_item(hash_table* table, void* key);
+
+void* hash_table_remove(hash_table* table, void* key);
 
 void hash_table_delete(hash_table* table);
 

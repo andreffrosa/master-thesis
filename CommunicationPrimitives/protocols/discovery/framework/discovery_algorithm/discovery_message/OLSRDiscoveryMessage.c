@@ -26,7 +26,7 @@ typedef enum {
     FLOOD_ROUTE_MPR
 } NeighMPRType;
 
-typedef struct _OLSRAttrs {
+typedef struct OLSRAttrs_ {
     bool flooding_mpr;
     bool flooding_mpr_selector; // L_mpr_selector
     bool routing_mpr;
