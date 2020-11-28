@@ -27,8 +27,63 @@ typedef struct LENWBDiscoveryState_ {
     hash_table* strict_two_hop_neighbors_neighbors;
 } LENWBDiscoveryState;
 
-static bool LENWBDiscovery_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+static void notify(LENWBDiscoveryState* state);
+
+static bool LENWBDiscovery_createMessage(ModuleState* m_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
+
+    LENWBDiscoveryState* state = (LENWBDiscoveryState*)m_state->vars;
+
+    //
+    if( msg_type == NEIGHBOR_CHANGE_MSG ) {
+        NeighborChangeSummary* s = (NeighborChangeSummary*)aux_info;
+
+        bool one_hop_change = s->new_neighbor || s->updated_neighbor || s->lost_neighbor;
+        bool two_hop_change = s->updated_2hop_neighbor || s->added_2hop_neighbor || s->lost_2hop_neighbor;
+
+        if( one_hop_change || two_hop_change ) {
+            bool changed = false;
+
+            void* iterator = NULL;
+            hash_table_item* hit = NULL;
+            while( (hit = hash_table_iterator_next(state->strict_two_hop_neighbors_neighbors, &iterator)) ) {
+                unsigned char* id = (unsigned char*)hit->key;
+                NeighPair* pair = (NeighPair*)hit->value;
+
+                bool strict_bi_two_hop_neigh = false;
+
+                NeighborEntry* neigh = NT_getNeighbor(neighbors, id);
+                if( neigh == NULL ) {
+                    void* iterator2 = NULL;
+                    NeighborEntry* current_neigh = NULL;
+                    while( (current_neigh = NT_nextNeighbor(neighbors, &iterator2)) ) {
+                        TwoHopNeighborEntry* two_hop_neigh = NE_getTwoHopNeighborEntry(current_neigh, id);
+                        if( two_hop_neigh != NULL ) {
+                            if( THNE_isBi(two_hop_neigh) ) {
+                                strict_bi_two_hop_neigh = true;
+                            }
+                        }
+                    }
+                }
+                if( !strict_bi_two_hop_neigh ) {
+                    // Remove
+                    NeighPair* aux = hash_table_remove(state->strict_two_hop_neighbors_neighbors, id);
+                    assert(aux == pair);
+
+                    free(pair);
+                    changed = true;
+                }
+            }
+
+            if( changed ) {
+                notify(state);
+            }
+
+            if( !changed && !one_hop_change && two_hop_change ) {
+                return false;
+            }
+        }
+    }
 
     byte* ptr = buffer;
 
@@ -110,19 +165,28 @@ static bool LENWBDiscovery_processMessage(ModuleState* m_state, void* f_state, u
 
                     bool strict_bi_two_hop_neigh = (neigh2 == NULL && two_hop_neigh != NULL && THNE_isBi(two_hop_neigh));
 
-                    if( strict_bi_two_hop_neigh ) {
-                        NeighPair* pair = hash_table_find_value(state->strict_two_hop_neighbors_neighbors, hacks[i].dest_process_id);
+                    NeighPair* pair = hash_table_find_value(state->strict_two_hop_neighbors_neighbors, hacks[i].dest_process_id);
 
-                        if( pair ) {
-                            if( hacks[i].seq > pair->seq ) {
+                    if( pair ) {
+                        if( hacks[i].seq > pair->seq ) {
+                            if( strict_bi_two_hop_neigh ) {
                                 if( pair->n_neighs != n_neighs ) {
                                     // Update
                                     pair->seq = hacks[i].seq;
                                     pair->n_neighs = n_neighs;
                                     changed = true;
                                 }
+                            } else {
+                                // Remove
+                                NeighPair* aux = hash_table_remove(state->strict_two_hop_neighbors_neighbors, hacks[i].dest_process_id);
+                                assert(aux == pair);
+
+                                free(pair);
+                                changed = true;
                             }
-                        } else {
+                        }
+                    } else {
+                        if( strict_bi_two_hop_neigh ) {
                             // Insert
                             unsigned char* key = malloc(sizeof(uuid_t));
                             uuid_copy(key, hacks[i].dest_process_id);
@@ -135,13 +199,6 @@ static bool LENWBDiscovery_processMessage(ModuleState* m_state, void* f_state, u
                             void* old = hash_table_insert(state->strict_two_hop_neighbors_neighbors, key, pair);
                             assert(old == NULL);
                         }
-                    } else {
-                        NeighPair* pair = hash_table_remove(state->strict_two_hop_neighbors_neighbors, hacks[i].dest_process_id);
-
-                        if(pair) {
-                            free(pair);
-                            changed = true;
-                        }
                     }
                 }
             }
@@ -150,31 +207,35 @@ static bool LENWBDiscovery_processMessage(ModuleState* m_state, void* f_state, u
 
     // Notify
     if( changed ) {
-        unsigned int size = sizeof(unsigned int) + state->strict_two_hop_neighbors_neighbors->n_items*(sizeof(uuid_t) + sizeof(byte));
-
-        byte buffer[size];
-        byte* ptr = buffer;
-
-        unsigned int amount = state->strict_two_hop_neighbors_neighbors->n_items;
-        memcpy(ptr, &amount, sizeof(amount));
-        ptr += sizeof(amount);
-
-        void* iterator = NULL;
-        hash_table_item* hit = NULL;
-        while( (hit = hash_table_iterator_next(state->strict_two_hop_neighbors_neighbors, &iterator)) ) {
-            NeighPair* pair = (NeighPair*)hit->value;
-
-            memcpy(ptr, hit->key, sizeof(uuid_t));
-            ptr += sizeof(uuid_t);
-
-            memcpy(ptr, &pair->n_neighs, sizeof(byte));
-            ptr += sizeof(byte);
-        }
-
-        DF_notifyEvent("LENWB_NEIGHS", buffer, size);
+        notify(state);
     }
 
     return false;
+}
+
+static void notify(LENWBDiscoveryState* state) {
+    unsigned int size = sizeof(unsigned int) + state->strict_two_hop_neighbors_neighbors->n_items*(sizeof(uuid_t) + sizeof(byte));
+
+    byte buffer[size];
+    byte* ptr = buffer;
+
+    unsigned int amount = state->strict_two_hop_neighbors_neighbors->n_items;
+    memcpy(ptr, &amount, sizeof(amount));
+    ptr += sizeof(amount);
+
+    void* iterator = NULL;
+    hash_table_item* hit = NULL;
+    while( (hit = hash_table_iterator_next(state->strict_two_hop_neighbors_neighbors, &iterator)) ) {
+        NeighPair* pair = (NeighPair*)hit->value;
+
+        memcpy(ptr, hit->key, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
+        memcpy(ptr, &pair->n_neighs, sizeof(byte));
+        ptr += sizeof(byte);
+    }
+
+    DF_notifyEvent("LENWB_NEIGHS", buffer, size);
 }
 
 static void LENWBDiscovery_destructor(ModuleState* m_state) {
