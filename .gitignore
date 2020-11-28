@@ -2,6 +2,7 @@
 # Directories to ignore
 ./bin/
 ./lib/
+./debug/
 
 .tags
 .tags1
@@ -230,4 +231,3 @@ dmypy.json
 
 # profiling data
 .prof
-

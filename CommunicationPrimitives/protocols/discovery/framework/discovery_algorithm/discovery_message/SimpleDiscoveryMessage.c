@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-static void SDM_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+static bool SDM_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     byte* ptr = buffer;
 
     // Serialize Hello
@@ -49,6 +49,8 @@ static void SDM_createMessage(ModuleState* state, unsigned char* myID, struct ti
         ptr += 1;
         *size += 1;
     }
+
+    return true;
 }
 
 static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {
@@ -64,7 +66,8 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
         memcpy(&hello, ptr, sizeof(HelloMessage));
         ptr += sizeof(HelloMessage);
 
-        deliverHello(f_state, &hello, mac_addr);
+        HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr);
+        free(summary);
     }
 
     byte n_hacks = ptr[0];
@@ -78,7 +81,8 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
             memcpy(&hacks[i], ptr, sizeof(HackMessage));
             ptr += sizeof(HackMessage);
 
-            deliverHack(f_state, &hacks[i]);
+            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i]);
+            free(summary);
         }
     }
 

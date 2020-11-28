@@ -39,12 +39,6 @@ typedef struct _discovery_stats {
 } discovery_stats;
 
 typedef struct _discovery_framework_args {
-    /*
-    unsigned long initial_heartbeat_period_s;
-    unsigned int hb_misses;
-    bool hb_only_in_announces;
-    */
-
     DiscoveryAlgorithm* algorithm;
 
     unsigned int hello_misses;
@@ -52,48 +46,43 @@ typedef struct _discovery_framework_args {
 
     unsigned long neigh_hold_time_s;
     unsigned long max_jitter_ms;
-    unsigned long period_margin_ms; // TODO
+    unsigned long period_margin_ms;
+    unsigned int announce_transition_period_n;
 
     bool ignore_zero_seq;
 
+    double lq_epsilon;
     double lq_threshold;
     double traffic_threshold;
-    unsigned int n_buckets;
-    unsigned int bucket_duration_s;
-    unsigned int window_notify_period_s;
-    char* window_type;
-    // char* bucket_type;
+    double traffic_epsilon;
 
-    // bool flush_events_upon_announce;
-
-	//unsigned long gc_interval_s; // TODO: Aqui ou parte do algorithm?
-    //unsigned long neigh_validity_s;
-
-    //bool process_hb_on_active;
-    //bool reset_hb_timer;
+    unsigned int discov_env_refresh_period_s;
+    unsigned int traffic_n_bucket;
+    unsigned int traffic_bucket_duration_s;
+    unsigned int churn_n_bucket;
+    unsigned int churn_bucket_duration_s;
+    char traffic_window_type[10];
+    char churn_window_type[10];
+    double churn_epsilon;
+    double neigh_density_epsilon;
 } discovery_framework_args;
 
 proto_def* discovery_framework_init(void* arg);
+
 void* discovery_framework_main_loop(main_loop_args* args);
 
-discovery_framework_args* new_discovery_framework_args(/*BroadcastAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s*/);
+discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algorithm,     unsigned int hello_misses, unsigned int hack_misses, unsigned long neigh_hold_time_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_transition_period_n, bool ignore_zero_seq, double lq_epsilon, double lq_threshold, double traffic_threshold, double traffic_epsilon, unsigned int discov_env_refresh_period_s, unsigned int traffic_n_bucket, unsigned int traffic_bucket_duration_s, unsigned int churn_n_bucket, unsigned int churn_bucket_duration_s, char* traffic_window_type, char* churn_window_type, double churn_epsilon, double neigh_density_epsilon);
+
+discovery_framework_args* default_discovery_framework_args();
+
+discovery_framework_args* load_discovery_framework_args(const char* file_path);
 
 typedef enum {
 	NEIGHBOR_FOUND,
 	NEIGHBOR_UPDATE,
 	NEIGHBOR_LOST,
-    //GENERIC_DISCOVERY_EVENT,
-    //NEIGHBORHOOD_UPDATE,
-    //IN_TRAFFIC,
-    //OUT_TRAFFIC,
-    //STABILITY,
-    //MISSES,
-    WINDOWS_EVENT,
-    //REPLY_EVENT,
-    //INIT_EVENT,
-    //HEARTBEAT_EVENT,
-    //MPR_SET,
-    //MPRS_SET,
+    GENERIC_DISCOVERY_EVENT,
+    DISCOVERY_ENVIRONMENT_UPDATE,
 	DISCOVERY_EVENT_COUNT
 } DiscoveryEventType;
 
@@ -107,16 +96,9 @@ typedef enum {
     HACK_TIMER,
     REPLY_TIMER,
     NEIGHBOR_CHANGE_TIMER,
-    WINDOWS_TIMER,
+    DISCOVERY_ENVIRONMENT_TIMER,
     NEIGHBOR_TIMER,
 	DISCOVERY_TIMER_TYPE_COUNT
 } DiscoveryTimerType;
-
-/*
-typedef enum {
-	MSG_BROADCAST_MESSAGE = 0,
-	BCAST_MSG_TYPE_COUNT
-} BcastMessageType;
-*/
 
 #endif /* _DISCOVERY_FRAMEWORK_H_ */

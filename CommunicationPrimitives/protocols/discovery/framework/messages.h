@@ -23,7 +23,6 @@
 #pragma pack(1)
 typedef struct _HelloMessage {
     uuid_t process_id;
-	//unsigned short version;
     unsigned short seq;
     byte period;
     float traffic;

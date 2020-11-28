@@ -24,7 +24,7 @@
 typedef struct _DiscoveryAlgorithm {
     DiscoveryPattern* d_pattern;
     DiscoveryPeriod* d_period;
-    LinkQuality* lq_metric; // TODO: rename
+    LinkQuality* lq_metric;
     DiscoveryMessage* d_message;
 } DiscoveryAlgorithm;
 

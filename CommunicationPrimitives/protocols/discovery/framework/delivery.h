@@ -16,8 +16,99 @@
 
 #include "messages.h"
 
-void deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr);
+typedef struct HelloDeliverSummary_ {
+    bool new_neighbor;
+    bool updated_neighbor;
+    bool rebooted;
+    bool period_changed;
+    bool updated_quality;
+    bool updated_quality_threshold;
+    bool updated_traffic;
+    bool updated_traffic_threshold;
+    int missed_hellos;
+} HelloDeliverSummary;
 
-void deliverHack(void* f_state, HackMessage* hack);
+typedef struct HackDeliverSummary_ {
+    bool positive_hack;
+    bool updated_neighbor;
+    int missed_hacks;
+    bool new_hack;
+    bool repeated_yet_fresh_hack;
+    bool became_bi;
+    bool lost_bi;
+    bool period_changed;
+    bool updated_quality;
+    bool updated_quality_threshold;
+
+    bool updated_2hop_quality;
+    bool updated_2hop_quality_threshold;
+    bool updated_2hop_traffic;
+    bool updated_2hop_traffic_threshold;
+    bool became_bi_2hop;
+    bool lost_bi_2hop;
+
+    bool updated_2hop_neighbor;
+    bool added_2hop_neighbor;
+    bool lost_2hop_neighbor;
+} HackDeliverSummary;
+
+typedef struct NeighborTimerSummary_ {
+    bool updated_neighbor;
+    bool lost_neighbor;
+    bool removed;
+    bool lost_bi;
+    bool updated_quality;
+    bool updated_quality_threshold;
+    int missed_hellos;
+    int missed_hacks;
+
+    unsigned int deleted_2hop;
+
+    //bool updated_2hop_neighbor;
+    //bool added_2hop_neighbor;
+    bool lost_2hop_neighbor;
+} NeighborTimerSummary;
+
+typedef enum {
+    PIGGYBACK_MSG,
+    PERIODIC_MSG,
+    REPLY_MSG,
+    NEIGHBOR_CHANGE_MSG
+} MessageType;
+
+typedef struct NeighborChangeSummary_ {
+    bool new_neighbor;
+    bool updated_neighbor;
+    bool lost_neighbor;
+
+    bool updated_2hop_neighbor;
+    bool added_2hop_neighbor;
+    bool lost_2hop_neighbor;
+
+    //unsigned int deleted_2hop;
+
+    bool other;
+
+    bool removed;
+    bool rebooted;
+    bool lost_bi;
+    bool became_bi;
+    bool hello_period_changed;
+    bool hack_period_changed;
+    bool updated_quality;
+    bool updated_quality_threshold;
+} NeighborChangeSummary;
+
+HelloDeliverSummary* newHelloDeliverSummary();
+
+HackDeliverSummary* newHackDeliverSummary();
+
+NeighborTimerSummary* newNeighborTimerSummary();
+
+HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr);
+
+HackDeliverSummary* deliverHack(void* f_state, HackMessage* hack);
+
+void DF_notifyEvent(char* type, void* buffer, unsigned int size);
 
 #endif /* _DISCOVERY_DELIVERY_H_ */

@@ -20,6 +20,7 @@
 
 #include "../neighbors_table.h"
 #include "../messages.h"
+#include "../delivery.h"
 
 typedef struct ModuleState_ {
     void* args;

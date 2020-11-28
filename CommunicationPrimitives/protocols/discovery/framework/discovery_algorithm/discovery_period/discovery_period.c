@@ -20,7 +20,10 @@ DiscoveryPeriod* newDiscoveryPeriod(byte initial_hello_period_s, byte initial_ha
 
     discovery_period->hello_period_s = initial_hello_period_s;
     discovery_period->hack_period_s = initial_hack_period_s;
+    discovery_period->old_hello_period_s = 0;
+    discovery_period->old_hack_period_s = 0;
     discovery_period->compute_next_period = compute_next_period;
+    copy_timespec(&discovery_period->transition_time, &zero_timespec);
 
     return discovery_period;
 }
@@ -31,6 +34,7 @@ void destroyDiscoveryPeriod(DiscoveryPeriod* discovery_period) {
     }
 }
 
+/*
 byte DP_getHelloPeriod(DiscoveryPeriod* discovery_period) {
     assert(discovery_period);
     return discovery_period->hello_period_s;
@@ -40,17 +44,68 @@ byte DP_getHackPeriod(DiscoveryPeriod* discovery_period) {
     assert(discovery_period);
     return discovery_period->hack_period_s;
 }
+*/
 
-byte DP_computeNextHelloPeriod(DiscoveryPeriod* discovery_period, unsigned long elapsed_time_ms, NeighborsTable* neighbors) {
+
+
+byte DP_getHelloAnnouncePeriod(DiscoveryPeriod* discovery_period) {
     assert(discovery_period);
-    byte next_hello_period = discovery_period->compute_next_period("hello", discovery_period->hello_period_s, elapsed_time_ms, neighbors);
-    discovery_period->hello_period_s = next_hello_period;
-    return next_hello_period;
+    return discovery_period->hello_period_s;
 }
 
-byte DP_computeNextHackPeriod(DiscoveryPeriod* discovery_period, unsigned long elapsed_time_ms, NeighborsTable* neighbors) {
+byte DP_getHelloTransmitPeriod(DiscoveryPeriod* discovery_period, struct timespec* current_time) {
     assert(discovery_period);
-    byte next_hack_period = discovery_period->compute_next_period("hack", discovery_period->hack_period_s, elapsed_time_ms, neighbors);
-    discovery_period->hack_period_s = next_hack_period;
-    return next_hack_period;
+
+    if( compare_timespec(&discovery_period->transition_time, current_time) > 0 ) {
+        return discovery_period->old_hello_period_s;
+    } else {
+        return discovery_period->hello_period_s;
+    }
+}
+
+byte DP_getHackAnnouncePeriod(DiscoveryPeriod* discovery_period) {
+    assert(discovery_period);
+    return discovery_period->hack_period_s;
+}
+
+byte DP_getHackTransmitPeriod(DiscoveryPeriod* discovery_period, struct timespec* current_time) {
+    assert(discovery_period);
+
+    if( compare_timespec(&discovery_period->transition_time, current_time) > 0 ) {
+        return discovery_period->old_hack_period_s;
+    } else {
+        return discovery_period->hack_period_s;
+    }
+}
+
+byte DP_computeNextHelloPeriod(DiscoveryPeriod* discovery_period, unsigned long elapsed_time_ms, unsigned int transition_period_n, NeighborsTable* neighbors, struct timespec* current_time) {
+    assert(discovery_period);
+
+    discovery_period->old_hello_period_s = discovery_period->hello_period_s;
+
+    discovery_period->hello_period_s = discovery_period->compute_next_period("hello", discovery_period->hello_period_s, elapsed_time_ms, neighbors);
+
+    if( discovery_period->hello_period_s > discovery_period->old_hello_period_s ) {
+        struct timespec t;
+        milli_to_timespec(&t, transition_period_n * discovery_period->old_hello_period_s);
+        add_timespec(&discovery_period->transition_time, &t, current_time);
+    }
+
+    return discovery_period->hello_period_s;
+}
+
+byte DP_computeNextHackPeriod(DiscoveryPeriod* discovery_period, unsigned long elapsed_time_ms, unsigned int transition_period_n, NeighborsTable* neighbors, struct timespec* current_time) {
+    assert(discovery_period);
+
+    discovery_period->old_hack_period_s = discovery_period->hack_period_s;
+
+    discovery_period->hack_period_s = discovery_period->compute_next_period("hack", discovery_period->hack_period_s, elapsed_time_ms, neighbors);
+
+    if( discovery_period->hack_period_s > discovery_period->old_hack_period_s ) {
+        struct timespec t;
+        milli_to_timespec(&t, transition_period_n * discovery_period->old_hack_period_s);
+        add_timespec(&discovery_period->transition_time, &t, current_time);
+    }
+
+    return discovery_period->hack_period_s;
 }

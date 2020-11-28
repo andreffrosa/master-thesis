@@ -18,6 +18,9 @@
 
 #include "Yggdrasil/core/utils/hashfunctions.h"
 
+#include "utility/my_sys.h"
+#include <linux/limits.h>
+
 #include <assert.h>
 
 Tuple* newTuple(void** entries, unsigned int size) {
@@ -96,14 +99,16 @@ unsigned char popMessageType(YggMessage* msg) {
 }
 
 
+/*
 list* get_bidirectional_stable_neighbors(graph* neighborhood, unsigned char* id) {
     list* neighbors = list_init();
 
-    /*printf("GET BI NEIGHS:\n");
-    char neigh_str[UUID_STR_LEN+1];
-    neigh_str[UUID_STR_LEN] = '\0';
-    char neigh2_str[UUID_STR_LEN+1];
-    neigh2_str[UUID_STR_LEN] = '\0';*/
+    // printf("GET BI NEIGHS:\n");
+    // char neigh_str[UUID_STR_LEN+1];
+    // neigh_str[UUID_STR_LEN] = '\0';
+    // char neigh2_str[UUID_STR_LEN+1];
+    // neigh2_str[UUID_STR_LEN] = '\0';
+
 
     graph_node* node = graph_find_node(neighborhood, id);
     //if(node != NULL) {
@@ -138,6 +143,10 @@ list* get_bidirectional_stable_neighbors(graph* neighborhood, unsigned char* id)
     return neighbors;
 }
 
+*/
+
+
+/*
 list* compute_mprs(graph* neighborhood, unsigned char* myID) {
 
     list* mprs = list_init();
@@ -308,6 +317,9 @@ list* compute_mprs(graph* neighborhood, unsigned char* myID) {
 
     return mprs;
 }
+*/
+
+
 
 int is_memory_zero(const void* addr, unsigned long size) {
 
@@ -325,4 +337,28 @@ int is_memory_zero(const void* addr, unsigned long size) {
     }
 
     return !not_zero;
+}
+
+
+topology_manager_args* load_overlay(char* overlay_path, char* hostname) {
+    // Register Topology Manager Protocol
+	char db_file_path[PATH_MAX];
+	char neighs_file_path[PATH_MAX];
+	build_path(db_file_path, overlay_path, "macAddrDB.txt");
+	//build_path(neighs_file_path, config.app.overlay_path, "neighs.txt");
+
+    char neighs_file[20];
+    sprintf(neighs_file, "%s.txt", hostname);
+    build_path(neighs_file_path, overlay_path, neighs_file);
+
+    char str[1000];
+    char cmd[PATH_MAX + 300];
+    sprintf(cmd, "cat %s | wc -l", db_file_path);
+    int n = run_command(cmd, str, 1000);
+    assert(n > 0);
+
+    int db_size = (int) strtol(str, NULL, 10);
+
+	topology_manager_args* t_args = topology_manager_args_init(db_size, db_file_path, neighs_file_path, true);
+	return t_args;
 }

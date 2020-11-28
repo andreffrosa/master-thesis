@@ -27,7 +27,7 @@ typedef enum {
     HYBRID_HELLO
 } HelloSchedulerType;
 
-HelloScheduler* newHelloScheduler(HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor);
+HelloScheduler* newHelloScheduler(HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 void destroyHelloScheduler(HelloScheduler* hello_sh);
 
@@ -35,11 +35,11 @@ HelloScheduler* NoHELLO();
 
 HelloScheduler* PiggybackHELLO(PiggybackType piggyback_hellos);
 
-HelloScheduler* PeriodicHELLO(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor);
+HelloScheduler* PeriodicHELLO(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
-HelloScheduler* HybridHELLO(PiggybackType piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor);
+HelloScheduler* HybridHELLO(PiggybackType piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
-void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor);
+void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 bool HELLO_isPeriodic(HelloScheduler* hello_sh);
 
@@ -50,6 +50,12 @@ bool HELLO_newNeighbor(HelloScheduler* hello_sh);
 bool HELLO_lostNeighbor(HelloScheduler* hello_sh);
 
 bool HELLO_updateNeighbor(HelloScheduler* hello_sh);
+
+bool HELLO_new2HopNeighbor(HelloScheduler* hello_sh);
+
+bool HELLO_lost2HopNeighbor(HelloScheduler* hello_sh);
+
+bool HELLO_update2HopNeighbor(HelloScheduler* hello_sh);
 
 HelloSchedulerType HELLO_getType(HelloScheduler* hello_sh);
 
