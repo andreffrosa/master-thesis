@@ -17,11 +17,15 @@
 
 #include <assert.h>
 
-static bool _EnhancedRapidPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool EnhancedRapidPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 	double beta = *((double*)(policy_state->args));
 	unsigned int n = 0;
-	if(!query_context(r_context, "n_neighbors", &n, myID, 0))
-		assert(false);
+
+    list* visited2 = list_init();
+    if(!RC_query(r_context, "n_neighbors", &n, NULL, myID, visited2))
+        assert(false);
+    list_delete(visited2);
+
 	unsigned int n_copies = getCopies(p_msg)->size;
 	unsigned int current_phase = getCurrentPhase(p_msg);
 
@@ -37,7 +41,7 @@ static bool _EnhancedRapidPolicy(ModuleState* policy_state, PendingMessage* p_ms
 
 			double_list_item* it = getCopies(p_msg)->head;
 			while(it) {
-                if(getCopyPhase(((message_copy*)it->data)) == 2) {
+                if(getCopyPhase(((MessageCopy*)it->data)) == 2) {
 					copies_on_2nd_phase++;
 				}
 				it = it->next;
@@ -49,19 +53,19 @@ static bool _EnhancedRapidPolicy(ModuleState* policy_state, PendingMessage* p_ms
 	}
 }
 
-static void _EnhancedRapidPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void EnhancedRapidPolicyDestroy(ModuleState* policy_state, list* visited) {
     free(policy_state->args);
 }
 
 RetransmissionPolicy* EnhancedRapidPolicy(double beta) {
-    RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
 
-	r_policy->policy_state.args = malloc(sizeof(double));
-	*((double*)r_policy->policy_state.args) = beta;
+	double* beta_arg = malloc(sizeof(double));
+	*beta_arg = beta;
 
-	r_policy->policy_state.vars = NULL;
-	r_policy->r_policy = &_EnhancedRapidPolicy;
-    r_policy->destroy = &_EnhancedRapidPolicyDestroy;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        beta_arg,
+        NULL,
+        &EnhancedRapidPolicyEval,
+        &EnhancedRapidPolicyDestroy
+    );
 }

@@ -15,26 +15,26 @@
 
 #include "utility/my_math.h"
 
-static bool _ProbabilityPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool ProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 	double p = *((double*)(policy_state->args));
 	double u = randomProb();
 
 	return u <= p;
 }
 
-static void _ProbabilityPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void ProbabilityPolicyDestroy(ModuleState* policy_state, list* visited) {
     free(policy_state->args);
 }
 
 RetransmissionPolicy* ProbabilityPolicy(double p) {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
 
-	r_policy->policy_state.args = malloc(sizeof(p));
-	*((double*)(r_policy->policy_state.args)) = p;
-	r_policy->policy_state.vars = NULL;
+	double* p_arg = malloc(sizeof(p));
+	*p_arg = p;
 
-	r_policy->r_policy = &_ProbabilityPolicy;
-    r_policy->destroy = &_ProbabilityPolicyDestroy;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        p_arg,
+        NULL,
+        &ProbabilityPolicyEval,
+        &ProbabilityPolicyDestroy
+    );
 }

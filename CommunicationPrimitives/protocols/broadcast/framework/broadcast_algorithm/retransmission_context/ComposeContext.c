@@ -25,18 +25,11 @@ static void ComposeContextInit(ModuleState* context_state, proto_def* protocol_d
 	ComposeContextArgs* args = ((ComposeContextArgs*)(context_state->args));
 
 	for(int i = 0; i < args->amount; i++) {
-        if(list_find_item(visited, &equalAddr, args->contexts[i]) == NULL) {
-            void** this = malloc(sizeof(void*));
-            *this = args->contexts[i];
-            list_add_item_to_tail(visited, this);
-
-            args->contexts[i]->init(&args->contexts[i]->context_state, protocol_definition, myID, visited);
-        }
+        RC_init(args->contexts[i], protocol_definition, myID, visited);
 	}
 }
 
-static unsigned int ComposeContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-
+static unsigned int ComposeContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
 	ComposeContextArgs* args = ((ComposeContextArgs*)(context_state->args));
 
 	unsigned char sizes[args->amount];
@@ -44,18 +37,7 @@ static unsigned int ComposeContextHeader(ModuleState* context_state, PendingMess
     unsigned int total_size = sizeof(sizes);
 
     for(int i = 0; i < args->amount; i++) {
-        if(list_find_item(visited, &equalAddr, args->contexts[i]) == NULL) {
-            void** this = malloc(sizeof(void*));
-            *this = args->contexts[i];
-            list_add_item_to_tail(visited, this);
-
-            unsigned int temp = args->contexts[i]->create_header(&args->contexts[i]->context_state, p_msg, &headers[i], r_context, myID, visited);
-            assert(temp <= 255);
-            sizes[i] = temp;
-        } else {
-            sizes[i] = 0;
-            headers[i] = NULL;
-        }
+        sizes[i] = RC_createHeader(args->contexts[i], p_msg, &headers[i], myID, visited);
 
         total_size += sizes[i];
     }
@@ -77,38 +59,26 @@ static unsigned int ComposeContextHeader(ModuleState* context_state, PendingMess
 	return total_size;
 }
 
-static void ComposeContextEvent(ModuleState* context_state, queue_t_elem* elem, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static void ComposeContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, list* visited) {
 	ComposeContextArgs* args = ((ComposeContextArgs*)(context_state->args));
 
     for(int i = 0; i < args->amount; i++) {
-        if(list_find_item(visited, &equalAddr, args->contexts[i]) == NULL) {
-            void** this = malloc(sizeof(void*));
-            *this = args->contexts[i];
-            list_add_item_to_tail(visited, this);
-
-		    args->contexts[i]->process_event(&args->contexts[i]->context_state, elem, r_context, myID, visited);
-        }
+        RC_processEvent(args->contexts[i], elem, myID, visited);
 	}
 }
 
-static bool ComposeContextQuery(ModuleState* context_state, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static bool ComposeContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
 
 	ComposeContextArgs* args = ((ComposeContextArgs*)(context_state->args));
 	for(int i = 0; i < args->amount; i++) {
-        if(list_find_item(visited, &equalAddr, args->contexts[i]) == NULL) {
-            void** this = malloc(sizeof(void*));
-            *this = args->contexts[i];
-            list_add_item_to_tail(visited, this);
-
-            bool r = args->contexts[i]->query_handler(&args->contexts[i]->context_state, query, result, argc, argv, r_context, myID, visited);
-		    if(r) return true;
-        }
+        bool r = RC_query(args->contexts[i], query, result, query_args, myID, visited);
+        if(r) return true;
 	}
 
 	return false;
 }
 
-static bool ComposeContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static bool ComposeContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
 
 	ComposeContextArgs* args = ((ComposeContextArgs*)(context_state->args));
 
@@ -122,14 +92,8 @@ static bool ComposeContextQueryHeader(ModuleState* context_state, void* context_
     unsigned char* ptr = context_header ? context_header + sizeof(sizes) : NULL;
 	for(int i = 0; i < args->amount; i++) {
 		if(sizes[i] > 0 && context_header != NULL) {
-            if(list_find_item(visited, &equalAddr, args->contexts[i]) == NULL) {
-                void** this = malloc(sizeof(void*));
-                *this = args->contexts[i];
-                list_add_item_to_tail(visited, this);
-
-    			bool r = args->contexts[i]->query_header_handler(&args->contexts[i]->context_state, ptr, sizes[i], query, result, argc, argv, r_context, myID, visited);
-    			if(r) return true;
-            }
+            bool r = RC_queryHeader(args->contexts[i], ptr, sizes[i], query, result, query_args, myID, visited);
+            if(r) return true;
 		}
 
         ptr += sizes[i];
@@ -139,20 +103,11 @@ static bool ComposeContextQueryHeader(ModuleState* context_state, void* context_
 	return false;
 }
 
-static void ComposeContextCopy(ModuleState* context_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static void ComposeContextCopy(ModuleState* context_state, PendingMessage* p_msg, unsigned char* myID, list* visited) {
     ComposeContextArgs* args = ((ComposeContextArgs*)(context_state->args));
-    for(int i = 0; i < args->amount; i++) {
-        if(list_find_item(visited, &equalAddr, args->contexts[i]) == NULL) {
-            void** this = malloc(sizeof(void*));
-            *this = args->contexts[i];
-            list_add_item_to_tail(visited, this);
 
-            RetransmissionContext* rc = args->contexts[i];
-            if(rc->copy_handler != NULL) {
-                if(rc->copy_handler != NULL)
-                    rc->copy_handler(&rc->context_state, p_msg, r_context, myID, visited);
-            }
-        }
+    for(int i = 0; i < args->amount; i++) {
+        RC_processCopy(args->contexts[i], p_msg, myID, visited);
     }
 }
 
@@ -160,13 +115,7 @@ static void ComposeContextDestroy(ModuleState* context_state, list* visited) {
     ComposeContextArgs* args = ((ComposeContextArgs*)(context_state->args));
 
     for(int i = 0; i < args->amount; i++) {
-        if(list_find_item(visited, &equalAddr, args->contexts[i]) == NULL) {
-            void** this = malloc(sizeof(void*));
-            *this = args->contexts[i];
-            list_add_item_to_tail(visited, this);
-
-            destroyRetransmissionContext(args->contexts[i], visited);
-        }
+        destroyRetransmissionContext(args->contexts[i], visited);
     }
 
     free(args->contexts);
@@ -188,18 +137,15 @@ RetransmissionContext* ComposeContext(int amount, ...) {
 	c_args->contexts = contexts;
 	c_args->amount = amount;
 
-	RetransmissionContext* r_context = malloc(sizeof(RetransmissionContext));
-
-	r_context->context_state.args = c_args;
-    r_context->context_state.vars = NULL;
-
-	r_context->init = &ComposeContextInit;
-	r_context->create_header = &ComposeContextHeader;
-	r_context->process_event = &ComposeContextEvent;
-	r_context->query_handler = &ComposeContextQuery;
-	r_context->query_header_handler = &ComposeContextQueryHeader;
-    r_context->copy_handler = &ComposeContextCopy;
-    r_context->destroy = &ComposeContextDestroy;
-
-	return r_context;
+    return newRetransmissionContext(
+        c_args,
+        NULL,
+        &ComposeContextInit,
+        &ComposeContextEvent,
+        &ComposeContextHeader,
+        &ComposeContextQuery,
+        &ComposeContextQueryHeader,
+        &ComposeContextCopy,
+        &ComposeContextDestroy
+    );
 }

@@ -13,26 +13,26 @@
 
 #include "retransmission_policy_private.h"
 
-static bool _CountPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool CountPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 	unsigned int c = *((unsigned int*)(policy_state->args));
 	unsigned int n_copies = getCopies(p_msg)->size;
 
 	return n_copies < c;
 }
 
-static void _CountPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void CountPolicyDestroy(ModuleState* policy_state, list* visited) {
     free(policy_state->args);
 }
 
 RetransmissionPolicy* CountPolicy(unsigned int c) {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
 
-	r_policy->policy_state.args = malloc(sizeof(c));
-	*((unsigned int*)(r_policy->policy_state.args)) = c;
-	r_policy->policy_state.vars = NULL;
+    unsigned int* c_arg = malloc(sizeof(c));
+    *c_arg = c;
 
-	r_policy->r_policy = &_CountPolicy;
-    r_policy->destroy = &_CountPolicyDestroy;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        c_arg,
+        NULL,
+        &CountPolicyEval,
+        &CountPolicyDestroy
+    );
 }

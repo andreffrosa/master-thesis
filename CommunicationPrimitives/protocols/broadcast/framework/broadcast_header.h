@@ -11,22 +11,22 @@
  * (C) 2019
  *********************************************************/
 
-#ifndef _BCAST_HEADER_H_
-#define _BCAST_HEADER_H_
+#ifndef _BROADCAST_HEADER_H_
+#define _BROADCAST_HEADER_H_
 
 #include "Yggdrasil.h"
 
 #pragma pack(1)
-typedef struct bcast_header_ {
+typedef struct BroadcastHeader_ {
 	uuid_t source_id;
     uuid_t sender_id;
 	uuid_t msg_id;
 	unsigned short dest_proto;
     unsigned short ttl;
 	unsigned short context_length;
-} bcast_header;
+} BroadcastHeader;
 #pragma pack()
 
-#define BCAST_HEADER_LENGTH sizeof(bcast_header)
+#define BROADCAST_HEADER_LENGTH sizeof(BroadcastHeader)
 
-#endif /* _BCAST_HEADER_H_ */
+#endif /* _BROADCAST_HEADER_H_ */

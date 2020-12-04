@@ -362,3 +362,7 @@ topology_manager_args* load_overlay(char* overlay_path, char* hostname) {
 	topology_manager_args* t_args = topology_manager_args_init(db_size, db_file_path, neighs_file_path, true);
 	return t_args;
 }
+
+bool equalAddr(void* a, void* b) {
+	return *((void**)a) == b;
+}

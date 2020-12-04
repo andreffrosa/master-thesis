@@ -17,7 +17,7 @@
 #include "data_structures/double_list.h"
 
 #include "pending_messages/pending_messages.h"
-#include "bcast_header.h"
+#include "broadcast_header.h"
 //#include "broadcast_algorithm/bcast_algorithms.h"
 
 #include "framework.h"
@@ -44,9 +44,9 @@ void RetransmitMessage(broadcast_framework_state* state, PendingMessage* p_msg, 
 void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req);
 void uponNewMessage(broadcast_framework_state* state, YggMessage* msg);
 void uponTimeout(broadcast_framework_state* state, YggTimer* timer);
-void serializeHeader(broadcast_framework_state* state, PendingMessage* p_msg, bcast_header* header, void** context_header, unsigned short ttl);
+void serializeHeader(broadcast_framework_state* state, PendingMessage* p_msg, BroadcastHeader* header, void** context_header, unsigned short ttl);
 void serializeMessage(broadcast_framework_state* state, YggMessage* m, PendingMessage* p_msg, unsigned short ttl);
-void deserializeMessage(YggMessage* m, bcast_header* header, void** context_header, YggMessage* toDeliver);
+void deserializeMessage(YggMessage* m, BroadcastHeader* header, void** context_header, YggMessage* toDeliver);
 void runGarbageCollector(broadcast_framework_state* state);
 void uponStatsRequest(broadcast_framework_state* state, YggRequest* req);
 

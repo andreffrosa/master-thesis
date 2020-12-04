@@ -13,25 +13,34 @@
 
 #include "retransmission_policy_private.h"
 
+#include "utility/my_string.h"
+
 #include <assert.h>
 
-static bool _SBAPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool SBAPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 
     bool all_covered = false;
-    if(!query_context(r_context, "all_covered", &all_covered, myID, 1, p_msg))
+
+    list* visited2 = list_init();
+    hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
+    char* key = malloc(6*sizeof(char));
+    strcpy(key, "p_msg");
+    void** value = malloc(sizeof(void*));
+    *value = p_msg;
+    hash_table_insert(query_args, key, value);
+    if(!RC_query(r_context, "all_covered", &all_covered, query_args, myID, visited2))
         assert(false);
+    hash_table_delete(query_args);
+    list_delete(visited2);
 
     return !all_covered;
 }
 
 RetransmissionPolicy* SBAPolicy() {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
-
-	r_policy->policy_state.args = NULL;
-	r_policy->policy_state.vars = NULL;
-
-	r_policy->r_policy = &_SBAPolicy;
-    r_policy->destroy = NULL;
-
-	return r_policy;
+	return newRetransmissionPolicy(
+        NULL,
+        NULL,
+        &SBAPolicyEval,
+        NULL
+    );
 }

@@ -13,18 +13,15 @@
 
 #include "retransmission_policy_private.h"
 
-static bool _TruePolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool TruePolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 	return true;
 }
 
 RetransmissionPolicy* TruePolicy() {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
-
-	r_policy->policy_state.args = NULL;
-	r_policy->policy_state.vars = NULL;
-
-	r_policy->r_policy = &_TruePolicy;
-    r_policy->destroy = NULL;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        NULL,
+        NULL,
+        &TruePolicyEval,
+        NULL
+    );
 }

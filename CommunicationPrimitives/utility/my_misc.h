@@ -38,6 +38,8 @@ bool equalInt(void* a, void* b);
 
 unsigned long int_hash(int* n);
 
+bool equalAddr(void* a, void* b);
+
 void pushMessageType(YggMessage* msg, unsigned char type);
 
 unsigned char popMessageType(YggMessage* msg);
@@ -57,5 +59,10 @@ list* compute_mprs(graph* neighborhood, unsigned char* myID);
 int is_memory_zero(const void* addr, unsigned long size);
 
 topology_manager_args* load_overlay(char* overlay_path, char* hostname);
+
+typedef struct ModuleState_ {
+    void* args;
+    void* vars;
+} ModuleState;
 
 #endif /* MY_MISC_H_ */

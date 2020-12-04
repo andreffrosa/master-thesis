@@ -14,4 +14,4 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -O0")
 
 add_library(pending_messages ${SRC_FILES_PENDING_MESSAGES})
 
-target_link_libraries(pending_messages PUBLIC utility data_structures discovery m uuid rt)
+target_link_libraries(pending_messages PUBLIC discovery_algorithm discovery_framework utility data_structures m uuid rt)

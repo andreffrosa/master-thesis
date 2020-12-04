@@ -26,22 +26,44 @@
 
 #include "Yggdrasil.h"
 
+#include "../app_common.h"
+
 #include "protocols/broadcast/framework/framework.h"
-#include "protocols/discovery/topology_discovery.h"
+#include "protocols/discovery/framework/framework.h"
+
 #include "utility/my_math.h"
 #include "utility/my_time.h"
 #include "utility/my_sys.h"
 
-#include "process_args.h"
+typedef struct BroadcastAppArgs_ {
+    char broadcast_type[200];
+    //struct timespec start_time;
+    unsigned long initial_grace_period_s;
+    unsigned long final_grace_period_s;
+
+    //unsigned long initial_timer_ms;
+    //unsigned long periodic_timer_ms;
+    unsigned long max_broadcasts;
+    unsigned long exp_duration_s;
+    unsigned char rcv_only;
+    //double bcast_prob;
+    //bool use_overlay;
+    //char overlay_path[PATH_MAX];
+    //char interface_name[100];
+    //char hostname[100];
+} BroadcastAppArgs;
+
+static BroadcastAppArgs* default_broadcast_app_args();
+static BroadcastAppArgs* parse_broadcast_app_args(const char* file_path);
 
 static void printDiscoveryStats(YggRequest* req);
 static void printBcastStats(YggRequest* req);
-static void bcastMessage(const char* pi, unsigned int counter);
+static void sendMessage(const char* pi, unsigned int counter);
 static void rcvMessage(YggMessage* msg);
-static void uponNotification(YggEvent* ev, Configs* config);
+static void uponNotification(YggEvent* ev, BroadcastAppArgs* app_args);
 
-static unsigned long getTimerDuration(Configs* config, bool isFirst);
-static void setBroadcastTimer(Configs* config, unsigned char* bcast_timer_id, bool isFirst);
+static unsigned long getTimerDuration(BroadcastAppArgs* app_args, bool isFirst, struct timespec* start_time);
+static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_timer_id, bool isFirst, struct timespec* start_time);
 
 #define APP_ID 400
 #define APP_NAME "BROADCAST APP"
@@ -49,54 +71,68 @@ static void setBroadcastTimer(Configs* config, unsigned char* bcast_timer_id, bo
 int main(int argc, char* argv[]) {
 
 	// Process Args
-    Configs config;
-    defaultConfigValues(&config);
-	processArgs(argc, argv, &config);
-    printConfigs(&config);
+    hash_table* args = parse_args(argc, argv);
 
-	NetworkConfig* ntconf = defineNetworkConfig2(config.app.interface_name, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
+    // Interface and Hostname
+    char interface[20] = {0}, hostname[30] = {0};
+    unparse_host(hostname, 20, interface, 30, args);
 
-	// Initialize ygg_runtime
-	ygg_runtime_init_2(ntconf, config.app.hostname);
+    // Network
+    NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
 
-    const char* pi = getHostname(); // raspi-n
-    pi = (pi == NULL) ? config.app.hostname : pi;
+    // Initialize ygg_runtime
+    ygg_runtime_init_2(ntconf, hostname);
 
-	// Register this app
-	app_def* myApp = create_application_definition(APP_ID, APP_NAME);
-
-	if(config.app.use_overlay) {
-		// Register Topology Manager Protocol
-		char db_file_path[PATH_MAX];
-		char neighs_file_path[PATH_MAX];
-		build_path(db_file_path, config.app.overlay_path, "macAddrDB.txt");
-		//build_path(neighs_file_path, config.app.overlay_path, "neighs.txt");
-        char neighs_file[20];
-        sprintf(neighs_file, "%s.txt", pi);
-        build_path(neighs_file_path, config.app.overlay_path, neighs_file);
-
-        char str[1000];
-        char cmd[PATH_MAX + 300];
-        sprintf(cmd, "cat %s | wc -l", db_file_path);
-        int n = run_command(cmd, str, 1000);
-        assert(n > 0);
-
-        int db_size = (int) strtol(str, NULL, 10);
-
-		topology_manager_args* t_args = topology_manager_args_init(db_size, db_file_path, neighs_file_path, true);
-		registerYggProtocol(PROTO_TOPOLOGY_MANAGER, topologyManager_init, t_args);
+    // Overlay
+    char* overlay_path = hash_table_find_value(args, "overlay");
+	if(overlay_path) {
+        topology_manager_args* t_args = load_overlay(overlay_path, hostname);
+        registerYggProtocol(PROTO_TOPOLOGY_MANAGER, topologyManager_init, t_args);
 		topology_manager_args_destroy(t_args);
 	}
 
-	// Register Framework Protocol
-	registerProtocol(BCAST_FRAMEWORK_PROTO_ID, &broadcast_framework_init, (void*) config.broadcast.f_args);
+    // Discovery Framework
+    char* discovery_args_file = hash_table_find_value(args, "discovery");
+    if(discovery_args_file) {
+        discovery_framework_args* discovery_args = load_discovery_framework_args(discovery_args_file);
 
+    	registerProtocol(DISCOVERY_FRAMEWORK_PROTO_ID, &discovery_framework_init, (void*) discovery_args);
+    }
+
+    // Broadcast Framework
+    broadcast_framework_args* broadcast_args = NULL;
+    char* broadcast_args_file = hash_table_find_value(args, "broadcast");
+    if(broadcast_args_file) {
+        broadcast_args = load_broadcast_framework_args(broadcast_args_file);
+    } else {
+        broadcast_args = default_broadcast_framework_args();
+    }
+    registerProtocol(BROADCAST_FRAMEWORK_PROTO_ID, &broadcast_framework_init, (void*) broadcast_args);
+
+    // Broadcast App
+    BroadcastAppArgs* app_args = NULL;
+    char* app_args_file = hash_table_find_value(args, "app");
+    if(app_args_file) {
+        app_args = parse_broadcast_app_args(app_args_file);
+    } else {
+        app_args = default_broadcast_app_args();
+    }
+    // TODO: print app_args
+
+    hash_table_delete(args);
+    args = NULL;
+
+    // Register this app
+    app_def* myApp = create_application_definition(APP_ID, APP_NAME);
+
+    /*
     app_def_add_consumed_events(myApp, TOPOLOGY_DISCOVERY_PROTO_ID, NEIGHBOR_FOUND);
-	app_def_add_consumed_events(myApp, TOPOLOGY_DISCOVERY_PROTO_ID, NEIGHBOR_UPDATE);
-	app_def_add_consumed_events(myApp, TOPOLOGY_DISCOVERY_PROTO_ID, NEIGHBOR_LOST);
+    app_def_add_consumed_events(myApp, TOPOLOGY_DISCOVERY_PROTO_ID, NEIGHBOR_UPDATE);
+    app_def_add_consumed_events(myApp, TOPOLOGY_DISCOVERY_PROTO_ID, NEIGHBOR_LOST);
     app_def_add_consumed_events(myApp, TOPOLOGY_DISCOVERY_PROTO_ID, NEIGHBORHOOD_UPDATE);
     app_def_add_consumed_events(myApp, TOPOLOGY_DISCOVERY_PROTO_ID, IN_TRAFFIC);
     app_def_add_consumed_events(myApp, TOPOLOGY_DISCOVERY_PROTO_ID, OUT_TRAFFIC);
+*/
 
     queue_t* inBox = registerApp(myApp);
 
@@ -107,29 +143,30 @@ int main(int argc, char* argv[]) {
 	// Start App
 
 	// Set periodic timer
-	struct timespec t = {0};
+    struct timespec start_time = {0};
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
 
-    clock_gettime(CLOCK_MONOTONIC, &config.app.start_time);
+    struct timespec t = {0};
 
     uuid_t bcast_timer_id;
 	genUUID(bcast_timer_id);
-    if(!config.app.rcv_only){
-        setBroadcastTimer(&config, bcast_timer_id, true);
+    if(!app_args->rcv_only){
+        setBroadcastTimer(app_args, bcast_timer_id, true, &start_time);
     }
 
 	// Set end of experiment
 	uuid_t end_exp;
 	genUUID(end_exp);
-	milli_to_timespec(&t, config.app.exp_duration_s*1000 + config.app.initial_grace_period_s*1000);
+	milli_to_timespec(&t, app_args->exp_duration_s*1000 + app_args->initial_grace_period_s*1000);
     SetTimer(&t, end_exp, APP_ID, 0);
 
 	YggRequest discovery_stats_req;
-	YggRequest_init(&discovery_stats_req, APP_ID, TOPOLOGY_DISCOVERY_PROTO_ID, REQUEST, STATS_REQ);
+	YggRequest_init(&discovery_stats_req, APP_ID, DISCOVERY_FRAMEWORK_PROTO_ID, REQUEST, REQ_DISCOVERY_FRAMEWORK_STATS);
 	YggRequest framework_stats_req;
-	YggRequest_init(&framework_stats_req, APP_ID, BCAST_FRAMEWORK_PROTO_ID, REQUEST, REQ_BCAST_FRAMEWORK_STATS);
+	YggRequest_init(&framework_stats_req, APP_ID, BROADCAST_FRAMEWORK_PROTO_ID, REQUEST, REQ_BROADCAST_FRAMEWORK_STATS);
 
 	char str[100];
-	sprintf(str, "%s starting experience with duration %lu + %lu + %lu s\n", pi, config.app.initial_grace_period_s, config.app.exp_duration_s, config.app.final_grace_period_s);
+	sprintf(str, "%s starting experience with duration %lu + %lu + %lu s\n", hostname, app_args->initial_grace_period_s, app_args->exp_duration_s, app_args->final_grace_period_s);
 	ygg_log(APP_NAME, "INIT", str);
 
 	unsigned int counter = 0;
@@ -147,7 +184,7 @@ int main(int argc, char* argv[]) {
                     finished = true;
                     ygg_log(APP_NAME, "MAIN LOOP", "END.");
 
-                    milli_to_timespec(&t, config.app.final_grace_period_s*1000);
+                    milli_to_timespec(&t, app_args->final_grace_period_s*1000);
                     SetTimer(&t, end_exp, APP_ID, 0);
                 } else {
                     deliverRequest(&framework_stats_req);
@@ -155,11 +192,11 @@ int main(int argc, char* argv[]) {
                 }
 			} else if( uuid_compare(elem.data.timer.id, bcast_timer_id ) == 0 ) {
 
-				if (!config.app.rcv_only && !finished) {
-                    bcastMessage(pi, ++counter);
+				if (!app_args->rcv_only && !finished) {
+                    sendMessage(hostname, ++counter);
 
-                    if( counter < config.app.max_broadcasts || config.app.max_broadcasts == ULONG_MAX ) {
-						setBroadcastTimer(&config, bcast_timer_id, false);
+                    if( counter < app_args->max_broadcasts || app_args->max_broadcasts == ULONG_MAX ) {
+						setBroadcastTimer(app_args, bcast_timer_id, false, &start_time);
 					}
 				}
 			}
@@ -177,12 +214,12 @@ int main(int argc, char* argv[]) {
             ;YggRequest* req = &elem.data.request;
 			if( req->proto_dest == APP_ID ) {
 
-				if( req->proto_origin == TOPOLOGY_DISCOVERY_PROTO_ID ) {
-					if( req->request == REPLY && req->request_type == STATS_REQ) {
+				if( req->proto_origin == DISCOVERY_FRAMEWORK_PROTO_ID ) {
+					if( req->request == REPLY && req->request_type == REQ_DISCOVERY_FRAMEWORK_STATS) {
 						printDiscoveryStats(req);
 					}
-				} else if ( req->proto_origin == BCAST_FRAMEWORK_PROTO_ID ) {
-					if( req->request == REPLY && req->request_type == REQ_BCAST_FRAMEWORK_STATS) {
+				} else if ( req->proto_origin == BROADCAST_FRAMEWORK_PROTO_ID ) {
+					if( req->request == REPLY && req->request_type == REQ_BROADCAST_FRAMEWORK_STATS) {
 						printBcastStats(req);
 					}
 				}
@@ -196,7 +233,7 @@ int main(int argc, char* argv[]) {
             }*/
 			break;
 		case YGG_EVENT:
-			uponNotification(&elem.data.event, &config);
+			uponNotification(&elem.data.event, app_args);
 			break;
 		default:
 			ygg_log(APP_NAME, "MAIN LOOP", "Received wierd thing in my queue.");
@@ -209,13 +246,14 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-static void bcastMessage(const char* pi, unsigned int counter) {
+static void sendMessage(const char* hostname, unsigned int counter) {
 	char payload[1000];
 	struct timespec current_time;
 	clock_gettime(CLOCK_MONOTONIC, &current_time);
 
     const char* ordinal = ((counter==1) ? "st" : ((counter==2) ? "nd" : ((counter==3) ? "rd" : "th")));
-    sprintf(payload, "I'm %s and this is my %d%s message.", pi, counter, ordinal);
+
+    sprintf(payload, "I'm %s and this is my %d%s message.", hostname, counter, ordinal);
 
     BroadcastMessage(APP_ID, (unsigned char*)payload, strlen(payload)+1, -1);
 
@@ -243,7 +281,7 @@ static void printBcastStats(YggRequest* req) {
 	YggRequest_readPayload(req, NULL, &stats, sizeof(broadcast_stats));
 
 	char m[1000];
-	sprintf(m, "Broadcast: %d \t Received: %d \t Transmitted: %d \t Not_Transmitted: %d \t Delivered: %d",
+	sprintf(m, "Broadcast: %lu \t Received: %lu \t Transmitted: %lu \t Not_Transmitted: %lu \t Delivered: %lu",
             stats.messages_bcasted,
             stats.messages_received,
             stats.messages_transmitted,
@@ -254,21 +292,22 @@ static void printBcastStats(YggRequest* req) {
 }
 
 static void printDiscoveryStats(YggRequest* req) {
-	topology_discovery_stats stats;
-	YggRequest_readPayload(req, NULL, &stats, sizeof(topology_discovery_stats));
+	discovery_stats stats;
+	YggRequest_readPayload(req, NULL, &stats, sizeof(discovery_stats));
 
 	char str[1000];
-	sprintf(str, "Announces: %d \t Piggybacked: %d \t Lost Neighs: %d \t New Neighs: %d",
-            stats.announces,
-            stats.piggybacked_heartbeats,
-            stats.lost_neighbours,
-            stats.new_neighbours);
+	sprintf(str, "Disc. Messages: %lu \t Piggybacked Hellos: %lu \t Lost Neighs: %lu \t New Neighs: %lu",
+            stats.discovery_messages,
+            stats.piggybacked_hellos,
+            stats.lost_neighbors,
+            stats.new_neighbors);
 
 	ygg_log(APP_NAME, "DISCOVERY STATS", str);
 }
 
-static void uponNotification(YggEvent* ev, Configs* config) {
+static void uponNotification(YggEvent* ev, BroadcastAppArgs* app_args) {
 
+	/*
 	if( ev->proto_dest == APP_ID ) {
         if(ev->proto_origin == TOPOLOGY_DISCOVERY_PROTO_ID) {
             if(ev->notification_id == NEIGHBORHOOD_UPDATE) {
@@ -285,14 +324,17 @@ static void uponNotification(YggEvent* ev, Configs* config) {
 		sprintf(s, "Received notification from protocol %d meant for protocol %d", ev->proto_origin, ev->proto_dest);
 		ygg_log(APP_NAME, "NOTIFICATION", s);
 	}
+*/
+
+
 
 }
 
-static unsigned long getTimerDuration(Configs* config, bool isFirst) {
+static unsigned long getTimerDuration(BroadcastAppArgs* app_args, bool isFirst, struct timespec* start_time) {
     unsigned long t = 0L;
 
-    char aux[strlen(config->app.broadcast_type)+1];
-    strcpy(aux, config->app.broadcast_type);
+    char aux[strlen(app_args->broadcast_type)+1];
+    strcpy(aux, app_args->broadcast_type);
 
     char* ptr = NULL;
     char* token  = strtok_r(aux, " ", &ptr);
@@ -326,10 +368,10 @@ static unsigned long getTimerDuration(Configs* config, bool isFirst) {
 
                                 struct timespec current_time;
                                 clock_gettime(CLOCK_MONOTONIC, &current_time);
-                                subtract_timespec(&current_time, &current_time, &config->app.start_time);
+                                subtract_timespec(&current_time, &current_time, start_time);
                                 double seconds = timespec_to_milli(&current_time) / 1000.0;
 
-                                double aux = dev + stretching*(seconds / config->app.exp_duration_s);
+                                double aux = dev + stretching*(seconds / app_args->exp_duration_s);
                                 double f = (1.0+cos(2.0*M_PI*aux))/2.0;
 
                                 lambda = min_lambda + (max_lambda - min_lambda)*f;
@@ -389,7 +431,7 @@ static unsigned long getTimerDuration(Configs* config, bool isFirst) {
     }
 
     if(isFirst) {
-        t += config->app.initial_grace_period_s*1000;
+        t += app_args->initial_grace_period_s*1000;
     }
 
     #ifdef DEBUG_BROADCAST_TEST
@@ -401,9 +443,74 @@ static unsigned long getTimerDuration(Configs* config, bool isFirst) {
     return t;
 }
 
-static void setBroadcastTimer(Configs* config, unsigned char* bcast_timer_id, bool isFirst) {
-    unsigned long t = getTimerDuration(config, isFirst);
+static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_timer_id, bool isFirst, struct timespec* start_time) {
+    unsigned long t = getTimerDuration(app_args, isFirst, start_time);
     struct timespec t_;
     milli_to_timespec(&t_, t);
     SetTimer(&t_, bcast_timer_id, APP_ID, 0);
+}
+
+static BroadcastAppArgs* default_broadcast_app_args() {
+    BroadcastAppArgs* app_args = malloc(sizeof(BroadcastAppArgs));
+
+    strcpy(app_args->broadcast_type, "Exponential Constant 2.0");
+    app_args->initial_grace_period_s = 10*1000; // 10 seconds
+    app_args->final_grace_period_s = 30*1000; // 30 seconds
+    app_args->max_broadcasts = ULONG_MAX; // infinite
+    app_args->exp_duration_s = 5*60; // 5 min
+    app_args->rcv_only = false;
+
+    return app_args;
+}
+
+static BroadcastAppArgs* parse_broadcast_app_args(const char* file_path) {
+    list* order = list_init();
+    hash_table* configs = parse_configs_order(file_path, &order);
+
+    if(configs == NULL) {
+        char str[100];
+        sprintf(str, "Config file %s not found!", file_path);
+        ygg_log(APP_NAME, "ARG ERROR", str);
+        ygg_logflush();
+
+        exit(-1);
+    }
+
+    BroadcastAppArgs* app_args = default_broadcast_app_args();
+
+    for(list_item* it = order->head; it; it = it->next) {
+        char* key = (char*)it->data;
+        char* value = (char*)hash_table_find_value(configs, key);
+
+        if( value != NULL ) {
+            if( strcmp(key, "broadcast_type") == 0 ) {
+                strcpy(app_args->broadcast_type, value);
+            } else if( strcmp(key, "initial_grace_period_s") == 0 ) {
+                app_args->initial_grace_period_s = (unsigned long) strtol(value, NULL, 10);
+            } else if( strcmp(key, "final_grace_period_s") == 0 ) {
+                app_args->final_grace_period_s = (unsigned long) strtol(value, NULL, 10);
+            } else if( strcmp(key, "max_broadcasts") == 0 ) {
+                bool is_infinite = (strcmp(value, "infinite") == 0 || strcmp(value, "inf") == 0);
+                app_args->max_broadcasts = is_infinite ? ULONG_MAX : (unsigned int) strtol(value, NULL, 10);
+            } else if( strcmp(key, "exp_duration_s") == 0 ) {
+                app_args->exp_duration_s = (unsigned long) strtol(value, NULL, 10);
+            } else if( strcmp(key, "rcv_only") == 0 ) {
+                app_args->rcv_only = strcmp("false", value) == 0 ? false : true;
+            } else {
+                char str[50];
+                sprintf(str, "Unknown Config %s = %s", key, value);
+                ygg_log(APP_NAME, "ARG ERROR", str);
+            }
+        } else {
+            char str[50];
+            sprintf(str, "Empty Config %s", key);
+            ygg_log(APP_NAME, "ARG ERROR", str);
+        }
+    }
+
+    // Clean
+    hash_table_delete(configs);
+    list_delete(order);
+
+    return app_args;
 }

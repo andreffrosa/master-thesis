@@ -15,36 +15,30 @@
 
 #include <assert.h>
 
-typedef struct _EnsemblePolicyArgs {
+typedef struct EnsemblePolicyArgs_ {
 	int amount;
 	bool (*ensemble_function)(bool* values, int amount);
 } EnsemblePolicyArgs;
 
-static bool _EnsemblePolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool EnsemblePolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 	RetransmissionPolicy** policies = ((RetransmissionPolicy**)(policy_state->vars));
 	EnsemblePolicyArgs* args = ((EnsemblePolicyArgs*)(policy_state->args));
 
 	bool values[args->amount];
 	for(int i = 0; i < args->amount; i++) {
-		values[i] = policies[i]->r_policy(&policies[i]->policy_state, p_msg, r_context, myID);
+		values[i] = RP_eval(policies[i], p_msg, myID, r_context, visited);
 	}
 
 	return args->ensemble_function(values, args->amount);
 }
 
-static void _EnsemblePolicyDestroy(ModuleState* policy_state, list* visited) {
+static void EnsemblePolicyDestroy(ModuleState* policy_state, list* visited) {
     EnsemblePolicyArgs* args = policy_state->vars;
     RetransmissionPolicy** policies = policy_state->vars;
 
     for(int i = 0; i < args->amount; i++) {
         if(policies[i]->destroy != NULL) {
-            if(list_find_item(visited, &equalAddr, policies[i]) == NULL) {
-                void** this = malloc(sizeof(void*));
-                *this = policies[i];
-                list_add_item_to_tail(visited, this);
-
-                destroyRetransmissionPolicy(policies[i], visited);
-            }
+            destroyRetransmissionPolicy(policies[i], visited);
         }
 	}
     free(policies);
@@ -52,11 +46,9 @@ static void _EnsemblePolicyDestroy(ModuleState* policy_state, list* visited) {
 }
 
 RetransmissionPolicy* EnsemblePolicy(bool (*ensemble_function)(bool* values, int amount), int amount, ...) {
-
 	assert(amount >= 1);
 	assert(amount == 1 || ensemble_function != NULL);
 
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
 	RetransmissionPolicy** policies = malloc(amount*sizeof(RetransmissionPolicy*));
 	va_list p_args;
 	va_start(p_args, amount);
@@ -64,15 +56,15 @@ RetransmissionPolicy* EnsemblePolicy(bool (*ensemble_function)(bool* values, int
 		policies[i] = va_arg(p_args, RetransmissionPolicy*);
 	}
 	va_end(p_args);
-	r_policy->policy_state.vars = policies;
 
 	EnsemblePolicyArgs* args = malloc(sizeof(EnsemblePolicyArgs));
 	args->amount = amount;
 	args->ensemble_function = ensemble_function;
-	r_policy->policy_state.args = args;
 
-	r_policy->r_policy = &_EnsemblePolicy;
-    r_policy->destroy = &_EnsemblePolicyDestroy;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        args,
+        policies,
+        &EnsemblePolicyEval,
+        &EnsemblePolicyDestroy
+    );
 }

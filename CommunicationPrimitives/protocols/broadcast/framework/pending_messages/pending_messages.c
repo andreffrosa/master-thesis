@@ -20,7 +20,7 @@ typedef struct _PendingMessages {
 } PendingMessages;
 
 // Comparator Function
-bool _pending_message_equal(PendingMessage* a, uuid_t b) {
+bool equalPendingMessage(PendingMessage* a, uuid_t b) {
 	return uuid_compare(getPendingMessageID(a), b) == 0;
 }
 
@@ -55,15 +55,15 @@ void pushPendingMessage(PendingMessages* p_msgs, PendingMessage* p_msg) {
 }
 
 PendingMessage* popPendingMessage(PendingMessages* p_msgs, PendingMessage* p_msg) {
-	return (PendingMessage*) double_list_remove(p_msgs->messages, (comparator_function) &_pending_message_equal, getPendingMessageID(p_msg));
+	return (PendingMessage*) double_list_remove(p_msgs->messages, (comparator_function) &equalPendingMessage, getPendingMessageID(p_msg));
 }
 
 PendingMessage* getPendingMessage(PendingMessages* p_msgs, uuid_t id) {
-	return (PendingMessage*) double_list_find(p_msgs->messages, (comparator_function) &_pending_message_equal, id);
+	return (PendingMessage*) double_list_find(p_msgs->messages, (comparator_function) &equalPendingMessage, id);
 }
 
 bool isInSeenMessages(PendingMessages* p_msgs, uuid_t id) {
-	return (PendingMessage*) double_list_find_item(p_msgs->messages, (comparator_function) &_pending_message_equal, id) != NULL;
+	return (PendingMessage*) double_list_find_item(p_msgs->messages, (comparator_function) &equalPendingMessage, id) != NULL;
 }
 
 
@@ -76,7 +76,7 @@ unsigned int runGarbageCollectorPM(PendingMessages* p_msgs, struct timespec* cur
 		PendingMessage* current_msg = (PendingMessage*) current_item->data;
 
 		if(!isPendingMessageActive(current_msg)) {
-			struct timespec* reception_time = getCopyReceptionTime((message_copy*)getCopies(current_msg)->head->data);
+			struct timespec* reception_time = getCopyReceptionTime((MessageCopy*)getCopies(current_msg)->head->data);
 
             struct timespec expiration = {0, 0};
 			add_timespec(&expiration, reception_time, seen_expiration);

@@ -11,8 +11,13 @@
  * (C) 2020
  *********************************************************/
 
-#include "common.h"
+#ifndef COMMUNICATION_PRIMITIVES_APP_COMMON_H_
+#define COMMUNICATION_PRIMITIVES_APP_COMMON_H_
 
-bool equalAddr(void* a, void* b) {
-	return *((void**)a) == b;
-}
+#include "data_structures/hash_table.h"
+
+hash_table* parse_args(int argc, char* argv[]);
+
+void unparse_host(char* hostname, unsigned int hostname_length, char* interface, unsigned int interface_length, hash_table* args);
+
+#endif /* COMMUNICATION_PRIMITIVES_APP_COMMON_H_ */

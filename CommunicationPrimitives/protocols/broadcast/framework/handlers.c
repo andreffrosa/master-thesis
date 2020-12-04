@@ -28,7 +28,7 @@ void init(broadcast_framework_state* state) {
 	genUUID(state->gc_id);
 	struct timespec _gc_interval = {0, 0};
 	milli_to_timespec(&_gc_interval, state->args->gc_interval_s*1000);
-	SetPeriodicTimer(&_gc_interval, state->gc_id, BCAST_FRAMEWORK_PROTO_ID, -1);
+	SetPeriodicTimer(&_gc_interval, state->gc_id, BROADCAST_FRAMEWORK_PROTO_ID, -1);
 
 	memset(&state->stats, 0, sizeof(broadcast_stats));
 
@@ -54,7 +54,7 @@ void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage
             }
             sprintf(str, "[%s] copy = %d total_phase = %d total_duration = %lu", id_str, getCopies(p_msg)->size, current_phase, total_duration);
 
-            ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "DELAY", str);
+            ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELAY", str);
         }
         #endif
         return;
@@ -64,7 +64,7 @@ void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage
     unsigned long elapsed, remaining;
     splitDuration(p_msg, &state->current_time, &elapsed, &remaining);
 
-	unsigned long delay = triggerRetransmissionDelay(state->args->algorithm, p_msg, remaining, isCopy, state->myID);
+	unsigned long delay = BA_computeRetransmissionDelay(state->args->algorithm, p_msg, remaining, isCopy, state->myID);
 
     setCurrentPhaseDuration(p_msg, elapsed + delay);
 
@@ -77,12 +77,12 @@ void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage
         //memcpy(&msg->timer_duration, &delay, sizeof(struct timespec));
         //timespec_add(&p_msg->timer_expiration_date, current_time, &delay);
 
-        SetTimer(&_delay, getPendingMessageID(p_msg), BCAST_FRAMEWORK_PROTO_ID, TIMER_BCAST_MESSAGE_TIMEOUT);
+        SetTimer(&_delay, getPendingMessageID(p_msg), BROADCAST_FRAMEWORK_PROTO_ID, TIMER_BROADCAST_MESSAGE_TIMEOUT);
     }
     else {
         if( delay < remaining ) {
-            CancelTimer(getPendingMessageID(p_msg), BCAST_FRAMEWORK_PROTO_ID);
-            SetTimer(&_delay, getPendingMessageID(p_msg), BCAST_FRAMEWORK_PROTO_ID, TIMER_BCAST_MESSAGE_TIMEOUT);
+            CancelTimer(getPendingMessageID(p_msg), BROADCAST_FRAMEWORK_PROTO_ID);
+            SetTimer(&_delay, getPendingMessageID(p_msg), BROADCAST_FRAMEWORK_PROTO_ID, TIMER_BROADCAST_MESSAGE_TIMEOUT);
         }
     }
 
@@ -99,7 +99,7 @@ void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage
         } else {
             sprintf(str, "[%s] change to phase = %d previous_phase_duration = %lu delay = %lu", id_str, current_phase, current_phase == 1? 0:getPhaseDuration(getPhaseStats(p_msg, current_phase-1)), delay);
         }
-        ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "DELAY", str);
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELAY", str);
     }
     #endif
 }
@@ -108,7 +108,7 @@ void changePhase(broadcast_framework_state* state, PendingMessage* p_msg) {
 
     finishCurrentPhase(p_msg);
 
-	if( getCurrentPhase(p_msg) < getRetransmissionPhases(state->args->algorithm) ) {
+	if( getCurrentPhase(p_msg) < BA_getRetransmissionPhases(state->args->algorithm) ) {
         // Increment current current_phase
         incCurrentPhase(p_msg);
 
@@ -152,11 +152,11 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
 	genUUID(msg_id);
 
 	// Create a new message item
-    PendingMessage* p_msg = newPendingMessage(msg_id, req->proto_origin, data, size, getRetransmissionPhases(state->args->algorithm));
+    PendingMessage* p_msg = newPendingMessage(msg_id, req->proto_origin, data, size, BA_getRetransmissionPhases(state->args->algorithm));
     setCurrentPhaseStats(p_msg, &state->current_time, 0L, true, true);
 
     // Add the first copy
-    bcast_header header = {0};
+    BroadcastHeader header = {0};
     uuid_copy(header.source_id, state->myID);
     uuid_copy(header.sender_id, state->myID);
     uuid_copy(header.msg_id, msg_id);
@@ -181,7 +181,7 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
         uuid_unparse(getPendingMessageID(p_msg), id_str);
         char str[UUID_STR_LEN+4];
         sprintf(str, "[%s]", id_str);
-        ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
     }
     #endif
 
@@ -204,7 +204,7 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
         char str[ym->dataLen+UUID_STR_LEN+1];
         sprintf(str, "[%s] %s", id_str, content);
 
-        ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "BROADCAST", str);
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "BROADCAST", str);
     }
     #endif
 
@@ -217,7 +217,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 	state->stats.messages_received++;
 
 	// Remove Framework's header of the message
-	bcast_header header;
+	BroadcastHeader header;
 	YggMessage toDeliver;
 	void* context_header;
 	deserializeMessage(msg, &header, &context_header, &toDeliver);
@@ -231,7 +231,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 	if( p_msg == NULL ){
 
 		// Insert on seen_msgs
-        p_msg = newPendingMessage(header.msg_id, header.dest_proto, toDeliver.data, toDeliver.dataLen, getRetransmissionPhases(state->args->algorithm));
+        p_msg = newPendingMessage(header.msg_id, header.dest_proto, toDeliver.data, toDeliver.dataLen, BA_getRetransmissionPhases(state->args->algorithm));
         setCurrentPhaseStart(p_msg, &state->current_time);
         addMessageCopy(p_msg, &state->current_time, &header, context_header);
 
@@ -247,11 +247,11 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
             uuid_unparse(getPendingMessageID(p_msg), id_str);
             char str[UUID_STR_LEN+4];
             sprintf(str, "[%s]", id_str);
-            ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
+            ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
         }
         #endif
 
-        triggerRetransmissionContextCopy(state->args->algorithm, p_msg, state->myID);
+        BA_processCopy(state->args->algorithm, p_msg, state->myID);
 
 		// Compute Current Phase's Retransmission Delay
 		ComputeRetransmissionDelay(state, p_msg, false);
@@ -259,7 +259,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 	} else {  // Duplicate message
         addMessageCopy(p_msg, &state->current_time, &header, context_header);
 
-        triggerRetransmissionContextCopy(state->args->algorithm, p_msg, state->myID);
+        BA_processCopy(state->args->algorithm, p_msg, state->myID);
 
         // Potentially Current Phase's Retransmission Delay
 		ComputeRetransmissionDelay(state, p_msg, true);
@@ -272,10 +272,10 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
         uuid_unparse(getPendingMessageID(p_msg), id_str);
         char parent_str[UUID_STR_LEN+1];
         parent_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(getBcastHeader((message_copy*)(getCopies(p_msg)->head->data))->sender_id, parent_str);
+        uuid_unparse(getBcastHeader((MessageCopy*)(getCopies(p_msg)->head->data))->sender_id, parent_str);
         char str[150];
         sprintf(str, "[%s] Received copy %d on phase %d from %s with ttl=%d", id_str, getCopies(p_msg)->size, getCurrentPhase(p_msg), parent_str, header.ttl);
-        ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "COPY", str);
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "COPY", str);
     }
     #endif
 }
@@ -297,18 +297,18 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
         	if(timespec_is_zero(&_remaining))
         		_remaining.tv_nsec = 1;
 
-        	SetTimer(&_remaining, getPendingMessageID(p_msg), BCAST_FRAMEWORK_PROTO_ID, TIMER_BCAST_MESSAGE_TIMEOUT);
+        	SetTimer(&_remaining, getPendingMessageID(p_msg), BROADCAST_FRAMEWORK_PROTO_ID, TIMER_BROADCAST_MESSAGE_TIMEOUT);
         } else {
             unsigned short max_ttl = 0;
             for(double_list_item* it = getCopies(p_msg)->head; it; it = it->next) {
-                message_copy* msg_copy = (message_copy*)(it->data);
+                MessageCopy* msg_copy = (MessageCopy*)(it->data);
                 max_ttl = iMax(max_ttl, getBcastHeader(msg_copy)->ttl);
             }
 
             bool retransmit = false;
             if(max_ttl > 0) {
                 // Execute Policy
-        		retransmit = triggerRetransmissionPolicy(state->args->algorithm, p_msg, state->myID);
+        		retransmit = BA_evalRetransmissionPolicy(state->args->algorithm, p_msg, state->myID);
             }/* else {
                 retransmit = false;
             }*/
@@ -329,7 +329,7 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
                 uuid_unparse(getPendingMessageID(p_msg), id_str);
                 char str [100];
                 sprintf(str, "[%s] Decision %s on phase %d", id_str, retransmit?"true":"false", getCurrentPhase(p_msg));
-                ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "POLICY", str);
+                ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "POLICY", str);
             }
             #endif
 
@@ -342,26 +342,26 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
     			int retransmit = state->my_args->algorithm->retransmission->timeout(state->my_args->algorithm->retransmission->global_state, state->my_args->algorithm->retransmission->args, p_msg->phase, p_msg->retrasnmission_attr);
     			onEndOfPhase(state, p_msg, &current_time, retransmit);
     		} else {
-    			SetTimer(&p_msg->expiration_date, timer->id, BCAST_FRAMEWORK_PROTO_ID);
+    			SetTimer(&p_msg->expiration_date, timer->id, BROADCAST_FRAMEWORK_PROTO_ID);
     		}*/
         }
 	} else {
-		ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "TIMEOUT", "Received wierd timer!");
+		ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "TIMEOUT", "Received wierd timer!");
 	}
 }
 
-void serializeHeader(broadcast_framework_state* state, PendingMessage* p_msg, bcast_header* header, void** context_header, unsigned short ttl) {
+void serializeHeader(broadcast_framework_state* state, PendingMessage* p_msg, BroadcastHeader* header, void** context_header, unsigned short ttl) {
     uuid_copy(header->msg_id, getPendingMessageID(p_msg));
 	getmyId(header->sender_id);
 	header->dest_proto = getToDeliver(p_msg)->Proto_id;
 
     assert(getCopies(p_msg)->head != NULL);
-    message_copy* first = (message_copy*)getCopies(p_msg)->head->data;
+    MessageCopy* first = (MessageCopy*)getCopies(p_msg)->head->data;
     assert(first != NULL);
     unsigned char* source_id = getBcastHeader(first)->source_id;
     uuid_copy(header->source_id, source_id);
 
-	header->context_length = triggerRetransmissionContextHeader(state->args->algorithm, p_msg, context_header, state->myID);
+	header->context_length = BA_createHeader(state->args->algorithm, p_msg, context_header, state->myID);
 
     header->ttl = ttl;
 }
@@ -374,18 +374,18 @@ void serializeMessage(broadcast_framework_state* state, YggMessage* m, PendingMe
 
     YggMessage* toDeliver = getToDeliver(p_msg);
 
-    YggMessage_initBcast(m, BCAST_FRAMEWORK_PROTO_ID);
+    YggMessage_initBcast(m, BROADCAST_FRAMEWORK_PROTO_ID);
 
 	// Initialize Broadcast Message Header
-	bcast_header header;
+	BroadcastHeader header;
     void* context_header = NULL;
     serializeHeader(state, p_msg, &header, &context_header, ttl);
 
-    int msg_size = BCAST_HEADER_LENGTH + header.context_length + toDeliver->dataLen;
+    int msg_size = BROADCAST_HEADER_LENGTH + header.context_length + toDeliver->dataLen;
     assert( msg_size <= YGG_MESSAGE_PAYLOAD );
 
 	// Insert Header
-	YggMessage_addPayload(m, (char*) &header, BCAST_HEADER_LENGTH);
+	YggMessage_addPayload(m, (char*) &header, BROADCAST_HEADER_LENGTH);
 
 	// Insert Context Header
 	if( header.context_length > 0)
@@ -399,10 +399,10 @@ void serializeMessage(broadcast_framework_state* state, YggMessage* m, PendingMe
 		free(context_header);
 }
 
-void deserializeMessage(YggMessage* m, bcast_header* header, void** context_header, YggMessage* toDeliver) {
+void deserializeMessage(YggMessage* m, BroadcastHeader* header, void** context_header, YggMessage* toDeliver) {
 
 	void* ptr = NULL;
-	ptr = YggMessage_readPayload(m, ptr, header, BCAST_HEADER_LENGTH);
+	ptr = YggMessage_readPayload(m, ptr, header, BROADCAST_HEADER_LENGTH);
 
 	if( header->context_length > 0 ) {
 		*context_header = malloc(header->context_length);
@@ -411,7 +411,7 @@ void deserializeMessage(YggMessage* m, bcast_header* header, void** context_head
 		*context_header = NULL;
 	}
 
-	unsigned short payload_size = m->dataLen - (BCAST_HEADER_LENGTH + header->context_length);
+	unsigned short payload_size = m->dataLen - (BROADCAST_HEADER_LENGTH + header->context_length);
 
 	YggMessage_initBcast(toDeliver, header->dest_proto);
 	memcpy(toDeliver->srcAddr.data, m->srcAddr.data, WLAN_ADDR_LEN);
@@ -429,7 +429,7 @@ void runGarbageCollector(broadcast_framework_state* state) {
 
         char s[100];
         sprintf(s, "deleted %u messages.", counter);
-        ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "GC", s);
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "GC", s);
     #else
         runGarbageCollectorPM(state->seen_msgs, &state->current_time, &seen_expiration);
     #endif
@@ -437,7 +437,7 @@ void runGarbageCollector(broadcast_framework_state* state) {
 
 void uponStatsRequest(broadcast_framework_state* state, YggRequest* req) {
 	unsigned short dest = req->proto_origin;
-	YggRequest_init(req, BCAST_FRAMEWORK_PROTO_ID, dest, REPLY, REQ_BCAST_FRAMEWORK_STATS);
+	YggRequest_init(req, BROADCAST_FRAMEWORK_PROTO_ID, dest, REPLY, REQ_BROADCAST_FRAMEWORK_STATS);
 
 	YggRequest_addPayload(req, (void*) &state->stats, sizeof(broadcast_stats));
 

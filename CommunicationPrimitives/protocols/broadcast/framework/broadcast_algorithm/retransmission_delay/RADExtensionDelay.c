@@ -15,7 +15,7 @@
 
 #include "utility/my_math.h"
 
-static unsigned long _RADExtensionDelay(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, RetransmissionContext* r_context, unsigned char* myID) {
+static unsigned long RADExtensionDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 
     unsigned long delta_t = *((unsigned long*) (delay_state->args));
     if(!isCopy) {
@@ -26,20 +26,20 @@ static unsigned long _RADExtensionDelay(ModuleState* delay_state, PendingMessage
     }
 }
 
-static void _RADExtensionDelayDestroy(ModuleState* delay_state, list* visited) {
+static void RADExtensionDelayDestroy(ModuleState* delay_state, list* visited) {
     free(delay_state->args);
 }
 
 // T_max = delta_T*(Cth-1); Cth = counter threshold
 RetransmissionDelay* RADExtensionDelay(unsigned long delta_t) {
-    RetransmissionDelay* r_delay = malloc(sizeof(RetransmissionDelay));
 
-	r_delay->delay_state.args = malloc(sizeof(delta_t));
-	*((unsigned long*)(r_delay->delay_state.args)) = delta_t;
+    unsigned long* delta_t_arg = malloc(sizeof(delta_t));
+	*delta_t_arg = delta_t;
 
-	r_delay->delay_state.vars = NULL;
-	r_delay->r_delay = &_RADExtensionDelay;
-    r_delay->destroy = &_RADExtensionDelayDestroy;
-
-	return r_delay;
+    return newRetransmissionDelay(
+        delta_t_arg,
+        NULL,
+        &RADExtensionDelayCompute,
+        &RADExtensionDelayDestroy
+    );
 }

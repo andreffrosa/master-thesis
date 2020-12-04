@@ -23,15 +23,20 @@ typedef struct _Gossip3PolicyArgs {
 	unsigned int m;
 } Gossip3PolicyArgs;
 
-static bool _Gossip3Policy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
-	Gossip3PolicyArgs* _args = ((Gossip3PolicyArgs*)(policy_state->args));
-	double p = _args->p;
-	unsigned int k = _args->k;
-	unsigned int m = _args->m;
-	message_copy* first = ((message_copy*)getCopies(p_msg)->head->data);
+static bool Gossip3PolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+	Gossip3PolicyArgs* args = ((Gossip3PolicyArgs*)(policy_state->args));
+	double p = args->p;
+	unsigned int k = args->k;
+	unsigned int m = args->m;
+	MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
 	unsigned char hops = 0;
-	if(!query_context_header(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "hops", &hops, myID, 0))
-				assert(false);
+
+    list* visited2 = list_init();
+    if(!RC_queryHeader(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "hops", &hops, NULL, myID, visited2)) {
+        assert(false);
+    }
+    list_delete(visited2);
+
 	unsigned int n_copies = getCopies(p_msg)->size;
 	unsigned int current_phase = getCurrentPhase(p_msg);
 
@@ -44,23 +49,22 @@ static bool _Gossip3Policy(ModuleState* policy_state, PendingMessage* p_msg, Ret
 	}
 }
 
-static void _Gossip3PolicyDestroy(ModuleState* policy_state, list* visited) {
+static void Gossip3PolicyDestroy(ModuleState* policy_state, list* visited) {
     free(policy_state->args);
 }
 
 RetransmissionPolicy* Gossip3Policy(double p, unsigned int k, unsigned int m) {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
+    assert( 0.0 < p && p <= 1.0);
 
-	r_policy->policy_state.args = malloc(sizeof(Gossip3PolicyArgs));
-	Gossip3PolicyArgs* args = ((Gossip3PolicyArgs*)r_policy->policy_state.args);
+	Gossip3PolicyArgs* args = malloc(sizeof(Gossip3PolicyArgs));
 	args->p = p;
 	args->k = k;
 	args->m = m;
 
-	r_policy->policy_state.vars = NULL;
-
-	r_policy->r_policy = &_Gossip3Policy;
-    r_policy->destroy = &_Gossip3PolicyDestroy;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        args,
+        NULL,
+        &Gossip3PolicyEval,
+        &Gossip3PolicyDestroy
+    );
 }

@@ -17,11 +17,14 @@
 
 #include <assert.h>
 
-static bool _RapidPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool RapidPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 	double beta = *((double*)(policy_state->args));
 	unsigned int n = 0;
-	if(!query_context(r_context, "n_neighbors", &n, myID, 0))
+
+    list* visited2 = list_init();
+    if(!RC_query(r_context, "n_neighbors", &n, NULL, myID, visited2))
 		assert(false);
+    list_delete(visited2);
 
 	double p  = dMin(1.0, (beta / n));
 	double u = randomProb();
@@ -29,19 +32,19 @@ static bool _RapidPolicy(ModuleState* policy_state, PendingMessage* p_msg, Retra
 	return u <= p;
 }
 
-static void _AHBPPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void RapidPolicyDestroy(ModuleState* policy_state, list* visited) {
     free(policy_state->args);
 }
 
 RetransmissionPolicy* RapidPolicy(double beta) {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
 
-	r_policy->policy_state.args = malloc(sizeof(double));
-	*((double*)(r_policy->policy_state.args)) = beta;
+	double* beta_arg = malloc(sizeof(double));
+	*beta_arg = beta;
 
-	r_policy->policy_state.vars = NULL;
-	r_policy->r_policy = &_RapidPolicy;
-    r_policy->destroy = &_AHBPPolicyDestroy;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        beta_arg,
+        NULL,
+        &RapidPolicyEval,
+        &RapidPolicyDestroy
+    );
 }

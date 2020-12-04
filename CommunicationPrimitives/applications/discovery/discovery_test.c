@@ -26,6 +26,8 @@
 
 #include "Yggdrasil.h"
 
+#include "../app_common.h"
+
 #include "protocols/discovery/framework/framework.h"
 
 #include "utility/my_math.h"
@@ -34,48 +36,72 @@
 #include "utility/my_misc.h"
 
 #define APP_ID 400
-#define APP_NAME "DISCOVERY FRAMEWORK APP"
+#define APP_NAME "DISCOVERY APP"
+
+typedef struct DiscoveryAppArgs_ {
+    bool periodic_messages;
+    // TODO:
+} DiscoveryAppArgs;
+
+static DiscoveryAppArgs* default_discovery_app_args();
+static DiscoveryAppArgs* load_discovery_app_args(const char* file_path);
 
 static void processNotification(YggEvent* notification);
 
 int main(int argc, char* argv[]) {
 
-    assert(argc >= 3);
+    // Process Args
+    hash_table* args = parse_args(argc, argv);
 
-    int ix = atoi(argv[1]);
-    char interface[10];
-    sprintf(interface, "wlan%d", ix-1);
-    char hostname[30];
-    sprintf(hostname, "raspi-0%d", ix);
+    // Interface and Hostname
+    char interface[20] = {0}, hostname[30] = {0};
+    unparse_host(hostname, 20, interface, 30, args);
 
-    bool periodic_messages = strcmp("false", argv[3]) == 0 ? false : true;
+    // Network
+    NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
 
-	NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
+    // Initialize ygg_runtime
+    ygg_runtime_init_2(ntconf, hostname);
 
-	// Initialize ygg_runtime
-	ygg_runtime_init_2(ntconf, hostname);
+    // Overlay
+    char* overlay_path = hash_table_find_value(args, "overlay");
+	if(overlay_path) {
+        topology_manager_args* t_args = load_overlay(overlay_path, hostname);
+        registerYggProtocol(PROTO_TOPOLOGY_MANAGER, topologyManager_init, t_args);
+		topology_manager_args_destroy(t_args);
+	}
 
-	// Register this app
-	app_def* myApp = create_application_definition(APP_ID, APP_NAME);
+    // Discovery Framework
+    discovery_framework_args* discovery_args = NULL;
+    char* discovery_args_file = hash_table_find_value(args, "discovery");
+    if(discovery_args_file) {
+        discovery_args = load_discovery_framework_args(discovery_args_file);
+    } else {
+        discovery_args = default_discovery_framework_args();
+    }
+    registerProtocol(DISCOVERY_FRAMEWORK_PROTO_ID, &discovery_framework_init, (void*) discovery_args);
 
-    // Register Framework Protocol
-    const char* discovery_configs = argv[2];
-    discovery_framework_args* f_args = load_discovery_framework_args(discovery_configs);
+    // Discovery App
+    DiscoveryAppArgs* app_args = NULL;
+    char* app_args_file = hash_table_find_value(args, "app");
+    if(app_args_file) {
+        app_args = load_discovery_app_args(app_args_file);
+    } else {
+        app_args = default_discovery_app_args();
+    }
+    // TODO: print app_args
 
-	registerProtocol(DISCOVERY_FRAMEWORK_PROTO_ID, &discovery_framework_init, (void*) f_args);
+    hash_table_delete(args);
+    args = NULL;
+
+    // Register this app
+    app_def* myApp = create_application_definition(APP_ID, APP_NAME);
+
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_UPDATE);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_LOST);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
-
-    bool use_overlay = argc == 5;
-    if( use_overlay ) {
-        char* overlay_path = argv[4];
-        topology_manager_args* t_args = load_overlay(overlay_path, hostname);
-        registerYggProtocol(PROTO_TOPOLOGY_MANAGER, topologyManager_init, t_args);
-		topology_manager_args_destroy(t_args);
-    }
 
     queue_t* inBox = registerApp(myApp);
 
@@ -90,7 +116,7 @@ int main(int argc, char* argv[]) {
     milli_to_timespec(&t, 6000);
     uuid_t tid;
     genUUID(tid);
-    if(periodic_messages) {
+    if(app_args->periodic_messages) {
         SetPeriodicTimer(&t, tid, APP_ID, -1);
     }
 
@@ -224,4 +250,54 @@ static void processNotification(YggEvent* notification) {
         }
 
 	}
+}
+
+static DiscoveryAppArgs* default_discovery_app_args() {
+    DiscoveryAppArgs* d_args = malloc(sizeof(DiscoveryAppArgs));
+
+    d_args->periodic_messages = false;
+
+    return d_args;
+}
+
+static DiscoveryAppArgs* load_discovery_app_args(const char* file_path) {
+
+    list* order = list_init();
+    hash_table* configs = parse_configs_order(file_path, &order);
+
+    if(configs == NULL) {
+        char str[100];
+        sprintf(str, "Config file %s not found!", file_path);
+        ygg_log(APP_NAME, "ARG ERROR", str);
+        ygg_logflush();
+
+        exit(-1);
+    }
+
+    DiscoveryAppArgs* d_args = default_discovery_app_args();
+
+    for(list_item* it = order->head; it; it = it->next) {
+        char* key = (char*)it->data;
+        char* value = (char*)hash_table_find_value(configs, key);
+
+        if( value != NULL ) {
+            if( strcmp(key, "periodic_messages") == 0 ) {
+                d_args->periodic_messages = strcmp("false", value) == 0 ? false : true;
+            } else {
+                char str[50];
+                sprintf(str, "Unknown Config %s = %s", key, value);
+                ygg_log(APP_NAME, "ARG ERROR", str);
+            }
+        } else {
+            char str[50];
+            sprintf(str, "Empty Config %s", key);
+            ygg_log(APP_NAME, "ARG ERROR", str);
+        }
+    }
+
+    // Clean
+    hash_table_delete(configs);
+    list_delete(order);
+
+    return d_args;
 }

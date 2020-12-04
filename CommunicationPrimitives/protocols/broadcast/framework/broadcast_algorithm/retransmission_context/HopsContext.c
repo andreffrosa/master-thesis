@@ -15,25 +15,13 @@
 
 #include <assert.h>
 
-static void HopsContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static void HopsContextEvent(ModuleState* context_state, queue_t_elem* elem, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static bool HopsContextQuery(ModuleState* context_state, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	return false;
-}
-
-static bool HopsContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static bool HopsContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
 
 	if(strcmp(query, "hops") == 0) {
         if(context_header) {
             *((unsigned char*)result) = *((unsigned char*)context_header);
         } else {
-            *((unsigned char*)result) = 0; // Request
+            *((unsigned char*)result) = 0; // Broadcast source node
         }
 
 		return true;
@@ -42,7 +30,7 @@ static bool HopsContextQueryHeader(ModuleState* context_state, void* context_hea
 	return false;
 }
 
-static unsigned int HopsContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static unsigned int HopsContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
 	unsigned int size = sizeof(unsigned char);
 	*context_header = malloc(size);
 
@@ -50,13 +38,13 @@ static unsigned int HopsContextHeader(ModuleState* context_state, PendingMessage
 
     assert(copies->size > 0);
 
-	/*if(copies->size == 0) { // Broadcast Request
+	/*if(copies->size == 0) { // // Broadcast source node
 		*((unsigned char*)*context_header) = 0;
 	} else {*/
-		message_copy* msg_copy = (message_copy*)copies->head->data;
+		MessageCopy* msg_copy = (MessageCopy*)copies->head->data;
 
 		unsigned char hops = 0;
-		if(!query_context_header(r_context, getContextHeader(msg_copy), getBcastHeader(msg_copy)->context_length, "hops", &hops, myID, 0))
+        if(!HopsContextQueryHeader(context_state, getContextHeader(msg_copy), getBcastHeader(msg_copy)->context_length, "hops", &hops, NULL, myID, visited))
 			assert(false);
 
         hops++;
@@ -67,18 +55,16 @@ static unsigned int HopsContextHeader(ModuleState* context_state, PendingMessage
 }
 
 RetransmissionContext* HopsContext() {
-	RetransmissionContext* r_context = malloc(sizeof(RetransmissionContext));
 
-	r_context->context_state.args = NULL;
-    r_context->context_state.vars = NULL;
-
-	r_context->init = &HopsContextInit;
-	r_context->create_header = &HopsContextHeader;
-	r_context->process_event = &HopsContextEvent;
-	r_context->query_handler = &HopsContextQuery;
-	r_context->query_header_handler = &HopsContextQueryHeader;
-    r_context->copy_handler = NULL;
-    r_context->destroy = NULL;
-
-	return r_context;
+    return newRetransmissionContext(
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &HopsContextHeader,
+        NULL,
+        &HopsContextQueryHeader,
+        NULL,
+        NULL
+    );
 }

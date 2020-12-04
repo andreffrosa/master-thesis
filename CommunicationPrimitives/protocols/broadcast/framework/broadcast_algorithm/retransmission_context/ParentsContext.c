@@ -17,19 +17,7 @@
 
 #include "utility/my_math.h"
 
-static void ParentsContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static void ParentsContextEvent(ModuleState* context_state, queue_t_elem* elem, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static bool ParentsContextQuery(ModuleState* context_state, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	return false;
-}
-
-static bool ParentsContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static bool ParentsContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
 	unsigned int amount = context_header_size / sizeof(uuid_t);
 
 	if(strcmp(query, "parents") == 0) {
@@ -49,7 +37,7 @@ static bool ParentsContextQueryHeader(ModuleState* context_state, void* context_
 	return false;
 }
 
-static unsigned int ParentsContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static unsigned int ParentsContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
     double_list* copies = getCopies(p_msg);
     assert(copies->size > 0);
     /*if(copies->size == 0) {
@@ -65,7 +53,7 @@ static unsigned int ParentsContextHeader(ModuleState* context_state, PendingMess
 
 	double_list_item* it = copies->head;
 	for(int i = 0; i < real_amount; i++, it = it->next) {
-		message_copy* msg_copy = (message_copy*)it->data;
+		MessageCopy* msg_copy = (MessageCopy*)it->data;
 		unsigned char* ptr = (buffer + i*sizeof(uuid_t));
 		uuid_copy(ptr, getBcastHeader(msg_copy)->sender_id);
 	}
@@ -79,19 +67,19 @@ static void ParentsContextDestroy(ModuleState* context_state, list* visited) {
 }
 
 RetransmissionContext* ParentsContext(unsigned int max_amount) {
-	RetransmissionContext* r_context = malloc(sizeof(RetransmissionContext));
 
-	r_context->context_state.args = malloc(sizeof(unsigned int));
-	*((unsigned int*)(r_context->context_state.args)) = max_amount;
-	r_context->context_state.vars = NULL;
+    unsigned int* max_amount_args = malloc(sizeof(unsigned int));
+    *max_amount_args = max_amount;
 
-	r_context->init = &ParentsContextInit;
-	r_context->create_header = &ParentsContextHeader;
-	r_context->process_event = &ParentsContextEvent;
-	r_context->query_handler = &ParentsContextQuery;
-	r_context->query_header_handler = &ParentsContextQueryHeader;
-    r_context->copy_handler = NULL;
-    r_context->destroy = &ParentsContextDestroy;
-
-	return r_context;
+    return newRetransmissionContext(
+        max_amount_args,
+        NULL,
+        NULL,
+        NULL,
+        &ParentsContextHeader,
+        NULL,
+        &ParentsContextQueryHeader,
+        NULL,
+        &ParentsContextDestroy
+    );
 }

@@ -34,19 +34,19 @@ static unsigned long getCurrentPhaseDelay(unsigned long t_max, unsigned int n, d
     return delay;
 }
 
-static unsigned long _DensityNeighDelay(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, RetransmissionContext* r_context, unsigned char* myID) {
+static unsigned long DN_compute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 
     if(!isCopy) {
         unsigned long t_max = *((unsigned long*) (delay_state->args));
 
         double aux[3];
-        if(!query_context(r_context, "neighbors_distribution", aux, myID, 0))
+        list* visited2 = list_init();
+        if(!RC_query(r_context, "neighbors_distribution", aux, NULL, myID, visited2))
             assert(false);
+        list_delete(visited2);
 
         unsigned int current_phase = getCurrentPhase(p_msg);
-        //unsigned long previous_phase_remaining = current_phase == 1 ? 0: t_max - getPhaseDuration(getPhaseStats(p_msg, current_phase-1));
 
-        //return previous_phase_remaining + getCurrentPhaseDelay(t_max, (int)aux[0], aux[1], aux[2]);
         return (current_phase == 1 ? 0 : t_max) + getCurrentPhaseDelay(t_max, (int)aux[0], aux[1], aux[2]);
     }
     else {
@@ -54,19 +54,19 @@ static unsigned long _DensityNeighDelay(ModuleState* delay_state, PendingMessage
     }
 }
 
-static void _DensityNeighDelayDestroy(ModuleState* delay_state, list* visited) {
+static void DN_destroy(ModuleState* delay_state, list* visited) {
     free(delay_state->args);
 }
 
 RetransmissionDelay* DensityNeighDelay(unsigned long t_max) {
-	RetransmissionDelay* r_delay = malloc(sizeof(RetransmissionDelay));
 
-	r_delay->delay_state.args = malloc(sizeof(t_max));
-	*((unsigned long*)(r_delay->delay_state.args)) = t_max;
+    unsigned long* t_max_arg = malloc(sizeof(t_max));
+    *t_max_arg = t_max;
 
-	r_delay->delay_state.vars = NULL;
-	r_delay->r_delay = &_DensityNeighDelay;
-    r_delay->destroy = &_DensityNeighDelayDestroy;
-
-	return r_delay;
+    return newRetransmissionDelay(
+        t_max_arg,
+        NULL,
+        &DN_compute,
+        &DN_destroy
+    );
 }

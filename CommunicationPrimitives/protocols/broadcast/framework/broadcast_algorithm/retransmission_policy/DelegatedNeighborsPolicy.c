@@ -17,18 +17,26 @@
 
 #include <assert.h>
 
-static bool _DelegatedNeighborsPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool DelegatedNeighborsPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 
-    message_copy* first_copy = ((message_copy*)getCopies(p_msg)->head->data);
+    MessageCopy* first_copy = ((MessageCopy*)getCopies(p_msg)->head->data);
 
     list* delegated_neighbors = NULL;
-    if(!query_context_header(r_context, getContextHeader(first_copy), getBcastHeader(first_copy)->context_length, "delegated_neighbors", &delegated_neighbors, myID, 0))
-        assert(false);
 
-    bool retransmit = false;
+    list* visited2 = list_init();
+    bool found = RC_query(r_context, "delegated_neighbors", &delegated_neighbors, NULL, myID, visited2);
+    list_delete(visited2);
 
-    retransmit = list_find_item(delegated_neighbors, &equalID, myID) != NULL;
+    if(!found) {
+        list* visited2 = list_init();
+        if(!RC_queryHeader(r_context, getContextHeader(first_copy), getBcastHeader(first_copy)->context_length, "delegated_neighbors", &delegated_neighbors, NULL, myID, visited2))
+            assert(false);
+        list_delete(visited2);
+    }
 
+    bool retransmit = list_find_item(delegated_neighbors, &equalID, myID) != NULL;
+
+    // Debug
     printf("Delegated Neighbors:\n");
     for(list_item* it = delegated_neighbors->head; it; it = it->next) {
         char id_str[UUID_STR_LEN+1];
@@ -43,13 +51,10 @@ static bool _DelegatedNeighborsPolicy(ModuleState* policy_state, PendingMessage*
 }
 
 RetransmissionPolicy* DelegatedNeighborsPolicy() {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
-
-	r_policy->policy_state.args = NULL;
-	r_policy->policy_state.vars = NULL;
-
-	r_policy->r_policy = &_DelegatedNeighborsPolicy;
-    r_policy->destroy = NULL;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        NULL,
+        NULL,
+        &DelegatedNeighborsPolicyEval,
+        NULL
+    );
 }

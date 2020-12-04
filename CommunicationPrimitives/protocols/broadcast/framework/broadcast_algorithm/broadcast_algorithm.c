@@ -29,128 +29,146 @@ BroadcastAlgorithm* newBroadcastAlgorithm(RetransmissionContext* r_context, Retr
 
 void destroyBroadcastAlgorithm(BroadcastAlgorithm* alg) {
     if(alg != NULL) {
-        destroyRetransmissionDelay(alg->r_delay, NULL);
-        destroyRetransmissionPolicy(alg->r_policy, NULL);
-        destroyRetransmissionContext(alg->r_context, NULL);
+        list* visited = list_init();
+        destroyRetransmissionDelay(alg->r_delay, visited);
+        list_delete(visited);
+
+        visited = list_init();
+        destroyRetransmissionPolicy(alg->r_policy, visited);
+        list_delete(visited);
+
+        visited = list_init();
+        destroyRetransmissionContext(alg->r_context, visited);
+        list_delete(visited);
+
         free(alg);
     }
 }
 
-RetransmissionContext* getRetransmissionContext(BroadcastAlgorithm* alg) {
+RetransmissionContext* BA_getRetransmissionContext(BroadcastAlgorithm* alg) {
     assert(alg != NULL);
+
     return alg->r_context;
 }
 
-RetransmissionContext* setRetransmissionContext(BroadcastAlgorithm* alg, RetransmissionContext* new_context) {
+void BA_setRetransmissionContext(BroadcastAlgorithm* alg, RetransmissionContext* new_context) {
     assert(alg != NULL);
-    RetransmissionContext* old_context = alg->r_context;
+
+    list* visited = list_init();
+    destroyRetransmissionContext(alg->r_context, visited);
+    list_delete(visited);
+
     alg->r_context = new_context;
-    return old_context;
 }
 
-RetransmissionDelay* getRetransmissionDelay(BroadcastAlgorithm* alg) {
+RetransmissionDelay* BA_getRetransmissionDelay(BroadcastAlgorithm* alg) {
     assert(alg != NULL);
+
     return alg->r_delay;
 }
 
-RetransmissionDelay* setRetransmissionDelay(BroadcastAlgorithm* alg, RetransmissionDelay* new_delay) {
+void BA_setRetransmissionDelay(BroadcastAlgorithm* alg, RetransmissionDelay* new_delay) {
     assert(alg != NULL);
-    RetransmissionDelay* old_delay = alg->r_delay;
+
+    list* visited = list_init();
+    destroyRetransmissionDelay(alg->r_delay, visited);
+    list_delete(visited);
+
     alg->r_delay = new_delay;
-    return old_delay;
 }
 
-RetransmissionPolicy* getRetransmissionPolicy(BroadcastAlgorithm* alg) {
+RetransmissionPolicy* BA_getRetransmissionPolicy(BroadcastAlgorithm* alg) {
     assert(alg != NULL);
+
     return alg->r_policy;
 }
 
-RetransmissionPolicy* setRetransmissionPolicy(BroadcastAlgorithm* alg, RetransmissionPolicy* new_policy) {
+void BA_setRetransmissionPolicy(BroadcastAlgorithm* alg, RetransmissionPolicy* new_policy) {
     assert(alg != NULL);
-    RetransmissionPolicy* old_policy = alg->r_policy;
+
+    list* visited = list_init();
+    destroyRetransmissionPolicy(alg->r_policy, visited);
+    list_delete(visited);
+
     alg->r_policy = new_policy;
-    return old_policy;
 }
 
-unsigned int getRetransmissionPhases(BroadcastAlgorithm* alg) {
+unsigned int BA_getRetransmissionPhases(BroadcastAlgorithm* alg) {
     assert(alg != NULL);
+
     return alg->n_phases;
 }
 
-void setRetransmissionPhases(BroadcastAlgorithm* alg, unsigned int phases) {
+void BA_setRetransmissionPhases(BroadcastAlgorithm* alg, unsigned int phases) {
     assert(alg != NULL);
+
     alg->n_phases = phases;
 }
 
-unsigned long triggerRetransmissionDelay(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID) {
+unsigned long BA_computeRetransmissionDelay(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID) {
     assert(algorithm != NULL && p_msg != NULL);
+
     RetransmissionDelay* rd = algorithm->r_delay;
     RetransmissionContext* rc = algorithm->r_context;
-	return rd->r_delay(&rd->delay_state, p_msg, remaining, isCopy, rc, myID);
-}
-
-bool triggerRetransmissionPolicy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID) {
-    assert(algorithm != NULL);
-    RetransmissionPolicy* rp = algorithm->r_policy;
-    RetransmissionContext* rc = algorithm->r_context;
-	return rp->r_policy(&rp->policy_state, p_msg, rc, myID);
-}
-
-void triggerRetransmissionContextInit(BroadcastAlgorithm* algorithm, proto_def* protocol_definition, unsigned char* myID) {
-    assert(algorithm != NULL);
-    RetransmissionContext* rc = algorithm->r_context;
 
     list* visited = list_init();
-    void** this = malloc(sizeof(void*));
-    *this = rc;
-    list_add_item_to_tail(visited, this);
-
-	rc->init(&rc->context_state, protocol_definition, myID, visited);
-
-    list_delete(visited);
-}
-
-void triggerRetransmissionContextEvent(BroadcastAlgorithm* algorithm, queue_t_elem* event, unsigned char* myID) {
-    assert(algorithm != NULL);
-    RetransmissionContext* rc = algorithm->r_context;
-
-    list* visited = list_init();
-    void** this = malloc(sizeof(void*));
-    *this = rc;
-    list_add_item_to_tail(visited, this);
-
-	rc->process_event(&rc->context_state, event, rc, myID, visited);
-
-    list_delete(visited);
-}
-
-unsigned int triggerRetransmissionContextHeader(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, void** context_header, unsigned char* myID) {
-    assert(algorithm != NULL && p_msg != NULL);
-    RetransmissionContext* rc = algorithm->r_context;
-
-    list* visited = list_init();
-    void** this = malloc(sizeof(void*));
-    *this = rc;
-    list_add_item_to_tail(visited, this);
-
-	unsigned int result = rc->create_header(&rc->context_state, p_msg, context_header, rc, myID, visited);
-
+	unsigned long result = RD_compute(rd, p_msg, remaining, isCopy, myID, rc, visited);
     list_delete(visited);
 
     return result;
 }
 
-void triggerRetransmissionContextCopy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID) {
-    assert(algorithm != NULL && p_msg != NULL);
+bool BA_evalRetransmissionPolicy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID) {
+    assert(algorithm != NULL);
+
+    RetransmissionPolicy* rp = algorithm->r_policy;
     RetransmissionContext* rc = algorithm->r_context;
 
     list* visited = list_init();
-    void** this = malloc(sizeof(void*));
-    *this = rc;
-    list_add_item_to_tail(visited, this);
+	bool result = RP_eval(rp, p_msg, myID, rc, visited);
+    list_delete(visited);
 
-    if(rc->copy_handler != NULL)
-        rc->copy_handler(&rc->context_state, p_msg, rc, myID, visited);
+    return result;
+}
 
+void BA_initRetransmissionContext(BroadcastAlgorithm* algorithm, proto_def* protocol_definition, unsigned char* myID) {
+    assert(algorithm != NULL);
+
+    RetransmissionContext* rc = algorithm->r_context;
+
+    list* visited = list_init();
+    RC_init(rc, protocol_definition, myID, visited);
+    list_delete(visited);
+}
+
+void BA_processEvent(BroadcastAlgorithm* algorithm, queue_t_elem* event, unsigned char* myID) {
+    assert(algorithm != NULL);
+
+    RetransmissionContext* rc = algorithm->r_context;
+
+    list* visited = list_init();
+    RC_processEvent(rc, event, myID, visited);
+    list_delete(visited);
+}
+
+unsigned int BA_createHeader(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, void** context_header, unsigned char* myID) {
+    assert(algorithm != NULL && p_msg != NULL);
+
+    RetransmissionContext* rc = algorithm->r_context;
+
+    list* visited = list_init();
+    unsigned int result = RC_createHeader(rc, p_msg, context_header, myID, visited);
+    list_delete(visited);
+
+    return result;
+}
+
+void BA_processCopy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID) {
+    assert(algorithm != NULL && p_msg != NULL);
+
+    RetransmissionContext* rc = algorithm->r_context;
+
+    list* visited = list_init();
+    RC_processCopy(rc, p_msg, myID, visited);
     list_delete(visited);
 }

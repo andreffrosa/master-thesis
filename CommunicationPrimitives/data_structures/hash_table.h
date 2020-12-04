@@ -54,4 +54,6 @@ void hash_table_delete_custom(hash_table* table, void (*delete_item)(hash_table_
 
 hash_table_item* hash_table_iterator_next(hash_table* table, void** iterator);
 
+hash_table* hash_table_clone(hash_table* table, unsigned int key_size, unsigned int value_size);
+
 #endif /* DATA_STRUCTURES_HASH_TABLE_H_ */

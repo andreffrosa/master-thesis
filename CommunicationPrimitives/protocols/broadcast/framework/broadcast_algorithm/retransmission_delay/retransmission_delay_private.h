@@ -16,14 +16,16 @@
 
 #include "retransmission_delay.h"
 
-#include "../common.h"
+typedef unsigned long (*compute_delay)(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited);
 
-#include "../retransmission_context/retransmission_context.h"
+typedef void (*destroy_delay)(ModuleState* context_state, list* visited);
 
 typedef struct _RetransmissionDelay {
-    ModuleState delay_state;
-	unsigned long (*r_delay)(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, RetransmissionContext* r_context, unsigned char* myID);
-    void (*destroy)(ModuleState* context_state, list* visited);
+    ModuleState state;
+	compute_delay compute;
+    destroy_delay  destroy;
 } RetransmissionDelay;
+
+RetransmissionDelay* newRetransmissionDelay(void* args, void* vars, compute_delay compute, destroy_delay destroy);
 
 #endif /* _RETRANSMISSION_DELAY_PRIVATE_H_ */

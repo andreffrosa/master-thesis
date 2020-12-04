@@ -15,7 +15,7 @@
 
 #include "utility/my_math.h"
 
-static unsigned long _TwoPhaseRandomDelay(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, RetransmissionContext* r_context, unsigned char* myID) {
+static unsigned long TwoPhaseRandomDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
     if(!isCopy) {
         unsigned long t1 = ((unsigned long*)(delay_state->args))[0];
         unsigned long t2 = ((unsigned long*)(delay_state->args))[1];
@@ -28,21 +28,20 @@ static unsigned long _TwoPhaseRandomDelay(ModuleState* delay_state, PendingMessa
     }
 }
 
-static void _TwoPhaseRandomDelayDestroy(ModuleState* delay_state, list* visited) {
+static void TwoPhaseRandomDelayDestroy(ModuleState* delay_state, list* visited) {
     free(delay_state->args);
 }
 
 RetransmissionDelay* TwoPhaseRandomDelay(unsigned long t1, unsigned long t2) {
-    RetransmissionDelay* r_delay = malloc(sizeof(RetransmissionDelay));
 
-	r_delay->delay_state.args = malloc(2*sizeof(unsigned long));
-	unsigned long* t = ((unsigned long*)(r_delay->delay_state.args));
-	t[0] = t1;
-	t[1] = t2;
+    unsigned long* t_args = malloc(2*sizeof(unsigned long));
+	t_args[0] = t1;
+	t_args[1] = t2;
 
-	r_delay->delay_state.vars = NULL;
-	r_delay->r_delay = &_TwoPhaseRandomDelay;
-    r_delay->destroy = &_TwoPhaseRandomDelayDestroy;
-
-	return r_delay;
+    return newRetransmissionDelay(
+        t_args,
+        NULL,
+        &TwoPhaseRandomDelayCompute,
+        &TwoPhaseRandomDelayDestroy
+    );
 }

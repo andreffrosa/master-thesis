@@ -15,15 +15,12 @@
 #define _BROADCAST_ALGORITHM_COMMON_H_
 
 #include "Yggdrasil.h"
+
 #include "../pending_messages/pending_message.h"
 
-#include "../bcast_header.h"
+#include "../broadcast_header.h"
 
-typedef struct ModuleState_ {
-    void* args;
-    void* vars;
-} ModuleState;
-
-bool equalAddr(void* a, void* b);
+#include "utility/byte.h"
+#include "utility/my_misc.h"
 
 #endif /* _BROADCAST_ALGORITHM_COMMON_H_ */

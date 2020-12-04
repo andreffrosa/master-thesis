@@ -24,47 +24,48 @@ typedef struct _Gossip2PolicyArgs {
 	unsigned int n;
 } Gossip2PolicyArgs;
 
-static bool _Gossip2Policy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool Gossip2PolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 	Gossip2PolicyArgs* _args = ((Gossip2PolicyArgs*)(policy_state->args));
 	double p1 = _args->p1;
 	unsigned int k = _args->k;
 	double p2 = _args->p2;
 	unsigned int n = _args->n;
 	unsigned char hops = 0;
-	message_copy* first = ((message_copy*)getCopies(p_msg)->head->data);
-	if(!query_context_header(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "hops", &hops, myID, 0))
-		assert(false);
-	
     unsigned int nn = 0;
-	if(!query_context(r_context, "n_neighbors", &nn, myID, 0))
-		assert(false);
+
+	MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
+
+    list* visited2 = list_init();
+    if(!RC_queryHeader(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "hops", &hops, NULL, myID, visited2))
+        assert(false);
+    list_delete(visited2);
+
+    visited2 = list_init();
+    if(!RC_query(r_context, "n_neighbors", &nn, NULL, myID, visited2))
+        assert(false);
+    list_delete(visited2);
 
 	double u = randomProb();
-
 	return hops < k || (nn < n && u <= p2) || (nn >= n && u <= p1);
 }
 
-static void _Gossip2PolicyDestroy(ModuleState* policy_state, list* visited) {
+static void Gossip2PolicyDestroy(ModuleState* policy_state, list* visited) {
     free(policy_state->args);
 }
 
 RetransmissionPolicy* Gossip2Policy(double p1, unsigned int k, double p2, unsigned int n) {
-
 	assert( p2 > p1 );
 
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
-
-	r_policy->policy_state.args = malloc(sizeof(Gossip2PolicyArgs));
-	Gossip2PolicyArgs* args = ((Gossip2PolicyArgs*)(r_policy->policy_state.args));
+	Gossip2PolicyArgs* args = malloc(sizeof(Gossip2PolicyArgs));
 	args->p1 = p1;
 	args->k = k;
 	args->p2 = p2;
 	args->n = n;
 
-	r_policy->policy_state.vars = NULL;
-
-	r_policy->r_policy = &_Gossip2Policy;
-    r_policy->destroy = &_Gossip2PolicyDestroy;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        args,
+        NULL,
+        &Gossip2PolicyEval,
+        &Gossip2PolicyDestroy
+    );
 }

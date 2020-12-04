@@ -15,19 +15,7 @@
 
 #include <assert.h>
 
-static void HopCountAwareRADExtensionContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static void HopCountAwareRADExtensionContextEvent(ModuleState* context_state, queue_t_elem* elem, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static bool HopCountAwareRADExtensionContextQuery(ModuleState* context_state, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	return false;
-}
-
-static bool HopCountAwareRADExtensionContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static bool HopCountAwareRADExtensionContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
 
 	if(strcmp(query, "delay") == 0 || strcmp(query, "timer") == 0 || strcmp(query, "rad") == 0) {
 		*((unsigned long*)result) = context_header ? *((unsigned long*)context_header) : 0;
@@ -37,7 +25,7 @@ static bool HopCountAwareRADExtensionContextQueryHeader(ModuleState* context_sta
 	return false;
 }
 
-static unsigned int HopCountAwareRADExtensionContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static unsigned int HopCountAwareRADExtensionContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
 
     unsigned long delta_t = *((unsigned long*) (context_state->args));
 
@@ -53,9 +41,10 @@ static unsigned int HopCountAwareRADExtensionContextHeader(ModuleState* context_
         unsigned long delay = getCurrentPhaseDuration(p_msg);
 
         unsigned long parent_initial_delay;
-        message_copy* first = ((message_copy*)copies->head->data);
-        if(!query_context_header(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "delay", &parent_initial_delay, myID, 0))
-    		assert(false);
+        MessageCopy* first = ((MessageCopy*)copies->head->data);
+
+        if(!HopCountAwareRADExtensionContextQueryHeader(context_state, getContextHeader(first), getBcastHeader(first)->context_length, "delay", &parent_initial_delay, NULL, myID, NULL))
+            assert(false);
 
         unsigned long initial_delay = delay - 2*n_copies*delta_t - (delta_t - parent_initial_delay);
         memcpy(buffer, &initial_delay, sizeof(unsigned long));
@@ -73,20 +62,20 @@ static void HopCountAwareRADExtensionContextDestroy(ModuleState* context_state, 
 }
 
 RetransmissionContext* HopCountAwareRADExtensionContext(unsigned long delta_t) {
-	RetransmissionContext* r_context = malloc(sizeof(RetransmissionContext));
+    assert(delta_t > 0);
 
-    r_context->context_state.args = malloc(sizeof(delta_t));
-	*((unsigned long*)(r_context->context_state.args)) = delta_t;
+    unsigned long* delta_t_arg = malloc(sizeof(unsigned long));
+    *delta_t_arg = delta_t;
 
-    r_context->context_state.vars = NULL;
-
-	r_context->init = &HopCountAwareRADExtensionContextInit;
-	r_context->create_header = &HopCountAwareRADExtensionContextHeader;
-	r_context->process_event = &HopCountAwareRADExtensionContextEvent;
-	r_context->query_handler = &HopCountAwareRADExtensionContextQuery;
-	r_context->query_header_handler = &HopCountAwareRADExtensionContextQueryHeader;
-    r_context->copy_handler = NULL;
-    r_context->destroy = &HopCountAwareRADExtensionContextDestroy;
-
-	return r_context;
+    return newRetransmissionContext(
+        delta_t_arg,
+        NULL,
+        NULL,
+        NULL,
+        &HopCountAwareRADExtensionContextHeader,
+        NULL,
+        &HopCountAwareRADExtensionContextQueryHeader,
+        NULL,
+        &HopCountAwareRADExtensionContextDestroy
+    );
 }

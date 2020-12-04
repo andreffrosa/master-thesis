@@ -14,9 +14,13 @@
 #ifndef _RETRANSMISSION_DELAY_H_
 #define _RETRANSMISSION_DELAY_H_
 
-#include "data_structures/list.h"
+#include "../common.h"
+
+#include "../retransmission_context/retransmission_context.h"
 
 typedef struct _RetransmissionDelay RetransmissionDelay;
+
+unsigned long RD_compute(RetransmissionDelay* r_delay, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited);
 
 void destroyRetransmissionDelay(RetransmissionDelay* r_delay, list* visited);
 

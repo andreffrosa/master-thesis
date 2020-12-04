@@ -15,7 +15,7 @@
 
 #include "utility/my_math.h"
 
-static unsigned long _RandomDelay(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, RetransmissionContext* r_context, unsigned char* myID) {
+static unsigned long RandomDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
     if(!isCopy) {
         	unsigned long t_max = *((unsigned long*) (delay_state->args));
         	double u = randomProb();
@@ -25,20 +25,19 @@ static unsigned long _RandomDelay(ModuleState* delay_state, PendingMessage* p_ms
     }
 }
 
-static void _RandomDelayDestroy(ModuleState* delay_state, list* visited) {
+static void RandomDelayDestroy(ModuleState* delay_state, list* visited) {
     free(delay_state->args);
 }
 
 RetransmissionDelay* RandomDelay(unsigned long t_max) {
-    RetransmissionDelay* r_delay = malloc(sizeof(RetransmissionDelay));
 
-	r_delay->delay_state.args = malloc(sizeof(t_max));
-	*((unsigned long*)(r_delay->delay_state.args)) = t_max;
+    unsigned long* t_max_arg = malloc(sizeof(t_max));
+    *t_max_arg = t_max;
 
-	r_delay->delay_state.vars = NULL;
-
-	r_delay->r_delay = &_RandomDelay;
-    r_delay->destroy = &_RandomDelayDestroy;
-
-	return r_delay;
+    return newRetransmissionDelay(
+        t_max_arg,
+        NULL,
+        &RandomDelayCompute,
+        &RandomDelayDestroy
+    );
 }

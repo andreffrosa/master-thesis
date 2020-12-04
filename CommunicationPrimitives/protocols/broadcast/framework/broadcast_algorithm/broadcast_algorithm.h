@@ -28,32 +28,32 @@ BroadcastAlgorithm* newBroadcastAlgorithm(RetransmissionContext* r_context, Retr
 
 void destroyBroadcastAlgorithm(BroadcastAlgorithm* alg);
 
-RetransmissionContext* getRetransmissionContext(BroadcastAlgorithm* alg);
+RetransmissionContext* BA_getRetransmissionContext(BroadcastAlgorithm* alg);
 
-RetransmissionContext* setRetransmissionContext(BroadcastAlgorithm* alg, RetransmissionContext* new_context);
+void BA_setRetransmissionContext(BroadcastAlgorithm* alg, RetransmissionContext* new_context);
 
-RetransmissionDelay* getRetransmissionDelay(BroadcastAlgorithm* alg);
+RetransmissionDelay* BA_getRetransmissionDelay(BroadcastAlgorithm* alg);
 
-RetransmissionDelay* setRetransmissionDelay(BroadcastAlgorithm* alg, RetransmissionDelay* new_delay);
+void BA_setRetransmissionDelay(BroadcastAlgorithm* alg, RetransmissionDelay* new_delay);
 
-RetransmissionPolicy* getRetransmissionPolicy(BroadcastAlgorithm* alg);
+RetransmissionPolicy* BA_getRetransmissionPolicy(BroadcastAlgorithm* alg);
 
-RetransmissionPolicy* setRetransmissionPolicy(BroadcastAlgorithm* alg, RetransmissionPolicy* new_policy);
+void BA_setRetransmissionPolicy(BroadcastAlgorithm* alg, RetransmissionPolicy* new_policy);
 
-unsigned int getRetransmissionPhases(BroadcastAlgorithm* alg);
+unsigned int BA_getRetransmissionPhases(BroadcastAlgorithm* alg);
 
-void setRetransmissionPhases(BroadcastAlgorithm* alg, unsigned int phases);
+void BA_setRetransmissionPhases(BroadcastAlgorithm* alg, unsigned int phases);
 
-unsigned long triggerRetransmissionDelay(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID);
+unsigned long BA_computeRetransmissionDelay(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID);
 
-bool triggerRetransmissionPolicy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID);
+bool BA_evalRetransmissionPolicy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID);
 
-unsigned int triggerRetransmissionContextHeader(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, void** context_header, unsigned char* myID);
+void BA_initRetransmissionContext(BroadcastAlgorithm* algorithm, proto_def* protocol_definition, unsigned char* myID);
 
-void triggerRetransmissionContextInit(BroadcastAlgorithm* algorithm, proto_def* protocol_definition, unsigned char* myID);
+void BA_processEvent(BroadcastAlgorithm* algorithm, queue_t_elem* event, unsigned char* myID);
 
-void triggerRetransmissionContextEvent(BroadcastAlgorithm* algorithm, queue_t_elem* event, unsigned char* myID);
+unsigned int BA_createHeader(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, void** context_header, unsigned char* myID);
 
-void triggerRetransmissionContextCopy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID);
+void BA_processCopy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID);
 
 #endif /* _BROADCAST_ALGORITHM_H_ */

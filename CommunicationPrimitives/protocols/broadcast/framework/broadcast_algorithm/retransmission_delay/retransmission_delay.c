@@ -11,25 +11,51 @@
  * (C) 2019
  *********************************************************/
 
- #include "retransmission_delay_private.h"
+#include "retransmission_delay_private.h"
+
+#include <assert.h>
+
+RetransmissionDelay* newRetransmissionDelay(void* args, void* vars, compute_delay compute, destroy_delay destroy) {
+    assert(compute);
+
+    RetransmissionDelay* r_delay = malloc(sizeof(RetransmissionDelay));
+
+	r_delay->state.args = args;
+	r_delay->state.vars = vars;
+	r_delay->compute = compute;
+    r_delay->destroy = destroy;
+
+	return r_delay;
+}
+
+unsigned long RD_compute(RetransmissionDelay* r_delay, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+    assert(r_delay && visited);
+
+    if( list_find_item(visited, &equalAddr, r_delay) == NULL ) {
+        void** this = malloc(sizeof(void*));
+        *this = r_delay;
+        list_add_item_to_tail(visited, this);
+
+        return r_delay->compute(&r_delay->state, p_msg, remaining, isCopy, myID, r_context, visited);
+    } else {
+        return 0L;
+        // TODO: what to do?
+    }
+}
 
 void destroyRetransmissionDelay(RetransmissionDelay* r_delay, list* visited) {
-     if(r_delay !=NULL) {
-         if(r_delay->destroy != NULL) {
-             bool root = visited == NULL;
-             if(root) {
-                 visited = list_init();
-                 void** this = malloc(sizeof(void*));
-                 *this = r_delay;
-                 list_add_item_to_tail(visited, this);
-             }
+    assert(visited);
 
-             r_delay->destroy(&r_delay->delay_state, visited);
+    if(r_delay != NULL) {
+        if( list_find_item(visited, &equalAddr, r_delay) == NULL ) {
+            void** this = malloc(sizeof(void*));
+            *this = r_delay;
+            list_add_item_to_tail(visited, this);
 
-             if(root) {
-                 list_delete(visited);
-             }
-         }
-         free(r_delay);
-     }
- }
+            if(r_delay->destroy != NULL) {
+                r_delay->destroy(&r_delay->state, visited);
+            }
+            free(r_delay);
+        }
+    }
+}

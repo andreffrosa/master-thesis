@@ -32,13 +32,13 @@ proto_def* broadcast_framework_init(void* arg) {
 	broadcast_framework_state* f_state = malloc(sizeof(broadcast_framework_state));
 	f_state->args = (broadcast_framework_args*)arg;
 
-	proto_def* framework = create_protocol_definition(BCAST_FRAMEWORK_PROTO_ID, BCAST_FRAMEWORK_PROTO_NAME, f_state, NULL);
+	proto_def* framework = create_protocol_definition(BROADCAST_FRAMEWORK_PROTO_ID, BROADCAST_FRAMEWORK_PROTO_NAME, f_state, NULL);
 	proto_def_add_protocol_main_loop(framework, &broadcast_framework_main_loop);
 
 	// Initialize f_state variables
 	init(f_state);
 
-	triggerRetransmissionContextInit(f_state->args->algorithm, framework, f_state->myID);
+	BA_initRetransmissionContext(f_state->args->algorithm, framework, f_state->myID);
 
 	return framework;
 }
@@ -75,13 +75,13 @@ void* broadcast_framework_main_loop(main_loop_args* args) {
 			; // On purpose
 			char s[100];
 			sprintf(s, "Got weird queue elem, type = %u", elem.type);
-			ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", s);
+			ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", s);
 			exit(-1);
 		}
 
         // this eent is meant to be processed by the Retransmission Context
         if(!processed) {
-            triggerRetransmissionContextEvent(f_state->args->algorithm, &elem, f_state->myID);
+            BA_processEvent(f_state->args->algorithm, &elem, f_state->myID);
         }
 
 		// Release memory of elem payload
@@ -94,7 +94,7 @@ void* broadcast_framework_main_loop(main_loop_args* args) {
 static bool processTimer(broadcast_framework_state* f_state, YggTimer* timer) {
 
     // Message Timeout
-    if( timer->timer_type == TIMER_BCAST_MESSAGE_TIMEOUT ) {
+    if( timer->timer_type == TIMER_BROADCAST_MESSAGE_TIMEOUT ) {
         uponTimeout(f_state, timer);
         return true;
     }
@@ -124,7 +124,7 @@ static bool processMessage(broadcast_framework_state* f_state, YggMessage* messa
 
 static bool processRequest(broadcast_framework_state* f_state, YggRequest* request) {
 
-    if( request->proto_dest == BCAST_FRAMEWORK_PROTO_ID ) {
+    if( request->proto_dest == BROADCAST_FRAMEWORK_PROTO_ID ) {
         if( request->request == REQUEST ) {
 
             // Broadcast Message Request
@@ -134,7 +134,7 @@ static bool processRequest(broadcast_framework_state* f_state, YggRequest* reque
             }
 
             // Get Stats Request
-            else if ( request->request_type == REQ_BCAST_FRAMEWORK_STATS ) {
+            else if ( request->request_type == REQ_BROADCAST_FRAMEWORK_STATS ) {
                 uponStatsRequest(f_state, request);
                 return true;
             }
@@ -151,7 +151,7 @@ static bool processRequest(broadcast_framework_state* f_state, YggRequest* reque
         else
             sprintf(s, "Received request from protocol %d meant for protocol %d", request->proto_origin, request->proto_dest);
 
-        ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "ERROR", s);
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "ERROR", s);
 
         return true;
     }
@@ -159,7 +159,7 @@ static bool processRequest(broadcast_framework_state* f_state, YggRequest* reque
 
 static bool processEvent(broadcast_framework_state* f_state, YggEvent* event) {
 
-    if( event->proto_dest == BCAST_FRAMEWORK_PROTO_ID ) {
+    if( event->proto_dest == BROADCAST_FRAMEWORK_PROTO_ID ) {
         // Currently the framework does not process any event
 
         // This event is meant to be processed by the Retransmission Context
@@ -169,25 +169,15 @@ static bool processEvent(broadcast_framework_state* f_state, YggEvent* event) {
     else {
         char s[100];
         sprintf(s, "Received event from protocol %d meant for protocol %d", event->proto_origin, event->proto_dest);
-        ygg_log(BCAST_FRAMEWORK_PROTO_NAME, "ERROR", s);
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "ERROR", s);
 
         return true;
     }
 }
 
-broadcast_framework_args* new_broadcast_framework_args(BroadcastAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s) {
-    broadcast_framework_args* args = malloc(sizeof(broadcast_framework_args));
-
-    args->algorithm = algorithm;
-    args->seen_expiration_ms = seen_expiration_ms;
-    args->gc_interval_s = gc_interval_s;
-
-    return args;
-}
-
 void BroadcastMessage(short protocol_id, unsigned char* data, unsigned int size, unsigned short ttl) {
     YggRequest framework_bcast_req;
-    YggRequest_init(&framework_bcast_req, protocol_id, BCAST_FRAMEWORK_PROTO_ID, REQUEST, REQ_BROADCAST_MESSAGE);
+    YggRequest_init(&framework_bcast_req, protocol_id, BROADCAST_FRAMEWORK_PROTO_ID, REQUEST, REQ_BROADCAST_MESSAGE);
     YggRequest_addPayload(&framework_bcast_req, &ttl, sizeof(ttl));
     YggRequest_addPayload(&framework_bcast_req, data, size);
     deliverRequest(&framework_bcast_req);

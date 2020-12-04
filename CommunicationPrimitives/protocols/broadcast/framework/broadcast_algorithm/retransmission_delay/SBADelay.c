@@ -26,15 +26,19 @@ static unsigned long getDelay(unsigned long t, unsigned int n, unsigned int max_
 	return (unsigned long) roundl( t*t0*u );
 }
 
-static unsigned long _SBADelay(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, RetransmissionContext* r_context, unsigned char* myID) {
+static unsigned long SBADelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
     if(!isCopy) {
         unsigned long t = *((unsigned long*) (delay_state->args));
 
         unsigned int n, max_n;
-        if(!query_context(r_context, "n_neighbors", &n, myID, 0))
+        list* visited2 = list_init();
+        if(!RC_query(r_context, "n_neighbors", &n, NULL, myID, visited2))
             assert(false);
-        if(!query_context(r_context, "max_neighbors", &max_n, myID, 0))
+        list_delete(visited2);
+        visited2 = list_init();
+        if(!RC_query(r_context, "max_neighbors", &max_n, NULL, myID, visited2))
             assert(false);
+        list_delete(visited2);
 
         return getDelay(t, n, max_n);
     } else {
@@ -42,19 +46,19 @@ static unsigned long _SBADelay(ModuleState* delay_state, PendingMessage* p_msg, 
     }
 }
 
-static void _SBADelayDestroy(ModuleState* delay_state, list* visited) {
+static void SBADelayDestroy(ModuleState* delay_state, list* visited) {
     free(delay_state->args);
 }
 
 RetransmissionDelay* SBADelay(unsigned long t) {
-    RetransmissionDelay* r_delay = malloc(sizeof(RetransmissionDelay));
 
-	r_delay->delay_state.args = malloc(sizeof(t));
-	*((unsigned long*)(r_delay->delay_state.args)) = t;
+    unsigned long* t_arg = malloc(sizeof(t));
+	*t_arg = t;
 
-	r_delay->delay_state.vars = NULL;
-	r_delay->r_delay = &_SBADelay;
-    r_delay->destroy = &_SBADelayDestroy;
-
-	return r_delay;
+    return newRetransmissionDelay(
+        t_arg,
+        NULL,
+        &SBADelayCompute,
+        &SBADelayDestroy
+    );
 }

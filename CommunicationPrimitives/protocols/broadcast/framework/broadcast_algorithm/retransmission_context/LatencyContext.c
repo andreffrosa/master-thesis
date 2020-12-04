@@ -17,18 +17,15 @@
 
 #include <assert.h>
 
-static void LatencyContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
-	// Do nothing
-}
 
-static unsigned int LatencyContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static unsigned int LatencyContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
 
     unsigned long* t = malloc(sizeof(unsigned long));
 
     assert(getCopies(p_msg)->size > 0);
 
     //if (getCopies(p_msg)->size > 0) {
-        struct timespec* reception_time = getCopyReceptionTime(((message_copy*)getCopies(p_msg)->head->data));
+        struct timespec* reception_time = getCopyReceptionTime(((MessageCopy*)getCopies(p_msg)->head->data));
         struct timespec current_time = {0}, elapsed = {0};
         clock_gettime(CLOCK_MONOTONIC, &current_time);
         subtract_timespec(&elapsed, &current_time, reception_time);
@@ -42,15 +39,7 @@ static unsigned int LatencyContextHeader(ModuleState* context_state, PendingMess
 	return sizeof(unsigned long);
 }
 
-static void LatencyContextEvent(ModuleState* context_state, queue_t_elem* elem, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static bool LatencyContextQuery(ModuleState* context_state, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	return false;
-}
-
-static bool LatencyContextQueryHeader(ModuleState* context_state, void* header, unsigned int header_size, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static bool LatencyContextQueryHeader(ModuleState* context_state, void* header, unsigned int header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
 
     if(strcmp(query, "latency") == 0) {
         if(header) {
@@ -65,14 +54,16 @@ static bool LatencyContextQueryHeader(ModuleState* context_state, void* header, 
 	return false;
 }
 
-static void LatencyContextCopy(ModuleState* context_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static void LatencyContextCopy(ModuleState* context_state, PendingMessage* p_msg, unsigned char* myID, list* visited) {
 
     if(getCurrentPhase(p_msg) == 1 && getCopies(p_msg)->size == 1) {
-        message_copy* first = ((message_copy*)getCopies(p_msg)->head->data);
+        MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
+
         unsigned long latency = 0L;
-        if(!query_context_header(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "latency", &latency, myID, 0))
+        if(!LatencyContextQueryHeader(context_state, getContextHeader(first), getBcastHeader(first)->context_length, "latency", &latency, NULL, myID, NULL))
     		assert(false);
 
+        // Debug
         char str[100];
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
@@ -83,18 +74,16 @@ static void LatencyContextCopy(ModuleState* context_state, PendingMessage* p_msg
 }
 
 RetransmissionContext* LatencyContext() {
-	RetransmissionContext* r_context = malloc(sizeof(RetransmissionContext));
 
-	r_context->context_state.args = NULL;
-    r_context->context_state.vars = NULL;
-
-	r_context->init = &LatencyContextInit;
-	r_context->create_header = &LatencyContextHeader;
-	r_context->process_event = &LatencyContextEvent;
-	r_context->query_handler = &LatencyContextQuery;
-	r_context->query_header_handler = &LatencyContextQueryHeader;
-    r_context->copy_handler = &LatencyContextCopy;
-    r_context->destroy = NULL;
-
-	return r_context;
+    return newRetransmissionContext(
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &LatencyContextHeader,
+        NULL,
+        &LatencyContextQueryHeader,
+        &LatencyContextCopy,
+        NULL
+    );
 }

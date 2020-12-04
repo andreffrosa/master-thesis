@@ -16,17 +16,32 @@
 
 #include "retransmission_context.h"
 
-#include "../common.h"
+typedef void (*init_ctx)(ModuleState* state, proto_def* protocol_definition, unsigned char* myID, list* visited);
+
+typedef void (*ctx_event_handler)(ModuleState* state, queue_t_elem* elem, unsigned char* myID, list* visited);
+
+typedef unsigned int (*create_ctx_header)(ModuleState* state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited);
+
+typedef bool (*ctx_query_handler)(ModuleState* state, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited);
+
+typedef bool (*ctx_query_header_handler)(ModuleState* state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited);
+
+typedef void (*ctx_copy_handler)(ModuleState* state, PendingMessage* p_msg, unsigned char* myID, list* visited);
+
+typedef void (*destroy_ctx)(ModuleState* state, list* visited);
 
 typedef struct _RetransmissionContext {
-    ModuleState context_state;
-	void (*init)(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited);
-	void (*process_event)(ModuleState* context_state, queue_t_elem* elem, RetransmissionContext* r_context, unsigned char* myID, list* visited);
-	unsigned int (*create_header)(ModuleState* context_state, PendingMessage* p_msg, void** context_header, RetransmissionContext* r_context, unsigned char* myID, list* visited);
-	bool (*query_handler)(ModuleState* context_state, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited);
-	bool (*query_header_handler)(ModuleState* context_state, void* context_header, unsigned int context_header_size, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited);
-    void (*copy_handler)(ModuleState* context_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID, list* visited);
-    void (*destroy)(ModuleState* context_state, list* visited);
+    ModuleState state;
+
+	init_ctx init;
+	ctx_event_handler process_event;
+    create_ctx_header create_header;
+    ctx_query_handler query_handler;
+    ctx_query_header_handler query_header_handler;
+    ctx_copy_handler copy_handler;
+    destroy_ctx destroy;
 } RetransmissionContext;
+
+RetransmissionContext* newRetransmissionContext(void* args, void* vars, init_ctx init, ctx_event_handler process_event, create_ctx_header create_header, ctx_query_handler query_handler, ctx_query_header_handler query_header_handler, ctx_copy_handler copy_handler, destroy_ctx destroy);
 
 #endif /* _RETRANSMISSION_CONTEXT_PRIVATE_H_ */

@@ -15,16 +15,20 @@
 
 #include <assert.h>
 
-static bool _HopCountAidedPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool HopCountAidedPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 
 	int hops = -1;
 
 	for(double_list_item* it = getCopies(p_msg)->head; it; it = it->next) {
-		message_copy* copy = (message_copy*)it->data;
+		MessageCopy* copy = (MessageCopy*)it->data;
 
 		unsigned char current_hops = 0;
-		if(!query_context_header(r_context, getContextHeader(copy), getBcastHeader(copy)->context_length, "hops", &current_hops, myID, 0))
-			assert(false);
+
+        list* visited2 = list_init();
+        if(!RC_queryHeader(r_context, getContextHeader(copy), getBcastHeader(copy)->context_length, "hops", &current_hops, NULL, myID, visited2)) {
+            assert(false);
+        }
+        list_delete(visited2);
 
 		if(hops == -1)
 			hops = current_hops;
@@ -38,13 +42,10 @@ static bool _HopCountAidedPolicy(ModuleState* policy_state, PendingMessage* p_ms
 }
 
 RetransmissionPolicy* HopCountAidedPolicy() {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
-
-	r_policy->policy_state.args = NULL;
-	r_policy->policy_state.vars = NULL;
-
-	r_policy->r_policy = &_HopCountAidedPolicy;
-    r_policy->destroy = NULL;
-    
-	return r_policy;
+	return newRetransmissionPolicy(
+        NULL,
+        NULL,
+        &HopCountAidedPolicyEval,
+        NULL
+    );
 }

@@ -21,4 +21,4 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -O0")
 
 add_library(broadcast_algorithm ${SRC_FILES_BROADCAST_ALGORITHM})
 
-target_link_libraries(broadcast_algorithm PUBLIC utility data_structures discovery m uuid rt)
+target_link_libraries(broadcast_algorithm PUBLIC discovery_algorithm discovery_framework utility data_structures m uuid rt)

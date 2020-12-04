@@ -22,36 +22,37 @@ typedef struct _HorizonProbabilityPolicyArgs {
 	unsigned int k;
 } HorizonProbabilityPolicyArgs;
 
-static bool _HorizonProbabilityPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static bool HorizonProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
 
 	double p = ((HorizonProbabilityPolicyArgs*)(policy_state->args))->p;
 	unsigned int k = ((HorizonProbabilityPolicyArgs*)(policy_state->args))->k;
-	message_copy* first = ((message_copy*)getCopies(p_msg)->head->data);
+	MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
 	unsigned char hops = 0;
-	if(!query_context_header(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "hops", &hops, myID, 0))
-	   assert(false);
+
+    list* visited2 = list_init();
+    if(!RC_queryHeader(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "hops", &hops, NULL, myID, visited2)) {
+        assert(false);
+    }
+    list_delete(visited2);
 
 	double u = randomProb();
-
 	return hops < k || u <= p;
 }
 
-static void _HorizonProbabilityPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void HorizonProbabilityPolicyDestroy(ModuleState* policy_state, list* visited) {
     free(policy_state->args);
 }
 
 RetransmissionPolicy* HorizonProbabilityPolicy(double p, unsigned int k) {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
 
-	r_policy->policy_state.args = malloc(sizeof(HorizonProbabilityPolicyArgs));
-	HorizonProbabilityPolicyArgs* args = ((HorizonProbabilityPolicyArgs*)(r_policy->policy_state.args));
+	HorizonProbabilityPolicyArgs* args = malloc(sizeof(HorizonProbabilityPolicyArgs));
 	args->p = p;
 	args->k = k;
 
-	r_policy->policy_state.vars = NULL;
-
-	r_policy->r_policy = &_HorizonProbabilityPolicy;
-    r_policy->destroy = &_HorizonProbabilityPolicyDestroy;
-
-	return r_policy;
+    return newRetransmissionPolicy(
+        args,
+        NULL,
+        &HorizonProbabilityPolicyEval,
+        &HorizonProbabilityPolicyDestroy
+    );
 }

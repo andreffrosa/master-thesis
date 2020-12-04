@@ -17,27 +17,25 @@
 
 #include <assert.h>
 
-static bool _DynamicProbabilityPolicy(ModuleState* policy_state, PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
-	double p;
+static bool DynamicProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+	double p = 0.0;
 
-    if(!query_context(r_context, "p", &p, myID, 0))
+    list* visited2 = list_init();
+    if(!RC_query(r_context, "p", &p, NULL, myID, visited2))
         assert(false);
+    list_delete(visited2);
 
-    printf("P = %f\n", p);
+    //printf("P = %f\n", p);
 
 	double u = randomProb();
-
 	return u <= p;
 }
 
 RetransmissionPolicy* DynamicProbabilityPolicy() {
-	RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
-
-    r_policy->policy_state.args = NULL;
-	r_policy->policy_state.vars = NULL;
-
-	r_policy->r_policy = &_DynamicProbabilityPolicy;
-    r_policy->destroy = NULL;
-
-	return r_policy;
+	return newRetransmissionPolicy(
+        NULL,
+        NULL,
+        &DynamicProbabilityPolicyEval,
+        NULL
+    );
 }

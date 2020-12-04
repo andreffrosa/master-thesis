@@ -1466,8 +1466,9 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         double tx_lq_delta = fabs(THNE_getTxLinkQuality(nn) - hack->tx_lq);
                         if( rx_lq_delta >= state->args->lq_epsilon || tx_lq_delta >= state->args->lq_epsilon || (rx_lq_delta > 0.0 && (hack->rx_lq == 1.0 || hack->rx_lq == 0.0)) || (tx_lq_delta > 0 && (hack->tx_lq == 1.0 || hack->tx_lq == 0.0))) {
 
-                            THNE_setRxLinkQuality(nn, hack->rx_lq);
-                            THNE_setTxLinkQuality(nn, hack->tx_lq);
+                            // Swap orientation
+                            THNE_setRxLinkQuality(nn, hack->tx_lq);
+                            THNE_setTxLinkQuality(nn, hack->rx_lq);
 
                             summary->updated_2hop_quality = true;
 
@@ -1808,6 +1809,42 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
     double tx_lq = NE_getRxLinkQuality(neigh);
     YggEvent_addPayload(ev, &tx_lq, sizeof(double));
 
+    // Append Traffic
+    double traffic = NE_getOutTraffic(neigh);
+    YggEvent_addPayload(ev, &traffic, sizeof(double));
+
+    // Append Neighbor Type
+    byte is_bi = NE_getNeighborType(neigh, &state->current_time) == BI_NEIGH;
+    YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+
+    // Append Neighbors
+    hash_table* ht = NE_getTwoHopNeighbors(neigh);
+    byte n = ht->n_items;
+    YggEvent_addPayload(ev, &n, sizeof(byte));
+
+    void* iterator = NULL;
+    hash_table_item* hit = NULL;
+    while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
+        TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+
+        // Append Neigh ID
+        YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+
+        // Append Neigh LQ
+        rx_lq = THNE_getRxLinkQuality(nn);
+        YggEvent_addPayload(ev, &rx_lq, sizeof(double));
+        tx_lq = THNE_getTxLinkQuality(nn);
+        YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+
+        // Append Traffic
+        traffic = THNE_getTraffic(nn);
+        YggEvent_addPayload(ev, &traffic, sizeof(double));
+
+        // Append Neigh Type
+        is_bi = THNE_isBi(nn);
+        YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+    }
+
     #ifdef DEBUG_DISCOVERY
     char id_str[UUID_STR_LEN+1];
     id_str[UUID_STR_LEN] = '\0';
@@ -1898,6 +1935,31 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
 
     // Append Neighbor ID
     YggEvent_addPayload(ev, NE_getNeighborID(neigh), sizeof(uuid_t));
+
+    // Append Neighbor Type
+    struct timespec aux;
+    copy_timespec(&aux, &state->current_time);
+    aux.tv_sec--;
+    byte is_bi = NE_getNeighborType(neigh, &aux) == BI_NEIGH;
+    YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+
+    // Append Neighbors
+    hash_table* ht = NE_getTwoHopNeighbors(neigh);
+    byte n = ht->n_items;
+    YggEvent_addPayload(ev, &n, sizeof(byte));
+
+    void* iterator = NULL;
+    hash_table_item* hit = NULL;
+    while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
+        TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+
+        // Append Neigh ID
+        YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+
+        // Append Neigh Type
+        is_bi = THNE_isBi(nn);
+        YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+    }
 
     #ifdef DEBUG_DISCOVERY
     char id_str[UUID_STR_LEN+1];

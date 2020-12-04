@@ -17,19 +17,7 @@
 
 #include "utility/my_math.h"
 
-static void RouteContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static void RouteContextEvent(ModuleState* context_state, queue_t_elem* elem, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	// Do nothing
-}
-
-static bool RouteContextQuery(ModuleState* context_state, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
-	return false;
-}
-
-static bool RouteContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, char* query, void* result, int argc, va_list* argv, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static bool RouteContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
 
 	if(strcmp(query, "route") == 0 || strcmp(query, "path") == 0) {
         unsigned int amount = context_header_size / sizeof(uuid_t);
@@ -44,14 +32,13 @@ static bool RouteContextQueryHeader(ModuleState* context_state, void* context_he
 		}
 
         *((list**)result) = l;
-
 		return true;
 	}
 
 	return false;
 }
 
-static unsigned int RouteContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, RetransmissionContext* r_context, unsigned char* myID, list* visited) {
+static unsigned int RouteContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
     double_list* copies = getCopies(p_msg);
     assert(copies->size > 0);
     /*if(copies->size == 0) {
@@ -59,10 +46,10 @@ static unsigned int RouteContextHeader(ModuleState* context_state, PendingMessag
         return 0;
     }*/
 
-    message_copy* first = (message_copy*)copies->head->data;
+    MessageCopy* first = (MessageCopy*)copies->head->data;
 
     list* route = NULL;
-    if(!query_context_header(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "route", &route, myID, 0))
+    if(!RouteContextQueryHeader(context_state, getContextHeader(first), getBcastHeader(first)->context_length, "route", &route, NULL, myID, NULL))
 		assert(false);
 
     unsigned char* x = malloc(sizeof(uuid_t));
@@ -95,19 +82,19 @@ static void RouteContextDestroy(ModuleState* context_state, list* visited) {
 }
 
 RetransmissionContext* RouteContext(unsigned int max_len) {
-	RetransmissionContext* r_context = malloc(sizeof(RetransmissionContext));
 
-	r_context->context_state.args = malloc(sizeof(unsigned int));
-	*((unsigned int*)(r_context->context_state.args)) = max_len;
-	r_context->context_state.vars = NULL;
+	unsigned int* max_len_arg = malloc(sizeof(unsigned int));
+	*max_len_arg = max_len;
 
-	r_context->init = &RouteContextInit;
-	r_context->create_header = &RouteContextHeader;
-	r_context->process_event = &RouteContextEvent;
-	r_context->query_handler = &RouteContextQuery;
-	r_context->query_header_handler = &RouteContextQueryHeader;
-    r_context->copy_handler = NULL;
-    r_context->destroy = &RouteContextDestroy;
-
-	return r_context;
+    return newRetransmissionContext(
+        max_len_arg,
+        NULL,
+        NULL,
+        NULL,
+        &RouteContextHeader,
+        NULL,
+        &RouteContextQueryHeader,
+        NULL,
+        &RouteContextDestroy
+    );
 }

@@ -15,6 +15,7 @@
 #define _OLSR_UTILS_H_
 
 #include "data_structures/hash_table.h"
+#include "my_misc.h"
 
 #define DEFAULT_WILLINGNESS 1
 
@@ -41,5 +42,7 @@ void destroyN1(hash_table* n1);
 void destroyN2(list* n2);
 
 list* compute_multipoint_relays(hash_table* n1, list* n2, list* initial);
+
+void delete_n1_item(hash_table_item* hit, void* aux);
 
 #endif /* _OLSR_UTILS_H_ */

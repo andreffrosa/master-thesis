@@ -14,7 +14,12 @@
 #ifndef _RETRANSMISSION_POLICY_H_
 #define _RETRANSMISSION_POLICY_H_
 
+#include "../common.h"
+#include "../retransmission_context/retransmission_context.h"
+
 typedef struct _RetransmissionPolicy RetransmissionPolicy;
+
+bool RP_eval(RetransmissionPolicy* r_policy, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited);
 
 void destroyRetransmissionPolicy(RetransmissionPolicy* policy, list* visited);
 
@@ -42,8 +47,7 @@ RetransmissionPolicy* LENWBPolicy();
 
 RetransmissionPolicy* DelegatedNeighborsPolicy();
 
-// ex = 0 -> convetional; ex = 1 -> retransmits if parent is not known; ex = 2 -> retansmits if 1 or if current node is not know to parent
-RetransmissionPolicy* AHBPPolicy(int ex);
+RetransmissionPolicy* AHBPPolicy(bool mobility_extension);
 
 RetransmissionPolicy* DynamicProbabilityPolicy();
 
