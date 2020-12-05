@@ -266,8 +266,6 @@ static void rcvMessage(YggMessage* msg) {
     unsigned short payload_size = 0;
     ptr = YggMessage_readPayload(msg, ptr, &payload_size, sizeof(payload_size));
 
-    //printf("payload_size = %hu\n", payload_size);
-
     const char* empty_msg = "[EMPTY MESSAGE]";
 
     unsigned short str_size = payload_size > 0 ? payload_size+1 : strlen(empty_msg)+1;
@@ -282,20 +280,6 @@ static void rcvMessage(YggMessage* msg) {
         strcpy(m, empty_msg);
     }
 
-
-	//struct timespec current_time;
-	//clock_gettime(CLOCK_MONOTONIC, &current_time);
-
-	/*
-if (msg->dataLen > 0 && msg->data != NULL) {
-		memcpy(m, msg->data, msg->dataLen);
-	} else {
-		strcpy(m, "[EMPTY MESSAGE]");
-	}
-*/
-
-
-	//sprintf(m, "%s Received at %ld:%ld.", m, current_time.tv_sec, current_time.tv_nsec);
 	ygg_log(APP_NAME, "RECEIVED MESSAGE", m);
 }
 
