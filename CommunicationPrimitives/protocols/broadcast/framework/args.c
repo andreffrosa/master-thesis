@@ -17,18 +17,19 @@
 
 #include <assert.h>
 
-broadcast_framework_args* new_broadcast_framework_args(BroadcastAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s) {
+broadcast_framework_args* new_broadcast_framework_args(BroadcastAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, bool late_delivery) {
     broadcast_framework_args* args = malloc(sizeof(broadcast_framework_args));
 
     args->algorithm = algorithm;
     args->seen_expiration_ms = seen_expiration_ms;
     args->gc_interval_s = gc_interval_s;
+    args->late_delivery = late_delivery;
 
     return args;
 }
 
 broadcast_framework_args* default_broadcast_framework_args() {
-    return new_broadcast_framework_args(Flooding(500), 1*60*1000, 3*60);
+    return new_broadcast_framework_args(Flooding(500), 1*60*1000, 3*60, false);
 }
 
 static BroadcastAlgorithm* parse_broadcast_algorithm(char* value);
@@ -75,6 +76,8 @@ broadcast_framework_args* load_broadcast_framework_args(const char* file_path) {
                 args->seen_expiration_ms = strtol(value, NULL, 10);
             } else if( strcmp(key, "gc_interval_s") == 0 ) {
                 args->gc_interval_s = strtol(value, NULL, 10);
+            } else if( strcmp(key, "late_delivery") == 0 ) {
+                args->late_delivery = strcmp(value, "false") == 0 ? false : true;
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);

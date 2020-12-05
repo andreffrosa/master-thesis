@@ -119,6 +119,11 @@ void changePhase(broadcast_framework_state* state, PendingMessage* p_msg) {
 	} else {
 		// Message is no longer active
 		setMessageInactive(p_msg);
+
+        if(state->args->late_delivery) {
+            // Deliver the message to the upper layer
+            DeliverMessage(state, p_msg);
+        }
 	}
 }
 
@@ -239,8 +244,10 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
     // Insert on seen_msgs
     pushPendingMessage(state->seen_msgs, p_msg);
 
-    // Deliver the message to the upper layer
-    DeliverMessage(state, p_msg);
+    if(!state->args->late_delivery) {
+        // Deliver the message to the upper layer
+        DeliverMessage(state, p_msg);
+    }
 
     if(ttl > 0) {
         // Retransmit Message
@@ -294,8 +301,10 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 
         pushPendingMessage(state->seen_msgs, p_msg);
 
-		// Deliver the message to the upper layer
-		DeliverMessage(state, p_msg);
+        if(!state->args->late_delivery) {
+            // Deliver the message to the upper layer
+            DeliverMessage(state, p_msg);
+        }
 
         BA_processCopy(state->args->algorithm, p_msg, state->myID);
 

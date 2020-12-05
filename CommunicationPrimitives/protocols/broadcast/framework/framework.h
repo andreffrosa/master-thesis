@@ -38,12 +38,13 @@ typedef struct broadcast_framework_args_ {
 	BroadcastAlgorithm* algorithm;
 	unsigned long seen_expiration_ms;
 	unsigned long gc_interval_s;
+    bool late_delivery;
 } broadcast_framework_args;
 
 proto_def* broadcast_framework_init(void* arg);
 void* broadcast_framework_main_loop(main_loop_args* args);
 
-broadcast_framework_args* new_broadcast_framework_args(BroadcastAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s);
+broadcast_framework_args* new_broadcast_framework_args(BroadcastAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, bool late_delivery);
 
 broadcast_framework_args* default_broadcast_framework_args();
 
