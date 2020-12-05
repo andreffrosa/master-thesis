@@ -49,7 +49,7 @@ broadcast_framework_args* default_broadcast_framework_args();
 
 broadcast_framework_args* load_broadcast_framework_args(const char* file_path);
 
-void BroadcastMessage(short protocol_id, byte* data, unsigned int size, unsigned short ttl);
+void BroadcastMessage(unsigned short protocol_id, unsigned short ttl, byte* data, unsigned short size);
 
 typedef enum {
     REQ_BROADCAST_MESSAGE = 0,

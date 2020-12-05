@@ -175,11 +175,14 @@ static bool processEvent(broadcast_framework_state* f_state, YggEvent* event) {
     }
 }
 
-void BroadcastMessage(short protocol_id, unsigned char* data, unsigned int size, unsigned short ttl) {
+void BroadcastMessage(unsigned short protocol_id, unsigned short ttl, byte* data, unsigned short size) {
     YggRequest framework_bcast_req;
     YggRequest_init(&framework_bcast_req, protocol_id, BROADCAST_FRAMEWORK_PROTO_ID, REQUEST, REQ_BROADCAST_MESSAGE);
+
     YggRequest_addPayload(&framework_bcast_req, &ttl, sizeof(ttl));
     YggRequest_addPayload(&framework_bcast_req, data, size);
+
     deliverRequest(&framework_bcast_req);
+
     YggRequest_freePayload(&framework_bcast_req);
 }

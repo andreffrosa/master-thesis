@@ -36,7 +36,7 @@
 #include "utility/my_sys.h"
 
 typedef struct BroadcastAppArgs_ {
-    char broadcast_type[200];
+    char broadcast_type[100];
     //struct timespec start_time;
     unsigned long initial_grace_period_s;
     unsigned long final_grace_period_s;
@@ -61,6 +61,9 @@ static void printBcastStats(YggRequest* req);
 static void sendMessage(const char* pi, unsigned int counter);
 static void rcvMessage(YggMessage* msg);
 static void uponNotification(YggEvent* ev, BroadcastAppArgs* app_args);
+
+static void requestDiscoveryStats();
+static void requestBroadcastStats();
 
 static unsigned long getTimerDuration(BroadcastAppArgs* app_args, bool isFirst, struct timespec* start_time);
 static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_timer_id, bool isFirst, struct timespec* start_time);
@@ -142,43 +145,38 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Start App
 
-	// Set periodic timer
+    char str[100];
+    sprintf(str, "%s starting experience with duration %lu + %lu + %lu s\n", hostname, app_args->initial_grace_period_s, app_args->exp_duration_s, app_args->final_grace_period_s);
+    ygg_log(APP_NAME, "INIT", str);
+
     struct timespec start_time = {0};
     clock_gettime(CLOCK_MONOTONIC, &start_time);
 
     struct timespec t = {0};
 
+	// Set end of experiment
+	uuid_t end_exp;
+	genUUID(end_exp);
+	milli_to_timespec(&t, (app_args->exp_duration_s + app_args->initial_grace_period_s)*1000);
+    SetTimer(&t, end_exp, APP_ID, 0);
+
+    // Set periodic timer
     uuid_t bcast_timer_id;
-	genUUID(bcast_timer_id);
+    genUUID(bcast_timer_id);
     if(!app_args->rcv_only){
         setBroadcastTimer(app_args, bcast_timer_id, true, &start_time);
     }
 
-	// Set end of experiment
-	uuid_t end_exp;
-	genUUID(end_exp);
-	milli_to_timespec(&t, app_args->exp_duration_s*1000 + app_args->initial_grace_period_s*1000);
-    SetTimer(&t, end_exp, APP_ID, 0);
-
-	YggRequest discovery_stats_req;
-	YggRequest_init(&discovery_stats_req, APP_ID, DISCOVERY_FRAMEWORK_PROTO_ID, REQUEST, REQ_DISCOVERY_FRAMEWORK_STATS);
-	YggRequest framework_stats_req;
-	YggRequest_init(&framework_stats_req, APP_ID, BROADCAST_FRAMEWORK_PROTO_ID, REQUEST, REQ_BROADCAST_FRAMEWORK_STATS);
-
-	char str[100];
-	sprintf(str, "%s starting experience with duration %lu + %lu + %lu s\n", hostname, app_args->initial_grace_period_s, app_args->exp_duration_s, app_args->final_grace_period_s);
-	ygg_log(APP_NAME, "INIT", str);
-
 	unsigned int counter = 0;
     bool finished = false;
 
-	queue_t_elem elem;
+	queue_t_elem elem = {0};
 	while(1) {
 		queue_pop(inBox, &elem);
 
 		switch(elem.type) {
 		case YGG_TIMER:
-			// Send new msg with probability send_prob
+
 			if( uuid_compare(elem.data.timer.id, end_exp ) == 0 ) {
                 if(!finished) {
                     finished = true;
@@ -187,8 +185,8 @@ int main(int argc, char* argv[]) {
                     milli_to_timespec(&t, app_args->final_grace_period_s*1000);
                     SetTimer(&t, end_exp, APP_ID, 0);
                 } else {
-                    deliverRequest(&framework_stats_req);
-                    deliverRequest(&discovery_stats_req);
+                    requestDiscoveryStats();
+                    requestBroadcastStats();
                 }
 			} else if( uuid_compare(elem.data.timer.id, bcast_timer_id ) == 0 ) {
 
@@ -255,7 +253,7 @@ static void sendMessage(const char* hostname, unsigned int counter) {
 
     sprintf(payload, "I'm %s and this is my %d%s message.", hostname, counter, ordinal);
 
-    BroadcastMessage(APP_ID, (unsigned char*)payload, strlen(payload)+1, -1);
+    BroadcastMessage(APP_ID, -1, (byte*)payload, strlen(payload)+1);
 
 	ygg_log(APP_NAME, "BROADCAST SENT", payload);
 }
@@ -274,6 +272,18 @@ static void rcvMessage(YggMessage* msg) {
 	}
 	//sprintf(m, "%s Received at %ld:%ld.", m, current_time.tv_sec, current_time.tv_nsec);
 	ygg_log(APP_NAME, "RECEIVED MESSAGE", m);
+}
+
+static void requestDiscoveryStats() {
+    YggRequest req;
+	YggRequest_init(&req, APP_ID, DISCOVERY_FRAMEWORK_PROTO_ID, REQUEST, REQ_DISCOVERY_FRAMEWORK_STATS);
+    deliverRequest(&req);
+}
+
+static void requestBroadcastStats() {
+    YggRequest req;
+	YggRequest_init(&req, APP_ID, BROADCAST_FRAMEWORK_PROTO_ID, REQUEST, REQ_BROADCAST_FRAMEWORK_STATS);
+    deliverRequest(&req);
 }
 
 static void printBcastStats(YggRequest* req) {
@@ -445,6 +455,7 @@ static unsigned long getTimerDuration(BroadcastAppArgs* app_args, bool isFirst, 
 
 static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_timer_id, bool isFirst, struct timespec* start_time) {
     unsigned long t = getTimerDuration(app_args, isFirst, start_time);
+
     struct timespec t_;
     milli_to_timespec(&t_, t);
     SetTimer(&t_, bcast_timer_id, APP_ID, 0);
@@ -454,8 +465,8 @@ static BroadcastAppArgs* default_broadcast_app_args() {
     BroadcastAppArgs* app_args = malloc(sizeof(BroadcastAppArgs));
 
     strcpy(app_args->broadcast_type, "Exponential Constant 2.0");
-    app_args->initial_grace_period_s = 10*1000; // 10 seconds
-    app_args->final_grace_period_s = 30*1000; // 30 seconds
+    app_args->initial_grace_period_s = 10;
+    app_args->final_grace_period_s = 30;
     app_args->max_broadcasts = ULONG_MAX; // infinite
     app_args->exp_duration_s = 5*60; // 5 min
     app_args->rcv_only = false;
