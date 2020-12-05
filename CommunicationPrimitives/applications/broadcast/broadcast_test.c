@@ -253,23 +253,48 @@ static void sendMessage(const char* hostname, unsigned int counter) {
 
     sprintf(payload, "I'm %s and this is my %d%s message.", hostname, counter, ordinal);
 
-    BroadcastMessage(APP_ID, -1, (byte*)payload, strlen(payload)+1);
+    BroadcastMessage(APP_ID, -1, (byte*)payload, strlen(payload));
 
 	ygg_log(APP_NAME, "BROADCAST SENT", payload);
 }
 
 static void rcvMessage(YggMessage* msg) {
-	char m[1000];
-	memset(m, 0, 1000);
+    assert(msg->dataLen > 0 && msg->data != NULL);
 
-	struct timespec current_time;
-	clock_gettime(CLOCK_MONOTONIC, &current_time);
+    void* ptr = NULL;
 
-	if (msg->dataLen > 0 && msg->data != NULL) {
+    unsigned short payload_size = 0;
+    ptr = YggMessage_readPayload(msg, ptr, &payload_size, sizeof(payload_size));
+
+    //printf("payload_size = %hu\n", payload_size);
+
+    const char* empty_msg = "[EMPTY MESSAGE]";
+
+    unsigned short str_size = payload_size > 0 ? payload_size+1 : strlen(empty_msg)+1;
+
+    char m[str_size];
+	//memset(m, 0, str_size);
+
+    if(payload_size > 0) {
+        m[str_size-1] = '\0';
+        ptr = YggMessage_readPayload(msg, ptr, m, payload_size);
+    } else {
+        strcpy(m, empty_msg);
+    }
+
+
+	//struct timespec current_time;
+	//clock_gettime(CLOCK_MONOTONIC, &current_time);
+
+	/*
+if (msg->dataLen > 0 && msg->data != NULL) {
 		memcpy(m, msg->data, msg->dataLen);
 	} else {
 		strcpy(m, "[EMPTY MESSAGE]");
 	}
+*/
+
+
 	//sprintf(m, "%s Received at %ld:%ld.", m, current_time.tv_sec, current_time.tv_nsec);
 	ygg_log(APP_NAME, "RECEIVED MESSAGE", m);
 }

@@ -39,7 +39,7 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer);
 void init(broadcast_framework_state* state);
 void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage* p_msg, bool isCopy);
 void changePhase(broadcast_framework_state* state, PendingMessage* p_msg);
-void DeliverMessage(broadcast_framework_state* state, YggMessage* toDeliver);
+void DeliverMessage(broadcast_framework_state* state, PendingMessage* p_msg);
 void RetransmitMessage(broadcast_framework_state* state, PendingMessage* p_msg, unsigned short ttl);
 void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req);
 void uponNewMessage(broadcast_framework_state* state, YggMessage* msg);

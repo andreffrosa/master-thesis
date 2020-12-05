@@ -122,8 +122,76 @@ void changePhase(broadcast_framework_state* state, PendingMessage* p_msg) {
 	}
 }
 
-void DeliverMessage(broadcast_framework_state* state, YggMessage* toDeliver) {
-	deliver(toDeliver);
+void DeliverMessage(broadcast_framework_state* state, PendingMessage* p_msg) {
+
+    int add_result = 0;
+
+    YggMessage* originalToDeliver = getToDeliver(p_msg);
+
+    YggMessage toDeliver;
+    YggMessage_initBcast(&toDeliver, originalToDeliver->Proto_id);
+
+    // Insert payload size
+    unsigned short payload_size = originalToDeliver->dataLen;
+    add_result = YggMessage_addPayload(&toDeliver, (char*)&payload_size, sizeof(payload_size));
+    assert(add_result != FAILED);
+
+    // Insert payload
+    add_result = YggMessage_addPayload(&toDeliver, (char*)originalToDeliver->data, payload_size);
+    assert(add_result != FAILED);
+
+    double_list* copies = getCopies(p_msg);
+    byte n_copies = copies->size;
+    assert(copies && n_copies > 0);
+
+    // Insert Broadcast Source Node's ID
+    unsigned char* source_id = getBcastHeader(((MessageCopy*)copies->head->data))->source_id;
+    add_result = YggMessage_addPayload(&toDeliver, (char*)source_id, sizeof(uuid_t));
+    assert(add_result != FAILED);
+
+    // Insert number of copies received
+    add_result = YggMessage_addPayload(&toDeliver, (char*)&n_copies, sizeof(n_copies));
+    assert(add_result != FAILED);
+
+    for(double_list_item* dit = copies->head; dit; dit = dit->next) {
+        MessageCopy* c = (MessageCopy*)dit->data;
+
+        // Insert parent id
+        unsigned char* parent_id = getBcastHeader(c)->sender_id;
+        add_result = YggMessage_addPayload(&toDeliver, (char*)parent_id, sizeof(uuid_t));
+        assert(add_result != FAILED);
+
+        // Insert timestamp
+        struct timespec* t = getCopyReceptionTime(c);
+        add_result = YggMessage_addPayload(&toDeliver, (char*)t, sizeof(struct timespec));
+        assert(add_result != FAILED);
+
+        // Insert context length
+        unsigned short context_length = getBcastHeader(c)->context_length;
+        add_result = YggMessage_addPayload(&toDeliver, (char*)&context_length, sizeof(context_length));
+        assert(add_result != FAILED);
+
+        // Insert Context
+        void* context = getContextHeader(c);
+        assert( (context_length == 0) || (context != NULL) );
+        add_result = YggMessage_addPayload(&toDeliver, (char*)context, context_length);
+        assert(add_result != FAILED);
+    }
+
+    //YggMessage* toDeliver = getToDeliver(p_msg);
+	deliver(&toDeliver);
+
+    #ifdef DEBUG_BROADCAST
+    {
+        char id_str[UUID_STR_LEN+1];
+        id_str[UUID_STR_LEN] = '\0';
+        uuid_unparse(getPendingMessageID(p_msg), id_str);
+        char str[UUID_STR_LEN+4];
+        sprintf(str, "[%s]", id_str);
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
+    }
+    #endif
+
 	state->stats.messages_delivered++;
 }
 
@@ -172,18 +240,7 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
     pushPendingMessage(state->seen_msgs, p_msg);
 
     // Deliver the message to the upper layer
-    DeliverMessage(state, getToDeliver(p_msg));
-
-    #ifdef DEBUG_BROADCAST
-    {
-        char id_str[UUID_STR_LEN+1];
-        id_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(getPendingMessageID(p_msg), id_str);
-        char str[UUID_STR_LEN+4];
-        sprintf(str, "[%s]", id_str);
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
-    }
-    #endif
+    DeliverMessage(state, p_msg);
 
     if(ttl > 0) {
         // Retransmit Message
@@ -238,18 +295,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
         pushPendingMessage(state->seen_msgs, p_msg);
 
 		// Deliver the message to the upper layer
-		DeliverMessage(state, getToDeliver(p_msg));
-
-        #ifdef DEBUG_BROADCAST
-        {
-            char id_str[UUID_STR_LEN+1];
-            id_str[UUID_STR_LEN] = '\0';
-            uuid_unparse(getPendingMessageID(p_msg), id_str);
-            char str[UUID_STR_LEN+4];
-            sprintf(str, "[%s]", id_str);
-            ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
-        }
-        #endif
+		DeliverMessage(state, p_msg);
 
         BA_processCopy(state->args->algorithm, p_msg, state->myID);
 
