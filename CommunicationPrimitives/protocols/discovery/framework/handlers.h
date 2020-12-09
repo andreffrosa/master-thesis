@@ -40,6 +40,7 @@ typedef struct discovery_framework_state_ {
     unsigned short my_seq;                      //
     NeighborsTable* neighbors;  	            // Table of neighbors
     DiscoveryEnvironment* environment;          //
+    bool dirty_neighborhood;                    //
 
     // HELLO Timer
     bool hello_timer_active;                    //
@@ -134,7 +135,9 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
 
 void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neigh);
 
-void changeAlgorithm(discovery_framework_state* state, DiscoveryAlgorithm* new_alg);
+void DF_notifyNeighborhood(discovery_framework_state* state);
+
+//void changeAlgorithm(discovery_framework_state* state, DiscoveryAlgorithm* new_alg);
 
 void DF_printNeighbors(discovery_framework_state* state);
 

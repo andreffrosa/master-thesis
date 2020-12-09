@@ -57,10 +57,10 @@ static void LabelNeighsContextEvent(ModuleState* context_state, queue_t_elem* el
 
 	if(elem->type == YGG_EVENT) {
         YggEvent* ev = &elem->data.event;
-        if( ev->notification_id == NEIGHBOR_FOUND /*|| ev->notification_id == NEIGHBOR_UPDATE*/ || ev->notification_id == NEIGHBOR_LOST ) {
+        //if( ev->notification_id == NEIGHBOR_FOUND /*|| ev->notification_id == NEIGHBOR_UPDATE*/ || ev->notification_id == NEIGHBOR_LOST ) {
+        if( ev->notification_id == NEIGHBORHOOD ) {
 
             // Recompute Labels
-
             list* visited = list_init();
             graph* neighborhood = NULL;
             if(!RC_query(args->neighbors_context, "neighborhood", &neighborhood, NULL, myID, visited))
@@ -81,30 +81,37 @@ static bool LabelNeighsContextQuery(ModuleState* context_state, const char* quer
     LabelNeighsContextArgs* args = (LabelNeighsContextArgs*)(context_state->args);
 
 	if(strcmp(query, "node_in_label") == 0) {
+        assert(query_args);
 		unsigned char* id = hash_table_find_value(query_args, "id");
         assert(id);
 
         NeighLabels* neigh_labels = hash_table_find_value(state->labels, id);
+
         *((NeighCoverageLabel*)result) = neigh_labels ? neigh_labels->in_label : UNKNOWN_NODE;
 
         return true;
 	} else if(strcmp(query, "node_out_label") == 0) {
+        assert(query_args);
         unsigned char* id = hash_table_find_value(query_args, "id");
         assert(id);
 
         NeighLabels* neigh_labels = hash_table_find_value(state->labels, id);
+
         *((NeighCoverageLabel*)result) = neigh_labels ? neigh_labels->out_label : UNKNOWN_NODE;
 
         return true;
 	} else if(strcmp(query, "missed_critical_neighs") == 0) {
-        PendingMessage* p_msg = hash_table_find_value(query_args, "p_msg");
+        assert(query_args);
+        void** aux1 = hash_table_find_value(query_args, "p_msg");
+        assert(aux1);
+		PendingMessage* p_msg = *aux1;
         assert(p_msg);
 
-        list* visited = list_init();
+        list* visited2 = list_init();
         graph* neighborhood = NULL;
-        if(!RC_query(args->neighbors_context, "neighborhood", &neighborhood, NULL, myID, visited))
+        if(!RC_query(args->neighbors_context, "neighborhood", &neighborhood, NULL, myID, visited2))
             assert(false);
-        list_delete(visited);
+        list_delete(visited2);
 
 		*((double*)result) = missedCriticalNeighs(p_msg, neighborhood, state->labels, myID);
 		return true;
@@ -146,7 +153,7 @@ RetransmissionContext* LabelNeighsContext(RetransmissionContext* neighbors_conte
 
 static hash_table* compute_labels(graph* neighborhood, unsigned char* myID) {
 
-    hash_table* labels = NULL;
+    hash_table* labels = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
     graph_node* me = graph_find_node(neighborhood, myID);
     assert(me);
@@ -171,44 +178,43 @@ static hash_table* compute_labels(graph* neighborhood, unsigned char* myID) {
     return labels;
 }
 
-static NeighCoverageLabel compute_label(graph* neighborhood, graph_node* node_a, graph_node* node_b) {
-    list* neighs_a = graph_get_adjacencies_from_node(neighborhood, node_a, OUT_ADJ);
-    list* neighs_b = graph_get_adjacencies_from_node(neighborhood, node_b, OUT_ADJ);
+static NeighCoverageLabel compute_label(graph* neighborhood, graph_node* start_node, graph_node* end_node) {
+    list* covered_by_start_node = graph_get_adjacencies_from_node(neighborhood, start_node, OUT_ADJ); // nodes that consider start_node as their neighbor
+    list* covered_by_end_node = graph_get_adjacencies_from_node(neighborhood, end_node, OUT_ADJ); // nodes that consider end_node as their neighbor
 
-    //bool a_in_b = false;
-    bool b_in_a = false;
+    //bool start_is_neighbor_of_end = false, end_is_neighbor_of_start = false;
 
-    void* tmp = list_remove_item(neighs_a, &equalID, node_b->key);
+    void* tmp = list_remove_item(covered_by_start_node, &equalID, end_node->key);
     if(tmp) {
         free(tmp);
-        b_in_a = true;
+        //start_is_neighbor_of_end = true;
     }
 
-    tmp = list_remove_item(neighs_b, &equalID, node_a->key);
+    tmp = list_remove_item(covered_by_end_node, &equalID, start_node->key);
     if(tmp) {
         free(tmp);
-        //a_in_b = true;
+        //end_is_neighbor_of_start = true;
     }
 
-    if(!b_in_a) {
+    /*if(!start_is_neighbor_of_end) {
         return UNKNOWN_NODE;
-    }
+    }*/
 
-    list* diff = list_difference(neighs_b, neighs_a, &equalID, neighborhood->key_size);
+    list* diff = list_difference(covered_by_end_node, covered_by_start_node, &equalID, neighborhood->key_size);
     if(diff->size > 0) {
         return CRITICAL_NODE;
     } else {
-        if(neighs_a->size == neighs_b->size) {
+        if(covered_by_start_node->size == covered_by_end_node->size) {
             return REDUNDANT_NODE;
         } else {
-            assert(neighs_b->size < neighs_a->size);
+            assert(covered_by_end_node->size < covered_by_start_node->size);
             return COVERED_NODE;
         }
     }
 
     free(diff);
-    free(neighs_a);
-    free(neighs_b);
+    free(covered_by_start_node);
+    free(covered_by_end_node);
 }
 
 /*

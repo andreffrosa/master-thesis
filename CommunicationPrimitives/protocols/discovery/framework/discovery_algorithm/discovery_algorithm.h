@@ -39,7 +39,7 @@ void DA_setLinkQuality(DiscoveryAlgorithm* alg, LinkQuality* new_lq_metric);
 
 void DA_setDiscoveryMessage(DiscoveryAlgorithm* alg, DiscoveryMessage* new_d_message);
 
-bool DA_periodicHello(DiscoveryAlgorithm* alg);
+PeriodicType DA_periodicHello(DiscoveryAlgorithm* alg);
 
 PiggybackType DA_piggybackHellos(DiscoveryAlgorithm* alg);
 
@@ -59,7 +59,7 @@ HelloSchedulerType DA_getHelloType(DiscoveryAlgorithm* alg);
 
 PiggybackType DA_piggybackHacks(DiscoveryAlgorithm* alg);
 
-bool DA_periodicHack(DiscoveryAlgorithm* alg);
+PeriodicType DA_periodicHack(DiscoveryAlgorithm* alg);
 
 HackReplyType DA_replyHacksToHellos(DiscoveryAlgorithm* alg);
 

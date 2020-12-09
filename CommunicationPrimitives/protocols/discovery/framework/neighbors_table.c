@@ -14,10 +14,13 @@
 #include "neighbors_table.h"
 
 #include "data_structures/hash_table.h"
+#include "data_structures/graph.h"
+
 #include "utility/my_misc.h"
 #include "utility/my_string.h"
 #include "utility/my_time.h"
 #include "utility/my_math.h"
+//#include "utility/byte.h"
 
 #include <assert.h>
 
@@ -536,7 +539,8 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
     // Print each neighbor
     unsigned int counter = 0;
     iterator = NULL;
-    for(NeighborEntry* current_neigh = NT_nextNeighbor(nt, &iterator); current_neigh; current_neigh = NT_nextNeighbor(nt, &iterator)) {
+    NeighborEntry* current_neigh = NULL;
+    while( (current_neigh = NT_nextNeighbor(nt, &iterator)) ) {
 
         char id_str[UUID_STR_LEN+1];
         uuid_unparse(NE_getNeighborID(current_neigh), id_str);
@@ -642,7 +646,11 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
             type_str = nneigh->is_bi ? "B" : "U";
 
             sprintf(rx_lq_str, "%0.3f", nneigh->rx_lq);
-            sprintf(tx_lq_str, "%0.3f", nneigh->tx_lq);
+            if( !nneigh->is_bi ) {
+                sprintf(tx_lq_str, "  -  ");
+            } else {
+                sprintf(tx_lq_str, "%0.3f", nneigh->tx_lq);
+            }
 
             subtract_timespec(&aux_t, &nneigh->expiration, current_time);
             timespec_to_string(&aux_t, rx_exp_str, 6, 1);
@@ -664,4 +672,164 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
 
     *str = buffer;
     return *str;
+}
+
+void NT_serialize(NeighborsTable* nt, unsigned char* myID, WLANAddr* myMAC, double out_traffic, struct timespec* current_time, byte** buffer, unsigned int* size) {
+    assert(nt);
+
+    unsigned int value_size = WLAN_ADDR_LEN + sizeof(double);
+    unsigned int label_size = sizeof(double);
+
+    graph* g = graph_init_complete((key_comparator)&uuid_compare, NULL, NULL, sizeof(uuid_t), value_size, label_size);
+
+    // Add myself
+    {
+        unsigned char* key = malloc(sizeof(uuid_t));
+        uuid_copy(key, myID);
+
+        byte* value = malloc(value_size);
+        memcpy(value, myMAC->data, WLAN_ADDR_LEN);
+        memcpy(value+WLAN_ADDR_LEN, &out_traffic, sizeof(double));
+
+        graph_insert_node(g, key, value);
+    }
+
+    // Serialize each neighbor
+    void* iterator = NULL;
+    NeighborEntry* current_neigh = NULL;
+    while( (current_neigh = NT_nextNeighbor(nt, &iterator)) ) {
+
+        if( !NE_isDeleted(current_neigh) ) {
+
+            unsigned char* neigh_id = NE_getNeighborID(current_neigh);
+
+            graph_node* node = graph_find_node(g, neigh_id);
+            if( node == NULL ) {
+                unsigned char* key = malloc(sizeof(uuid_t));
+                uuid_copy(key, neigh_id);
+
+                byte* value = malloc(value_size);
+                memcpy(value, NE_getNeighborMAC(current_neigh)->data, WLAN_ADDR_LEN);
+                double traffic = NE_getOutTraffic(current_neigh);
+                memcpy(value+WLAN_ADDR_LEN, &traffic, sizeof(double));
+
+                graph_insert_node(g, key, value);
+            }
+
+            graph_edge* edge = graph_find_edge(g, neigh_id, myID);
+            assert(edge == NULL);
+
+            double* label = malloc(sizeof(double));
+            *label = NE_getRxLinkQuality(current_neigh);
+
+            graph_insert_edge(g, neigh_id, myID, label);
+
+            if( NE_getNeighborType(current_neigh, current_time) == BI_NEIGH ) {
+                edge = graph_find_edge(g, myID, neigh_id);
+                assert(edge == NULL);
+                //if(edge == NULL) {
+                    double* label = malloc(sizeof(double));
+                    *label = NE_getTxLinkQuality(current_neigh);
+
+                    graph_insert_edge(g, myID, neigh_id, label);
+                //}
+            } else {
+                label = graph_remove_edge(g, myID, neigh_id);
+                if(label)
+                    free(label);
+            }
+
+            hash_table* neighs = NE_getTwoHopNeighbors(current_neigh);
+            void* iterator = NULL;
+            hash_table_item* hit = NULL;
+            while( (hit = hash_table_iterator_next(neighs, &iterator)) ) {
+                TwoHopNeighborEntry* current_neigh_2 = (TwoHopNeighborEntry*)hit->value;
+
+                unsigned char* neigh2_id = THNE_getID(current_neigh_2);
+
+                if( uuid_compare(neigh2_id, myID) != 0 ) {
+                    graph_node* node = graph_find_node(g, neigh2_id);
+                    if( node == NULL ) {
+                        unsigned char* key = malloc(sizeof(uuid_t));
+                        uuid_copy(key, neigh2_id);
+
+                        byte* value = malloc(value_size);
+                        memset(value, 0, WLAN_ADDR_LEN);
+                        double traffic = THNE_getTraffic(current_neigh_2);
+                        memcpy(value+WLAN_ADDR_LEN, &traffic, sizeof(double));
+
+                        graph_insert_node(g, key, value);
+                    }
+
+                    edge = graph_find_edge(g, neigh2_id, neigh_id);
+                    assert(edge == NULL);
+
+                    label = malloc(sizeof(double));
+                    *label = THNE_getRxLinkQuality(current_neigh_2);
+
+                    graph_insert_edge(g, neigh2_id, neigh_id, label);
+
+                    // Is not two hop neigh also and is bi
+                    if( NT_getNeighbor(nt, neigh2_id) == NULL && THNE_isBi(current_neigh_2) ) {
+                        edge = graph_find_edge(g, neigh_id, neigh2_id);
+                        assert(edge == NULL);
+
+                        label = malloc(sizeof(double));
+                        *label = THNE_getTxLinkQuality(current_neigh_2);
+
+                        graph_insert_edge(g, neigh_id, neigh2_id, label);
+                    }
+                }
+            }
+        } else {
+            // Ignore entry
+        }
+    }
+
+    unsigned int buffer_total_size = 2*sizeof(byte) + g->nodes->size*(sizeof(uuid_t) + WLAN_ADDR_LEN + sizeof(double)) + g->edges->size*(2*sizeof(uuid_t) + sizeof(double));
+    byte* buffer_ = malloc(buffer_total_size);
+    byte* ptr = buffer_;
+
+    // Serialize nodes
+    byte n_nodes = g->nodes->size;
+    memcpy(ptr, &n_nodes, sizeof(n_nodes));
+    ptr += sizeof(byte);
+
+    for(list_item* it = g->nodes->head; it; it = it->next) {
+        graph_node* node = (graph_node*)it->data;
+
+        // Serialize node id
+        memcpy(ptr, node->key, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
+        // Serialize MAC + out traffic
+        memcpy(ptr, node->value, value_size);
+        ptr += value_size;
+    }
+
+    // Serialize edges
+    byte n_edges = g->edges->size;
+    memcpy(ptr, &n_edges, sizeof(n_edges));
+    ptr += sizeof(byte);
+
+    for(list_item* it = g->edges->head; it; it = it->next) {
+        graph_edge* edge = (graph_edge*)it->data;
+
+        // Serialize start node id
+        memcpy(ptr, edge->start_node->key, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
+        // Serialize end node id
+        memcpy(ptr, edge->end_node->key, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
+        // Serialize link quality
+        memcpy(ptr, edge->label, label_size);
+        ptr += label_size;
+    }
+
+    graph_delete(g);
+
+    *buffer = buffer_;
+    *size = buffer_total_size;
 }

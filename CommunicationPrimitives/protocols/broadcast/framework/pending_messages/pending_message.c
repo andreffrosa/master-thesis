@@ -155,6 +155,7 @@ unsigned int getCurrentPhase(PendingMessage* p_msg) {
 
 void addMessageCopy(PendingMessage* p_msg, struct timespec* reception_time, BroadcastHeader* header, void* context_header) {
     assert(p_msg != NULL);
+    assert(p_msg->copies != NULL);
 
     MessageCopy* p_msg_copy = newMessageCopy(reception_time, header, context_header, p_msg->current_phase);
 
@@ -163,6 +164,7 @@ void addMessageCopy(PendingMessage* p_msg, struct timespec* reception_time, Broa
 
 MessageCopy* getCopyFrom(PendingMessage* p_msg, uuid_t id) {
     assert(p_msg != NULL);
+    assert(p_msg->copies != NULL);
 	return (MessageCopy*) double_list_find(p_msg->copies, (comparator_function) &equalMessageCopy, id);
 }
 
@@ -183,20 +185,23 @@ bool isPendingMessageActive(PendingMessage* p_msg) {
 
 double_list* getCopies(PendingMessage* p_msg) {
     assert(p_msg != NULL);
-
-    assert(p_msg->copies != NULL); // TEMP
+    assert(p_msg->copies != NULL);
 
     return p_msg->copies;
 }
 
 PhaseStats* getPhaseStats(PendingMessage* p_msg, unsigned int phase) {
     assert(p_msg != NULL);
+    assert(p_msg->PhaseStats);
     return &p_msg->PhaseStats[phase-1];
 }
 
 /////////////////////////////////////////////////////////////
 
 void splitDuration(PendingMessage* p_msg, struct timespec* current_time, unsigned long* elapsed, unsigned long* remaining) {
+    assert(p_msg != NULL);
+    assert(p_msg->PhaseStats);
+
     PhaseStats* ps = &(p_msg->PhaseStats[p_msg->current_phase-1]);
 
     struct timespec t;
@@ -213,18 +218,30 @@ void splitDuration(PendingMessage* p_msg, struct timespec* current_time, unsigne
 }
 
 void setCurrentPhaseDuration(PendingMessage* p_msg, unsigned long new_duration) {
+    assert(p_msg != NULL);
+    assert(p_msg->PhaseStats);
+
     p_msg->PhaseStats[p_msg->current_phase-1].duration = new_duration;
 }
 
 unsigned long getCurrentPhaseDuration(PendingMessage* p_msg) {
+    assert(p_msg != NULL);
+    assert(p_msg->PhaseStats);
+
     return p_msg->PhaseStats[p_msg->current_phase-1].duration;
 }
 
 void finishCurrentPhase(PendingMessage* p_msg) {
+    assert(p_msg != NULL);
+    assert(p_msg->PhaseStats);
+
     p_msg->PhaseStats[p_msg->current_phase-1].finished = true;
 }
 
 void setCurrentPhaseStats(PendingMessage* p_msg, struct timespec* start_time, unsigned long duration, bool finished, bool retransmission_decision) {
+    assert(p_msg != NULL);
+    assert(p_msg->PhaseStats);
+
     setPhaseStats(&p_msg->PhaseStats[p_msg->current_phase-1], start_time, duration, finished, retransmission_decision);
 }
 
@@ -233,6 +250,9 @@ void incCurrentPhase(PendingMessage* p_msg) {
 }
 
 void setCurrentPhaseStart(PendingMessage* p_msg, struct timespec* start_time) {
+    assert(p_msg != NULL);
+    assert(p_msg->PhaseStats);
+
     PhaseStats* ps = &p_msg->PhaseStats[p_msg->current_phase-1];
 
     memcpy(&ps->start_time, start_time, sizeof(struct timespec));
@@ -242,9 +262,14 @@ void setCurrentPhaseStart(PendingMessage* p_msg, struct timespec* start_time) {
 }
 
 void setMessageInactive(PendingMessage* p_msg) {
+    assert(p_msg != NULL);
+
     p_msg->active = false;
 }
 
 void setPendingMessageDecision(PendingMessage* p_msg, bool decision) {
+    assert(p_msg != NULL);
+    assert(p_msg->PhaseStats);
+    
     p_msg->PhaseStats[p_msg->current_phase-1].retransmission_decision = decision;
 }

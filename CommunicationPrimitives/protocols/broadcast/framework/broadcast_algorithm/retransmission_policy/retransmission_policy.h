@@ -30,7 +30,7 @@ RetransmissionPolicy* CountPolicy(unsigned int c);
 RetransmissionPolicy* NeighborCountingPolicy(unsigned int c);
 RetransmissionPolicy* PbNeighCountingPolicy(unsigned int c1, unsigned int c2);
 
-RetransmissionPolicy* CriticalNeighPolicy(double min_critical_coverage);
+RetransmissionPolicy* CriticalNeighPolicy(bool all_copies, bool mobility_extension, double min_critical_coverage);
 
 RetransmissionPolicy* EnsemblePolicy(bool (*ensemble_function)(bool* values, int amount), int amount, ...);
 

@@ -78,9 +78,10 @@ discovery_framework_args* default_discovery_framework_args();
 discovery_framework_args* load_discovery_framework_args(const char* file_path);
 
 typedef enum {
-	NEIGHBOR_FOUND,
-	NEIGHBOR_UPDATE,
-	NEIGHBOR_LOST,
+	NEW_NEIGHBOR,
+	UPDATE_NEIGHBOR,
+	LOST_NEIGHBOR,
+    NEIGHBORHOOD,
     GENERIC_DISCOVERY_EVENT,
     DISCOVERY_ENVIRONMENT_UPDATE,
 	DISCOVERY_EVENT_COUNT

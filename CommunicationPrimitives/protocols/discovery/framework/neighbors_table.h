@@ -18,6 +18,7 @@
 
 #include "data_structures/hash_table.h"
 #include "utility/window.h"
+#include "utility/byte.h"
 
 typedef struct NeighborsTable_ NeighborsTable;
 typedef struct NeighborEntry_ NeighborEntry;
@@ -150,5 +151,7 @@ TwoHopNeighborEntry* NE_removeTwoHopNeighborEntry(NeighborEntry* neigh, unsigned
 TwoHopNeighborEntry* NE_addTwoHopNeighborEntry(NeighborEntry* neigh, TwoHopNeighborEntry* nn);
 
 char* NT_print(NeighborsTable* neighbors, char** str, struct timespec* current_time, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq);
+
+void NT_serialize(NeighborsTable* nt, unsigned char* myID, WLANAddr* myMAC, double out_traffic, struct timespec* current_time, byte** buffer, unsigned int* size);
 
 #endif /* _NEIGHBORS_TABLE_H_ */

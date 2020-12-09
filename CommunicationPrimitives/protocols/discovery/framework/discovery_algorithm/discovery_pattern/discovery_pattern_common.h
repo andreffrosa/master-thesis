@@ -22,4 +22,10 @@ typedef enum {
     PIGGYBACK_ON_ALL_TRAFFIC,
 } PiggybackType;
 
+typedef enum {
+    NO_PERIODIC,
+    STATIC_PERIODIC,
+    RESET_PERIODIC,
+} PeriodicType;
+
 #endif /* _DISCOVERY_PATTERN_COMMON_H_ */

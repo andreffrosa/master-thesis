@@ -32,8 +32,8 @@ BroadcastAlgorithm* LENWB(unsigned long t);
 BroadcastAlgorithm* NABA1(unsigned long t, unsigned int c); // CountingNABA
 BroadcastAlgorithm* NABA2(unsigned long t, unsigned int c1, unsigned int c2); // PbCountingNABA
 BroadcastAlgorithm* NABA3(unsigned long t);
-BroadcastAlgorithm* NABA4(unsigned long t, double min_critical_coverage);
-BroadcastAlgorithm* NABA3e4(unsigned long t, double min_critical_coverage, unsigned int np); // CriticalNABA
+BroadcastAlgorithm* NABA4(unsigned long t);
+BroadcastAlgorithm* NABA3e4(unsigned long t, unsigned int np); // CriticalNABA
 
 BroadcastAlgorithm* MPR(unsigned long t);
 BroadcastAlgorithm* AHBP(int ex, unsigned long t, unsigned int route_max_len);

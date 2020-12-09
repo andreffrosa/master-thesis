@@ -40,13 +40,14 @@
 
 typedef struct DiscoveryAppArgs_ {
     bool periodic_messages;
+    bool verbose;
     // TODO:
 } DiscoveryAppArgs;
 
 static DiscoveryAppArgs* default_discovery_app_args();
 static DiscoveryAppArgs* load_discovery_app_args(const char* file_path);
 
-static void processNotification(YggEvent* notification);
+static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_args);
 
 int main(int argc, char* argv[]) {
 
@@ -97,9 +98,10 @@ int main(int argc, char* argv[]) {
     // Register this app
     app_def* myApp = create_application_definition(APP_ID, APP_NAME);
 
-    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);
-	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_UPDATE);
-	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_LOST);
+    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
+	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
+	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
+    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
 
@@ -145,13 +147,14 @@ int main(int argc, char* argv[]) {
 		/*case YGG_REQUEST:
 			break;*/
 		case YGG_MESSAGE:
-            ;
-            YggMessage* msg = &elem.data.msg;
-            ygg_log(APP_NAME, "RCV MESSAGE", msg->data);
+            if(app_args->verbose) {
+                YggMessage* msg = &elem.data.msg;
+                ygg_log(APP_NAME, "RCV MESSAGE", msg->data);
+            }
 			break;
         case YGG_EVENT:
     			if( elem.data.event.proto_dest == APP_ID ) {
-    				processNotification(&elem.data.event);
+    				processNotification(&elem.data.event, app_args);
     			} else {
     				char s[100];
     				sprintf(s, "Received notification from protocol %d meant for protocol %d", elem.data.event.proto_origin, elem.data.event.proto_dest);
@@ -169,23 +172,28 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-static void processNotification(YggEvent* notification) {
+static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_args) {
+
+    if(!app_args->verbose)
+        return;
 
     char id[UUID_STR_LEN+1];
     id[UUID_STR_LEN] = '\0';
 	unsigned char* ptr = notification->payload;
 
-	if(notification->notification_id == NEIGHBOR_FOUND) {
+	if(notification->notification_id == NEW_NEIGHBOR) {
         uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR FOUND", id);
 
-	} else if(notification->notification_id == NEIGHBOR_UPDATE) {
+	} else if(notification->notification_id == UPDATE_NEIGHBOR) {
         uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR UPDATE", id);
 
-	} else if(notification->notification_id == NEIGHBOR_LOST) {
+	} else if(notification->notification_id == LOST_NEIGHBOR) {
         uuid_unparse(ptr, id);
 		ygg_log(APP_NAME, "NEIGHBOR LOST", id);
+	} else if(notification->notification_id == NEIGHBORHOOD) {
+        // TODO
 	} else if(notification->notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
         ygg_log(APP_NAME, "DISCOVERY ENVIRONMENT UPDATE", "");
 	}
@@ -256,6 +264,7 @@ static DiscoveryAppArgs* default_discovery_app_args() {
     DiscoveryAppArgs* d_args = malloc(sizeof(DiscoveryAppArgs));
 
     d_args->periodic_messages = false;
+    d_args->verbose = true;
 
     return d_args;
 }
@@ -283,6 +292,8 @@ static DiscoveryAppArgs* load_discovery_app_args(const char* file_path) {
         if( value != NULL ) {
             if( strcmp(key, "periodic_messages") == 0 ) {
                 d_args->periodic_messages = strcmp("false", value) == 0 ? false : true;
+            } else if( strcmp(key, "verbose") == 0 ) {
+                d_args->verbose = strcmp("false", value) == 0 ? false : true;
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);

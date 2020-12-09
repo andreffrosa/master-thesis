@@ -392,15 +392,7 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
 		if(token != NULL) {
 			unsigned long t = strtol(token, NULL, 10);
 
-			token = strtok_r(NULL, " ", &ptr);
-			if(token != NULL) {
-				double min_critical_coverage = strtod(token, NULL);
-
-				return NABA4(t, min_critical_coverage);
-			} else {
-				printf("Parameter 2 of %s not passed!\n", name);
-				exit(-1);
-			}
+			return NABA4(t);
 		} else {
 			printf("Parameter 1 of %s not passed!\n", name);
 			exit(-1);
@@ -411,23 +403,15 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
 		if(token != NULL) {
 			unsigned long t = strtol(token, NULL, 10);
 
-			token = strtok_r(NULL, " ", &ptr);
-			if(token != NULL) {
-				double min_critical_coverage = strtod(token, NULL);
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                unsigned int np = strtol(token, NULL, 10);
 
-				token = strtok_r(NULL, " ", &ptr);
-				if(token != NULL) {
-					unsigned int np = strtol(token, NULL, 10);
-
-					return NABA3e4(t, min_critical_coverage, np);
-				} else {
-					printf("Parameter 3 of %s not passed!\n", name);
-					exit(-1);
-				}
-			} else {
-				printf("Parameter 2 of %s not passed!\n", name);
-				exit(-1);
-			}
+                return NABA3e4(t, np);
+            } else {
+                printf("Parameter 2 of %s not passed!\n", name);
+                exit(-1);
+            }
 		} else {
 			printf("Parameter 1 of %s not passed!\n", name);
 			exit(-1);
@@ -756,7 +740,7 @@ static RetransmissionPolicy* parse_r_policy(char* value) {
         if(token != NULL) {
             double min_critical_coverage = strtod(token, NULL);
 
-            return CriticalNeighPolicy(min_critical_coverage);
+            return CriticalNeighPolicy(true, false, min_critical_coverage);
         } else {
             printf("Parameter 1 of %s not passed!\n", name);
             exit(-1);

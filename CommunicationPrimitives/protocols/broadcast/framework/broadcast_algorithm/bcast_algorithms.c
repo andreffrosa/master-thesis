@@ -68,15 +68,15 @@ BroadcastAlgorithm* NABA2(unsigned long t, unsigned int c1, unsigned int c2) {
 }
 
 BroadcastAlgorithm* NABA3(unsigned long t) {
-	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(0.0), 1);
+	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(true, false, 0.0), 1);
 }
 
-BroadcastAlgorithm* NABA4(unsigned long t, double min_critical_coverage) {
-	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(min_critical_coverage), 2);
+BroadcastAlgorithm* NABA4(unsigned long t) {
+	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(true, false, 1.0), 2);
 }
 
-BroadcastAlgorithm* NABA3e4(unsigned long t, double min_critical_coverage, unsigned int np) {
-	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(min_critical_coverage), np);
+BroadcastAlgorithm* NABA3e4(unsigned long t, unsigned int np) {
+	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(true, false, 1.0), np);
 }
 
 BroadcastAlgorithm* MPR(unsigned long t) {
