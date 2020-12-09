@@ -15,11 +15,11 @@
 
 #include <assert.h>
 
-HelloScheduler* newHelloScheduler(HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+HelloScheduler* newHelloScheduler(HelloSchedulerType hello_type, PiggybackType piggyback_type, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
 
     HelloScheduler* hello_sh = malloc(sizeof(HelloScheduler));
 
-    HELLO_update(hello_sh, hello_type, piggyback_type, periodic, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
+    HELLO_update(hello_sh, hello_type, piggyback_type, periodic_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
 
     return hello_sh;
 }
@@ -30,24 +30,24 @@ void destroyHelloScheduler(HelloScheduler* hello_sh) {
 }
 
 HelloScheduler* NoHELLO() {
-    return newHelloScheduler(NO_HELLO, NO_PIGGYBACK, false, false, false, false, false, false, false);
+    return newHelloScheduler(NO_HELLO, NO_PIGGYBACK, NO_PERIODIC, false, false, false, false, false, false);
 }
 
 HelloScheduler* PiggybackHELLO(PiggybackType piggyback_type) {
-    return newHelloScheduler(PIGGYBACK_HELLO, piggyback_type, false, false, false, false, false, false, false);
+    return newHelloScheduler(PIGGYBACK_HELLO, piggyback_type, NO_PERIODIC, false, false, false, false, false, false);
 }
 
 HelloScheduler* PeriodicHELLO(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
 
-    return newHelloScheduler(PERIODIC_HELLO, NO_PIGGYBACK, true, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
+    return newHelloScheduler(PERIODIC_HELLO, NO_PIGGYBACK, STATIC_PERIODIC, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
 }
 
 HelloScheduler* HybridHELLO(PiggybackType piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
 
-    return newHelloScheduler(HYBRID_HELLO, piggyback_type, true, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
+    return newHelloScheduler(HYBRID_HELLO, piggyback_type, RESET_PERIODIC, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
 }
 
-static bool HelloRepresentationInvariant(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+static bool HelloRepresentationInvariant(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
     if(hello_sh == NULL)
         return false;
 
@@ -55,23 +55,23 @@ static bool HelloRepresentationInvariant(HelloScheduler* hello_sh, HelloSchedule
 
     switch( hello_type ) {
         case NO_HELLO:
-            return piggyback_type == NO_PIGGYBACK && !periodic && !react;
+            return piggyback_type == NO_PIGGYBACK && periodic_type == NO_PERIODIC && !react;
         case PIGGYBACK_HELLO:
-            return piggyback_type != NO_PIGGYBACK && !periodic && !react;
+            return piggyback_type != NO_PIGGYBACK && periodic_type == NO_PERIODIC && !react;
         case PERIODIC_HELLO:
-            return piggyback_type == NO_PIGGYBACK && periodic;
+            return piggyback_type == NO_PIGGYBACK && periodic_type == STATIC_PERIODIC;
         case HYBRID_HELLO:
-            return piggyback_type != NO_PIGGYBACK && periodic;
+            return piggyback_type != NO_PIGGYBACK && periodic_type == RESET_PERIODIC;
         default: return false;
     }
 }
 
-void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
-    assert( HelloRepresentationInvariant(hello_sh, hello_type, piggyback_type, periodic, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor) );
+void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+    assert( HelloRepresentationInvariant(hello_sh, hello_type, piggyback_type, periodic_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor) );
 
     hello_sh->type = hello_type;
     hello_sh->piggyback_type = piggyback_type;
-    hello_sh->periodic = periodic;
+    hello_sh->periodic_type = periodic_type;
     hello_sh->react_to_new_neighbor = react_to_new_neighbor;
     hello_sh->react_to_lost_neighbor = react_to_lost_neighbor;
     hello_sh->react_to_update_neighbor = react_to_update_neighbor;
@@ -80,9 +80,9 @@ void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, Piggy
     hello_sh->react_to_update_2hop_neighbor = react_to_update_2hop_neighbor;
 }
 
-bool HELLO_isPeriodic(HelloScheduler* hello_sh) {
+PeriodicType HELLO_periodicType(HelloScheduler* hello_sh) {
     assert(hello_sh);
-    return hello_sh->periodic;
+    return hello_sh->periodic_type;
 }
 
 PiggybackType HELLO_piggybackType(HelloScheduler* hello_sh) {

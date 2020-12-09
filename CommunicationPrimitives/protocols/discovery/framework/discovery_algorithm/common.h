@@ -16,17 +16,12 @@
 
 #include "Yggdrasil.h"
 
-#include "utility/byte.h"
 
 #include "../neighbors_table.h"
 #include "../messages.h"
 #include "../delivery.h"
 
-typedef struct ModuleState_ {
-    void* args;
-    void* vars;
-} ModuleState;
-
-bool equalAddr(void* a, void* b);
+#include "utility/byte.h"
+#include "utility/my_misc.h"
 
 #endif /* _DISCOVERY_ALGORITHM_COMMON_H_ */

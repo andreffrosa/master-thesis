@@ -134,7 +134,7 @@ static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespe
             ptr += sizeof(uuid_t);
         }
 
-        DF_notifyEvent("MPRS", buffer, size);
+        DF_notifyGenericEvent("MPRS", buffer, size);
 
         //////////////////////////////////////
 
@@ -328,7 +328,7 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
             ptr += sizeof(uuid_t);
         }
 
-        DF_notifyEvent("MPR SELECTORS", buffer, size);
+        DF_notifyGenericEvent("MPR SELECTORS", buffer, size);
     }
 
     return false;
@@ -363,12 +363,6 @@ static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID
     return compute_mprs(false, neighbors, myID, current_time);
 }
 
-static void delete_n1_item(hash_table_item* hit, void* aux) {
-    N1_Tuple* n1_tuple = (N1_Tuple*)hit->value;
-    list_delete(n1_tuple->ns);
-    free(n1_tuple);
-}
-
 static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time) {
     hash_table* n1 = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
     list* n2 = list_init();
@@ -391,7 +385,7 @@ static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned ch
                 bool to_add = THNE_isBi(current_2hop_neigh) && uuid_compare(THNE_getID(current_2hop_neigh), myID) != 0 && list_find_item(n2, &equalN2Tuple, THNE_getID(current_2hop_neigh)) == NULL;
 
                 if( to_add ) {
-                    N2_Tuple* n2_tuple = newN2Tuple(THNE_getID(current_2hop_neigh), THNE_getRxLinkQuality(current_2hop_neigh)); // lq from 1 hop to 2 hops
+                    N2_Tuple* n2_tuple = newN2Tuple(THNE_getID(current_2hop_neigh), THNE_getTxLinkQuality(current_2hop_neigh)); // lq from 1 hop to 2 hops
                     list_add_item_to_tail(ns, n2_tuple);
 
                     unsigned char* id = malloc(sizeof(uuid_t));

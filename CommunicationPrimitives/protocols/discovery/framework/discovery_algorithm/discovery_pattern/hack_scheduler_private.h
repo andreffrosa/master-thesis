@@ -21,7 +21,7 @@
 typedef struct _HackScheduler {
     HackSchedulerType type;
     PiggybackType piggyback_type;
-    bool periodic;
+    PeriodicType periodic_type;
     HackReplyType reply_to_hellos;
     bool react_to_new_neighbor;
     bool react_to_lost_neighbor;

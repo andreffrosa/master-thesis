@@ -273,3 +273,9 @@ list* compute_multipoint_relays(hash_table* n1, list* n2, list* initial) {
 
     return m;
 }
+
+void delete_n1_item(hash_table_item* hit, void* aux) {
+    N1_Tuple* n1_tuple = (N1_Tuple*)hit->value;
+    list_delete(n1_tuple->ns);
+    free(n1_tuple);
+}

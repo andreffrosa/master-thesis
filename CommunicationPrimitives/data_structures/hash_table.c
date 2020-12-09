@@ -15,6 +15,7 @@
 
 #include "utility/my_math.h"
 
+#include <assert.h>
 
 #define DEFAULT_SIZE 10
 #define UPPER_RATIO 75
@@ -202,4 +203,25 @@ hash_table_item* hash_table_iterator_next(hash_table* table, void** iterator) {
     free(it);
     *iterator = NULL;
     return NULL;
+}
+
+hash_table* hash_table_clone(hash_table* table, unsigned int key_size, unsigned int value_size) {
+    assert(table);
+
+    hash_table* clone = hash_table_init_size(table->array_size, table->hash_fun, table->comp_fun);
+
+    void* iterator = NULL;
+    hash_table_item* hit = NULL;
+    while( (hit = hash_table_iterator_next(table, &iterator)) ) {
+        void* key = malloc(key_size);
+        memcpy(key, hit->key, key_size);
+
+        void* value = hit->value ? NULL : malloc(value_size);
+        if(value)
+            memcpy(value, hit->value, value_size);
+
+        hash_table_insert(clone, key, value);
+    }
+
+    return clone;
 }

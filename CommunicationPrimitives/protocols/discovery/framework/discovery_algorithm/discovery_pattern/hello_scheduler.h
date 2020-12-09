@@ -27,7 +27,7 @@ typedef enum {
     HYBRID_HELLO
 } HelloSchedulerType;
 
-HelloScheduler* newHelloScheduler(HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+HelloScheduler* newHelloScheduler(HelloSchedulerType hello_type, PiggybackType piggyback_type, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
 void destroyHelloScheduler(HelloScheduler* hello_sh);
 
@@ -39,9 +39,9 @@ HelloScheduler* PeriodicHELLO(bool react_to_new_neighbor, bool react_to_lost_nei
 
 HelloScheduler* HybridHELLO(PiggybackType piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
-void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, bool periodic, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
 
-bool HELLO_isPeriodic(HelloScheduler* hello_sh);
+PeriodicType HELLO_periodicType(HelloScheduler* hello_sh);
 
 PiggybackType HELLO_piggybackType(HelloScheduler* hello_sh);
 

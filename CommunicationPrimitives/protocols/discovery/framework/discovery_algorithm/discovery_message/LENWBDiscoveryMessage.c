@@ -235,7 +235,7 @@ static void notify(LENWBDiscoveryState* state) {
         ptr += sizeof(byte);
     }
 
-    DF_notifyEvent("LENWB_NEIGHS", buffer, size);
+    DF_notifyGenericEvent("LENWB_NEIGHS", buffer, size);
 }
 
 static void LENWBDiscovery_destructor(ModuleState* m_state) {

@@ -23,7 +23,7 @@
 #define DISCOVERY_FRAMEWORK_PROTO_ID 159
 #define DISCOVERY_FRAMEWORK_PROTO_NAME "DISCOVERY FRAMEWORK"
 
-typedef struct _discovery_stats {
+typedef struct discovery_stats_ {
     unsigned long new_neighbors;
 	unsigned long lost_neighbors;
     unsigned long updated_neighbors;
@@ -38,7 +38,7 @@ typedef struct _discovery_stats {
     unsigned long missed_hacks;
 } discovery_stats;
 
-typedef struct _discovery_framework_args {
+typedef struct discovery_framework_args_ {
     DiscoveryAlgorithm* algorithm;
 
     unsigned int hello_misses;
@@ -78,9 +78,10 @@ discovery_framework_args* default_discovery_framework_args();
 discovery_framework_args* load_discovery_framework_args(const char* file_path);
 
 typedef enum {
-	NEIGHBOR_FOUND,
-	NEIGHBOR_UPDATE,
-	NEIGHBOR_LOST,
+	NEW_NEIGHBOR,
+	UPDATE_NEIGHBOR,
+	LOST_NEIGHBOR,
+    NEIGHBORHOOD,
     GENERIC_DISCOVERY_EVENT,
     DISCOVERY_ENVIRONMENT_UPDATE,
 	DISCOVERY_EVENT_COUNT

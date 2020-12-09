@@ -81,9 +81,9 @@ void DA_setDiscoveryMessage(DiscoveryAlgorithm* alg, DiscoveryMessage* new_d_mes
     alg->d_message = new_d_message;
 }
 
-bool DA_periodicHello(DiscoveryAlgorithm* alg) {
+PeriodicType DA_periodicHello(DiscoveryAlgorithm* alg) {
     assert(alg);
-    return HELLO_isPeriodic(DP_getHelloScheduler(alg->d_pattern));
+    return HELLO_periodicType(DP_getHelloScheduler(alg->d_pattern));
 }
 
 PiggybackType DA_piggybackHellos(DiscoveryAlgorithm* alg) {
@@ -126,9 +126,9 @@ HelloSchedulerType DA_getHelloType(DiscoveryAlgorithm* alg) {
     return HELLO_getType(DP_getHelloScheduler(alg->d_pattern));
 }
 
-bool DA_periodicHack(DiscoveryAlgorithm* alg) {
+PeriodicType DA_periodicHack(DiscoveryAlgorithm* alg) {
     assert(alg);
-    return HACK_isPeriodic(DP_getHackScheduler(alg->d_pattern));
+    return HACK_periodicType(DP_getHackScheduler(alg->d_pattern));
 }
 
 PiggybackType DA_piggybackHacks(DiscoveryAlgorithm* alg) {
