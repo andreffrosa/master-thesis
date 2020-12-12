@@ -217,7 +217,7 @@ static bool OLSR_createMessage(ModuleState* m_state, unsigned char* myID, struct
 }
 
 
-static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {
+static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {
 
     OLSRState* state = (OLSRState*)m_state->vars;
 
@@ -228,7 +228,7 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
     memcpy(&hello, ptr, sizeof(HelloMessage));
     ptr += sizeof(HelloMessage);
 
-    HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr);
+    HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr, msg_summary);
     free(summary);
 
     // Deserialize Hacks
@@ -244,7 +244,7 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
             memcpy(&hacks[i], ptr, sizeof(HackMessage));
             ptr += sizeof(HackMessage);
 
-            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i]);
+            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i], msg_summary);
             free(summary);
 
             byte aux;

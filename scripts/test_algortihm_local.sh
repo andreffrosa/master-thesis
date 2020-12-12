@@ -19,15 +19,15 @@ DISCOVERY="-d ../experiments/configs/discovery.conf"
 #BROADCAST="-b ../experiments/configs/broadcast.conf"
 BROADCAST=""
 #APP="-a ../experiments/configs/broadcast_app.conf"
-APP=""
+APP="-a ../experiments/configs/discovery_app.conf"
 OVERLAY="-o ../topologies/exp1/"
 
 
 
 
 # Launch virtual network
-#echo "Launching virtual network with $PIS nodes ..."
-#sudo ./launch_virtual_network.sh $PIS > /dev/null 2>&1
+echo "Launching virtual network with $PIS nodes ..."
+sudo ./launch_virtual_network.sh $PIS > /dev/null 2>&1
 
 echo ""
 

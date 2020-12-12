@@ -53,7 +53,7 @@ static bool SDM_createMessage(ModuleState* state, unsigned char* myID, struct ti
     return true;
 }
 
-static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {
+static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {
 
     byte* ptr = buffer;
 
@@ -66,7 +66,7 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
         memcpy(&hello, ptr, sizeof(HelloMessage));
         ptr += sizeof(HelloMessage);
 
-        HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr);
+        HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr, msg_summary);
         free(summary);
     }
 
@@ -81,7 +81,7 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
             memcpy(&hacks[i], ptr, sizeof(HackMessage));
             ptr += sizeof(HackMessage);
 
-            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i]);
+            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i], msg_summary);
             free(summary);
         }
     }

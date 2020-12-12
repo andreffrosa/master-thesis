@@ -209,7 +209,15 @@ double computeWindow(Window* w, struct timespec* current_time, char* window_type
 
     double result = compute_moving_avg(buckets, n_buckets, window_type);
 
-
-
     return result == NAN || result == -NAN ? 0.0 : result;
+}
+
+unsigned int getWindowNBuckets(Window* w) {
+    assert(w);
+    return w->n_buckets;
+}
+
+unsigned int getWindowBucketDurationS(Window* w) {
+    assert(w);
+    return w->bucket_duration_s;
 }

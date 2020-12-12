@@ -45,9 +45,9 @@ bool DM_create(DiscoveryMessage* dm, unsigned char* myID, struct timespec* curre
     return dm->create_message(&dm->state, myID, current_time, neighbors, msg_type, aux_info, hello, hacks, n_hacks, buffer, size);
 }
 
-bool DM_process(DiscoveryMessage* dm, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {
+bool DM_process(DiscoveryMessage* dm, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {
     assert(dm);
-    return dm->process_message(&dm->state, f_state, myID, current_time, neighbors, piggybacked, mac_addr, buffer, size);
+    return dm->process_message(&dm->state, f_state, myID, current_time, neighbors, piggybacked, mac_addr, buffer, size, msg_summary);
 }
 
 void* DM_createAttrs(DiscoveryMessage* dm) {

@@ -410,49 +410,9 @@ static DiscoveryPattern* parse_d_pattern(char* value) {
 
             token = strtok_r(NULL, " ", &ptr);
             if(token != NULL) {
-                bool react_to_new_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                bool react_to_new_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
-                token = strtok_r(NULL, " ", &ptr);
-                if(token != NULL) {
-                    bool react_to_lost_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                    token = strtok_r(NULL, " ", &ptr);
-                    if(token != NULL) {
-                        bool react_to_update_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                        token = strtok_r(NULL, " ", &ptr);
-                        if(token != NULL) {
-                            bool react_to_new_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                            token = strtok_r(NULL, " ", &ptr);
-                            if(token != NULL) {
-                                bool react_to_lost_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                                token = strtok_r(NULL, " ", &ptr);
-                                if(token != NULL) {
-                                    bool react_to_update_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                                    d_pattern = HybridHelloDiscovery(hello_piggyback_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
-                                } else {
-                                    printf("Parameter 7 of %s not passed!\n", name);
-                                    exit(-1);
-                                }
-                            } else {
-                                printf("Parameter 6 of %s not passed!\n", name);
-                                exit(-1);
-                            }
-                        } else {
-                            printf("Parameter 5 of %s not passed!\n", name);
-                            exit(-1);
-                        }
-                    } else {
-                        printf("Parameter 4 of %s not passed!\n", name);
-                        exit(-1);
-                    }
-                } else {
-                    printf("Parameter 3 of %s not passed!\n", name);
-                    exit(-1);
-                }
+                d_pattern = HybridHelloDiscovery(hello_piggyback_type, react_to_new_neighbor);
             } else {
                 printf("Parameter 2 of %s not passed!\n", name);
                 exit(-1);
@@ -464,50 +424,9 @@ static DiscoveryPattern* parse_d_pattern(char* value) {
     } else if( strcmp(token, (name = "PeriodicHelloDiscovery")) == 0 ) {
         token = strtok_r(NULL, " ", &ptr);
         if(token != NULL) {
+            bool react_to_new_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
-            bool react_to_new_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-            token = strtok_r(NULL, " ", &ptr);
-            if(token != NULL) {
-                bool react_to_lost_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                token = strtok_r(NULL, " ", &ptr);
-                if(token != NULL) {
-                    bool react_to_update_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                    token = strtok_r(NULL, " ", &ptr);
-                    if(token != NULL) {
-                        bool react_to_new_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                        token = strtok_r(NULL, " ", &ptr);
-                        if(token != NULL) {
-                            bool react_to_lost_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                            token = strtok_r(NULL, " ", &ptr);
-                            if(token != NULL) {
-                                bool react_to_update_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
-
-                                d_pattern = PeriodicHelloDiscovery(react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
-                            } else {
-                                printf("Parameter 6 of %s not passed!\n", name);
-                                exit(-1);
-                            }
-                        } else {
-                            printf("Parameter 5 of %s not passed!\n", name);
-                            exit(-1);
-                        }
-                    } else {
-                        printf("Parameter 4 of %s not passed!\n", name);
-                        exit(-1);
-                    }
-                } else {
-                    printf("Parameter 3 of %s not passed!\n", name);
-                    exit(-1);
-                }
-            } else {
-                printf("Parameter 2 of %s not passed!\n", name);
-                exit(-1);
-            }
+            d_pattern = PeriodicHelloDiscovery(react_to_new_neighbor);
         } else {
             printf("Parameter 1 of %s not passed!\n", name);
             exit(-1);
@@ -516,27 +435,27 @@ static DiscoveryPattern* parse_d_pattern(char* value) {
         token = strtok_r(NULL, " ", &ptr);
         if(token != NULL) {
 
-            bool react_to_new_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+            bool react_to_new_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
             token = strtok_r(NULL, " ", &ptr);
             if(token != NULL) {
-                bool react_to_lost_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                bool react_to_lost_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                 token = strtok_r(NULL, " ", &ptr);
                 if(token != NULL) {
-                    bool react_to_update_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                    bool react_to_update_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                     token = strtok_r(NULL, " ", &ptr);
                     if(token != NULL) {
-                        bool react_to_new_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                        bool react_to_new_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                         token = strtok_r(NULL, " ", &ptr);
                         if(token != NULL) {
-                            bool react_to_lost_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                            bool react_to_lost_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                             token = strtok_r(NULL, " ", &ptr);
                             if(token != NULL) {
-                                bool react_to_update_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                                bool react_to_update_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                                 d_pattern = PeriodicJointDiscovery(react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
                             } else {
@@ -567,27 +486,27 @@ static DiscoveryPattern* parse_d_pattern(char* value) {
         token = strtok_r(NULL, " ", &ptr);
         if(token != NULL) {
 
-            bool react_to_new_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+            bool react_to_new_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
             token = strtok_r(NULL, " ", &ptr);
             if(token != NULL) {
-                bool react_to_lost_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                bool react_to_lost_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                 token = strtok_r(NULL, " ", &ptr);
                 if(token != NULL) {
-                    bool react_to_update_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                    bool react_to_update_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                     token = strtok_r(NULL, " ", &ptr);
                     if(token != NULL) {
-                        bool react_to_new_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                        bool react_to_new_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                         token = strtok_r(NULL, " ", &ptr);
                         if(token != NULL) {
-                            bool react_to_lost_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                            bool react_to_lost_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                             token = strtok_r(NULL, " ", &ptr);
                             if(token != NULL) {
-                                bool react_to_update_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                                bool react_to_update_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                                 d_pattern = PeriodicDisjointDiscovery(react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
                             } else {
@@ -652,33 +571,175 @@ static DiscoveryPattern* parse_d_pattern(char* value) {
                 token = strtok_r(NULL, " ", &ptr);
                 if(token != NULL) {
 
-                    bool react_to_new_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                    bool react_to_new_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                     token = strtok_r(NULL, " ", &ptr);
                     if(token != NULL) {
-                        bool react_to_lost_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                        bool react_to_lost_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                         token = strtok_r(NULL, " ", &ptr);
                         if(token != NULL) {
-                            bool react_to_update_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                            bool react_to_update_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                             token = strtok_r(NULL, " ", &ptr);
                             if(token != NULL) {
-                                bool react_to_new_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                                bool react_to_new_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                                 token = strtok_r(NULL, " ", &ptr);
                                 if(token != NULL) {
-                                    bool react_to_lost_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                                    bool react_to_lost_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                                     token = strtok_r(NULL, " ", &ptr);
                                     if(token != NULL) {
-                                        bool react_to_update_2hop_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                                        bool react_to_update_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                                         d_pattern = HybridDisjointDiscovery(hello_piggyback_type, hack_piggyback_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
                                     } else {
                                         printf("Parameter 8 of %s not passed!\n", name);
                                         exit(-1);
                                     }
+                                } else {
+                                    printf("Parameter 7 of %s not passed!\n", name);
+                                    exit(-1);
+                                }
+                            } else {
+                                printf("Parameter 6 of %s not passed!\n", name);
+                                exit(-1);
+                            }
+                        } else {
+                            printf("Parameter 5 of %s not passed!\n", name);
+                            exit(-1);
+                        }
+                    } else {
+                        printf("Parameter 4 of %s not passed!\n", name);
+                        exit(-1);
+                    }
+                } else {
+                    printf("Parameter 3 of %s not passed!\n", name);
+                    exit(-1);
+                }
+            } else {
+                printf("Parameter 2 of %s not passed!\n", name);
+                exit(-1);
+            }
+        } else {
+            printf("Parameter 1 of %s not passed!\n", name);
+            exit(-1);
+        }
+    } else if( strcmp(token, (name = "HybridHelloPeriodicHackDiscovery")) == 0 ) {
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+            PiggybackType hello_piggyback_type;
+            if( strcmp(token, "NO_PIGGYBACK") == 0 ) {
+                hello_piggyback_type = NO_PIGGYBACK;
+            } else if( strcmp(token, "PIGGYBACK_ON_UNICAST_TRAFFIC") == 0 ) {
+                hello_piggyback_type = PIGGYBACK_ON_UNICAST_TRAFFIC;
+            } else if( strcmp(token, "PIGGYBACK_ON_BROADCAST_TRAFFIC") == 0 ) {
+                hello_piggyback_type = PIGGYBACK_ON_BROADCAST_TRAFFIC;
+            } else if( strcmp(token, "PIGGYBACK_ON_DISCOVERY_TRAFFIC") == 0 ) {
+                hello_piggyback_type = PIGGYBACK_ON_DISCOVERY_TRAFFIC;
+            } else if( strcmp(token, "PIGGYBACK_ON_ALL_TRAFFIC") == 0 ) {
+                hello_piggyback_type = PIGGYBACK_ON_ALL_TRAFFIC;
+            } else {
+                assert(false);
+            }
+
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                bool react_to_new_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                token = strtok_r(NULL, " ", &ptr);
+                if(token != NULL) {
+                    bool react_to_lost_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                    token = strtok_r(NULL, " ", &ptr);
+                    if(token != NULL) {
+                        bool react_to_update_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                        token = strtok_r(NULL, " ", &ptr);
+                        if(token != NULL) {
+                            bool react_to_new_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                            token = strtok_r(NULL, " ", &ptr);
+                            if(token != NULL) {
+                                bool react_to_lost_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                                token = strtok_r(NULL, " ", &ptr);
+                                if(token != NULL) {
+                                    bool react_to_update_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                                    d_pattern = HybridHelloPeriodicHackDiscovery(hello_piggyback_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
+                                } else {
+                                    printf("Parameter 7 of %s not passed!\n", name);
+                                    exit(-1);
+                                }
+                            } else {
+                                printf("Parameter 6 of %s not passed!\n", name);
+                                exit(-1);
+                            }
+                        } else {
+                            printf("Parameter 5 of %s not passed!\n", name);
+                            exit(-1);
+                        }
+                    } else {
+                        printf("Parameter 4 of %s not passed!\n", name);
+                        exit(-1);
+                    }
+                } else {
+                    printf("Parameter 3 of %s not passed!\n", name);
+                    exit(-1);
+                }
+            } else {
+                printf("Parameter 2 of %s not passed!\n", name);
+                exit(-1);
+            }
+        } else {
+            printf("Parameter 1 of %s not passed!\n", name);
+            exit(-1);
+        }
+    } else if( strcmp(token, (name = "PeriodicHelloHybridHackDiscovery")) == 0 ) {
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+            PiggybackType hack_piggyback_type;
+            if( strcmp(token, "NO_PIGGYBACK") == 0 ) {
+                hack_piggyback_type = NO_PIGGYBACK;
+            } else if( strcmp(token, "PIGGYBACK_ON_UNICAST_TRAFFIC") == 0 ) {
+                hack_piggyback_type = PIGGYBACK_ON_UNICAST_TRAFFIC;
+            } else if( strcmp(token, "PIGGYBACK_ON_BROADCAST_TRAFFIC") == 0 ) {
+                hack_piggyback_type = PIGGYBACK_ON_BROADCAST_TRAFFIC;
+            } else if( strcmp(token, "PIGGYBACK_ON_DISCOVERY_TRAFFIC") == 0 ) {
+                hack_piggyback_type = PIGGYBACK_ON_DISCOVERY_TRAFFIC;
+            } else if( strcmp(token, "PIGGYBACK_ON_ALL_TRAFFIC") == 0 ) {
+                hack_piggyback_type = PIGGYBACK_ON_ALL_TRAFFIC;
+            } else {
+                assert(false);
+            }
+
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                bool react_to_new_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                token = strtok_r(NULL, " ", &ptr);
+                if(token != NULL) {
+                    bool react_to_lost_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                    token = strtok_r(NULL, " ", &ptr);
+                    if(token != NULL) {
+                        bool react_to_update_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                        token = strtok_r(NULL, " ", &ptr);
+                        if(token != NULL) {
+                            bool react_to_new_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                            token = strtok_r(NULL, " ", &ptr);
+                            if(token != NULL) {
+                                bool react_to_lost_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                                token = strtok_r(NULL, " ", &ptr);
+                                if(token != NULL) {
+                                    bool react_to_update_2hop_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
+
+                                    d_pattern = PeriodicHelloHybridHackDiscovery(hack_piggyback_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
                                 } else {
                                     printf("Parameter 7 of %s not passed!\n", name);
                                     exit(-1);
@@ -723,11 +784,11 @@ static DiscoveryPattern* parse_d_pattern(char* value) {
 
             token = strtok_r(NULL, " ", &ptr);
             if(token != NULL) {
-                bool piggyback_hello_on_reply = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                bool piggyback_hello_on_reply = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                 token = strtok_r(NULL, " ", &ptr);
                 if(token != NULL) {
-                    bool react_to_new_neighbor = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                    bool react_to_new_neighbor = strcmp(token, "true") == 0 || strcmp(token, "True") == 0;
 
                     d_pattern = EchoDiscovery(reply_type, piggyback_hello_on_reply, react_to_new_neighbor);
                 } else {

@@ -138,7 +138,6 @@ int main(int argc, char* argv[]) {
 		case YGG_TIMER:
             ; YggMessage m;
 
-
             YggMessage_initBcast(&m, APP_ID);
             char* str = "msg";
             YggMessage_addPayload(&m, str, strlen(str)+1);
@@ -183,17 +182,17 @@ static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_ar
 
 	if(notification->notification_id == NEW_NEIGHBOR) {
         uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "NEIGHBOR FOUND", id);
+		ygg_log(APP_NAME, "NEW NEIGHBOR", id);
 
 	} else if(notification->notification_id == UPDATE_NEIGHBOR) {
         uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "NEIGHBOR UPDATE", id);
+		ygg_log(APP_NAME, "UPDATE NEIGHBOR", id);
 
 	} else if(notification->notification_id == LOST_NEIGHBOR) {
         uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "NEIGHBOR LOST", id);
+		ygg_log(APP_NAME, "LOST NEIGHBOR", id);
 	} else if(notification->notification_id == NEIGHBORHOOD) {
-        // TODO
+        ygg_log(APP_NAME, "NEIGHBORHOOD", "");
 	} else if(notification->notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
         ygg_log(APP_NAME, "DISCOVERY ENVIRONMENT UPDATE", "");
 	}
@@ -264,7 +263,7 @@ static DiscoveryAppArgs* default_discovery_app_args() {
     DiscoveryAppArgs* d_args = malloc(sizeof(DiscoveryAppArgs));
 
     d_args->periodic_messages = false;
-    d_args->verbose = true;
+    d_args->verbose = false;
 
     return d_args;
 }

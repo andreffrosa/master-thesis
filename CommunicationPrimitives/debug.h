@@ -19,7 +19,7 @@
 #define ADVANCED_DEBUG 2
 #define FULL_DEBUG 3
 
-#define DEBUG_INCLUDE_EQ(current_level, statement_level) (current_level == statement_level)
+//#define DEBUG_INCLUDE_EQ(current_level, statement_level) (current_level == statement_level)
 #define DEBUG_INCLUDE_GT(current_level, statement_level) (current_level >= statement_level)
 
 #define DISCOVERY_DEBUG_LEVEL FULL_DEBUG

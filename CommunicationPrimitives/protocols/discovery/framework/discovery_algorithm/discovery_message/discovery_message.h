@@ -28,7 +28,7 @@ DiscoveryMessage* LENWBDiscoveryMessage();
 
 bool DM_create(DiscoveryMessage* dm, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size);
 
-bool DM_process(DiscoveryMessage* dm, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size);
+bool DM_process(DiscoveryMessage* dm, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary);
 
 void* DM_createAttrs(DiscoveryMessage* dm);
 

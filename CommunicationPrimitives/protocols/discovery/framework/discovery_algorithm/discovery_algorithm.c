@@ -252,10 +252,10 @@ bool DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, str
     return DM_create(alg->d_message, myID, current_time, neighbors, msg_type, aux_info, hello, hacks, n_hacks, buffer, size);
 }
 
-bool DA_processDiscoveryMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {
+bool DA_processDiscoveryMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {
     assert(alg != NULL);
 
-    return DM_process(alg->d_message, f_state, myID, current_time, neighbors, piggybacked, mac_addr, buffer, size);
+    return DM_process(alg->d_message, f_state, myID, current_time, neighbors, piggybacked, mac_addr, buffer, size, msg_summary);
 }
 
 void* DA_createMessageAttributes(DiscoveryAlgorithm* alg) {

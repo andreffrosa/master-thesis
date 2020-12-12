@@ -47,18 +47,18 @@ DiscoveryPattern* PassiveDiscovery(PiggybackType hello_piggyback_type, Piggyback
     return newDiscoveryPattern(PiggybackHELLO(hello_piggyback_type), hack_sh);
 }
 
-DiscoveryPattern* HybridHelloDiscovery(PiggybackType hello_piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+DiscoveryPattern* HybridHelloDiscovery(PiggybackType hello_piggyback_type, bool react_to_new_neighbor) {
 
     return newDiscoveryPattern(
-        HybridHELLO(hello_piggyback_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor),
+        HybridHELLO(hello_piggyback_type, react_to_new_neighbor, false, false, false, false, false),
         NoHACK()
     );
 }
 
-DiscoveryPattern* PeriodicHelloDiscovery(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+DiscoveryPattern* PeriodicHelloDiscovery(bool react_to_new_neighbor) {
 
     return newDiscoveryPattern(
-        PeriodicHELLO(react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor),
+        PeriodicHELLO(react_to_new_neighbor, false, false, false, false, false),
         NoHACK()
     );
 }
@@ -81,6 +81,25 @@ DiscoveryPattern* PeriodicDisjointDiscovery(bool react_to_new_neighbor, bool rea
     );
 }
 
+DiscoveryPattern* HybridHelloPeriodicHackDiscovery(PiggybackType hello_piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+
+    // TODO: disjoint parameters?
+
+    return newDiscoveryPattern(
+        HybridHELLO(hello_piggyback_type, false /*react_to_new_neighbor*/, false, false, false, false, false), // if hacks react, hellos are piggybacked
+        PeriodicHACK(react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor)
+    );
+}
+
+DiscoveryPattern* PeriodicHelloHybridHackDiscovery(PiggybackType hack_piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+    // TODO: disjoint parameters?
+
+    return newDiscoveryPattern(
+        PeriodicHELLO(react_to_new_neighbor, false, false, false, false, false),
+        HybridHACK(hack_piggyback_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor)
+    );
+}
+
 DiscoveryPattern* HybridDisjointDiscovery(PiggybackType hello_piggyback_type, PiggybackType hack_piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
 
     // TODO: disjoint parameters?
@@ -94,7 +113,9 @@ DiscoveryPattern* HybridDisjointDiscovery(PiggybackType hello_piggyback_type, Pi
 DiscoveryPattern* EchoDiscovery(HackReplyType reply_type, bool piggyback_hello_on_reply, bool react_to_new_neighbor) {
     assert( !piggyback_hello_on_reply || reply_type != UNICAST_HACK_REPLY );
 
-    HelloScheduler* hello_sh = piggyback_hello_on_reply ? HybridHELLO(PIGGYBACK_ON_DISCOVERY_TRAFFIC, react_to_new_neighbor, false, false, false, false, false) : PeriodicHELLO(react_to_new_neighbor, false, false, false, false, false);
+    HelloScheduler* hello_sh = piggyback_hello_on_reply ? \
+    HybridHELLO(PIGGYBACK_ON_DISCOVERY_TRAFFIC, react_to_new_neighbor, false, false, false, false, false) : \
+    PeriodicHELLO(react_to_new_neighbor, false, false, false, false, false);
 
     return newDiscoveryPattern(
         hello_sh,

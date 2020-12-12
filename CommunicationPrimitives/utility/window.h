@@ -29,4 +29,8 @@ void insertIntoWindow(Window* w, struct timespec* t, double value);
 // type = avg or sma, wma, ema <alfa>
 double computeWindow(Window* w, struct timespec* current_time, char* window_type, char* bucket_type, bool per_second);
 
+unsigned int getWindowNBuckets(Window* w);
+
+unsigned int getWindowBucketDurationS(Window* w);
+
 #endif /* _UTILITY_WINDOW_H_ */

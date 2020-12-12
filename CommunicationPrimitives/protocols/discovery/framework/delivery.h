@@ -15,8 +15,11 @@
 #define _DISCOVERY_DELIVERY_H_
 
 #include "messages.h"
+#include "neighbors_table.h"
 
 typedef struct HelloDeliverSummary_ {
+    NeighborEntry* neigh;
+
     bool new_neighbor;
     bool updated_neighbor;
     bool rebooted;
@@ -29,6 +32,8 @@ typedef struct HelloDeliverSummary_ {
 } HelloDeliverSummary;
 
 typedef struct HackDeliverSummary_ {
+    NeighborEntry* neigh;
+
     bool positive_hack;
     bool updated_neighbor;
     int missed_hacks;
@@ -53,6 +58,8 @@ typedef struct HackDeliverSummary_ {
 } HackDeliverSummary;
 
 typedef struct NeighborTimerSummary_ {
+    NeighborEntry* neigh;
+
     bool updated_neighbor;
     bool lost_neighbor;
     bool removed;
@@ -77,6 +84,8 @@ typedef enum {
 } MessageType;
 
 typedef struct NeighborChangeSummary_ {
+    //NeighborEntry* neigh;
+
     bool new_neighbor;
     bool updated_neighbor;
     bool lost_neighbor;
@@ -99,15 +108,24 @@ typedef struct NeighborChangeSummary_ {
     bool updated_quality_threshold;
 } NeighborChangeSummary;
 
+typedef struct MessageSummary_ {
+    //NeighborEntry* neigh;
+    HelloDeliverSummary* hello_summary;
+    //HackDeliverSummary* hack_summary;
+    list* hack_summaries;
+} MessageSummary;
+
 HelloDeliverSummary* newHelloDeliverSummary();
 
 HackDeliverSummary* newHackDeliverSummary();
 
 NeighborTimerSummary* newNeighborTimerSummary();
 
-HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr);
+MessageSummary* newMessageSummary();
 
-HackDeliverSummary* deliverHack(void* f_state, HackMessage* hack);
+HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr, MessageSummary* msg_summary);
+
+HackDeliverSummary* deliverHack(void* f_state, HackMessage* hack, MessageSummary* msg_summary);
 
 void DF_notifyGenericEvent(char* type, void* buffer, unsigned int size);
 

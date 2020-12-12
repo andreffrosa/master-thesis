@@ -37,7 +37,8 @@ static double compute_quality(ModuleState* state, void* lq_attrs, double previou
 
     if( init ) {
         // Insert into window
-        int samples = 50;
+        /*
+        int samples = 25;
         unsigned int x = samples*args->initial_quality;
         for(int i = 0; i < x; i++) {
             insertIntoWindow(window, current_time, 1.0);
@@ -45,6 +46,11 @@ static double compute_quality(ModuleState* state, void* lq_attrs, double previou
         for(int i = x; i < samples; i++) {
             insertIntoWindow(window, current_time, 0.0);
         }
+        */
+        struct timespec moment = {0};
+        milli_to_timespec(&moment, getWindowBucketDurationS(window)*1000);
+        subtract_timespec(&moment, current_time, &moment);
+        insertIntoWindow(window, &moment, args->initial_quality);
 
         // Debug
         // double initial_quality = computeWindow(window, current_time, args->window_type, "avg", false);
