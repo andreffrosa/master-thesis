@@ -20,7 +20,7 @@
 
 typedef struct _HelloScheduler {
     HelloSchedulerType type;
-    PiggybackType piggyback_type;
+    PiggybackFilter* piggyback_filter;
     PeriodicType periodic_type;
     bool react_to_new_neighbor;
     bool react_to_lost_neighbor;

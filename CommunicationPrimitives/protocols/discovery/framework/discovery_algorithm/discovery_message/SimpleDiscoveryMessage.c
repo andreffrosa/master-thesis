@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-static bool SDM_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+static void SDM_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     byte* ptr = buffer;
 
     // Serialize Hello
@@ -50,7 +50,7 @@ static bool SDM_createMessage(ModuleState* state, unsigned char* myID, struct ti
         *size += 1;
     }
 
-    return true;
+    //return true;
 }
 
 static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {

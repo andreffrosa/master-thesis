@@ -366,3 +366,12 @@ topology_manager_args* load_overlay(char* overlay_path, char* hostname) {
 bool equalAddr(void* a, void* b) {
 	return *((void**)a) == b;
 }
+
+bool is_unicast_message(YggMessage* msg) {
+    WLANAddr* bcast_addr = getBroadcastAddr();
+    WLANAddr* addr = &msg->destAddr;
+    bool is_unicast_addr = memcmp(addr->data, bcast_addr->data, WLAN_ADDR_LEN) != 0;
+    free(bcast_addr);
+
+    return is_unicast_addr;
+}

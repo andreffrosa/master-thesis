@@ -24,15 +24,15 @@ void deleteDiscoveryEnvironment(DiscoveryEnvironment* de);
 
 void DE_registerOutTraffic(DiscoveryEnvironment* de, struct timespec* current_time);
 
-bool DE_computeOutTraffic(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon);
+bool DE_computeOutTraffic(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon, int precision);
 
 void DE_registerNewNeighbor(DiscoveryEnvironment* de, struct timespec* current_time);
 
-bool DE_computeNewNeighborsFlux(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon);
+bool DE_computeNewNeighborsFlux(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon, int precision);
 
 void DE_registerLostNeighbor(DiscoveryEnvironment* de, struct timespec* current_time);
 
-bool DE_computeLostNeighborsFlux(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon);
+bool DE_computeLostNeighborsFlux(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon, int precision);
 
 double DE_getOutTraffic(DiscoveryEnvironment* de);
 

@@ -16,10 +16,11 @@
 
 #include "Yggdrasil.h"
 
-
+#include "../internal_events.h"
 #include "../neighbors_table.h"
 #include "../messages.h"
 #include "../delivery.h"
+
 
 #include "utility/byte.h"
 #include "utility/my_misc.h"

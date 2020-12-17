@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
     args = NULL;
 
     // Register this app
-    app_def* myApp = create_application_definition(APP_ID, APP_NAME);
+    /*app_def* myApp =*/ create_application_definition(APP_ID, APP_NAME);
 
     //queue_t* inBox = registerApp(myApp);
 

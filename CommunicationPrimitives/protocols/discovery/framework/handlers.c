@@ -188,9 +188,11 @@ void DF_createHack(discovery_framework_state* state, HackMessage* hack, Neighbor
 
 void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, byte* n_hacks, NeighborsTable* neighbors) {
     *n_hacks = NT_getSize(state->neighbors);
-    *hacks = malloc(*n_hacks * sizeof(HackMessage));
+    *hacks = NULL;
 
-    if( n_hacks > 0 ) {
+    if( *n_hacks > 0 ) {
+        *hacks = malloc(*n_hacks * sizeof(HackMessage));
+
         // Compute Next Hack Period
         struct timespec aux;
         subtract_timespec(&aux, &state->current_time, &state->last_hack_time);
@@ -203,40 +205,8 @@ void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, b
         while ( (current_neigh = NT_nextNeighbor(state->neighbors, &iterator)) ) {
             DF_createHack(state, current_hack++, current_neigh, false);
         }
-    } /*
-    else {
-        // Re-schedule
-        scheduleHackTimer(state, false);
-    }
-    */
-}
-
-bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info) {
-
-    YggMessage msg;
-    YggMessage_initBcast(&msg, DISCOVERY_FRAMEWORK_PROTO_ID);
-
-    WLANAddr* bcast_addr = getBroadcastAddr();
-    WLANAddr* dest_addr = addr ? addr : bcast_addr;
-
-    bool send = DF_createMessage(state, &msg, hello, hacks, n_hacks, dest_addr, msg_type, aux_info);
-
-    free(bcast_addr);
-
-    if( send ) {
-        // Insert into dispatcher queue
-        DF_dispatchMessage(state->dispatcher_queue, &msg);
-
-        state->stats.discovery_messages++;
     }
 
-    #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-    char str[200];
-    sprintf(str, "HELLO=[%s] HACK=[%u]", (hello?"yes":"no"), n_hacks);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "SEND MESSAGE", str);
-    #endif
-
-    return send;
 }
 
 void DF_processMessage(discovery_framework_state* state, byte* data, unsigned short size, bool piggybacked, WLANAddr* mac_addr) {
@@ -407,86 +377,39 @@ void scheduleHackTimer(discovery_framework_state* state, bool now) {
     }
 }
 
-void DF_uponHelloTimer(discovery_framework_state* state, bool periodic, bool send_hack) {
+void DF_uponHelloTimer(discovery_framework_state* state) {
     assert( state->hello_timer_active );
 
     if( DA_periodicHello(state->args->algorithm) ) {
 
         if( compare_timespec(&state->current_time, &state->next_hello_time) >= 0 ) {
-            /*{
-                unsigned long hello_period_ms = DA_getHelloTransmitPeriod(state->args->algorithm, &state->current_time)*1000;
-                unsigned long real_period_ms = hello_period_ms - state->args->period_margin_ms;
-
-                struct timespec diff_ = {0};
-                subtract_timespec(&diff_, &state->current_time, &state->last_hello_time);
-                unsigned long diff = timespec_to_milli(&diff_);
-
-                bool first_timer = compare_timespec(&state->last_hello_time, (struct timespec*)&zero_timespec) == 0;
-
-                bool invariant = first_timer ? true : diff <= real_period_ms;
-                if(!invariant) {
-                    char str[100];
-                    sprintf(str, "diff = %lu ms real_period = %lu ms", diff, real_period_ms);
-                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO TIMER ERROR", str);
-                    ygg_logflush();
-                    printf("%s\n", str);
-                    assert(false);
-                }
-                //assert( first_timer ? true : diff <= real_period_ms );
-            }*/
-
             state->hello_timer_active = false;
-            // copy_timespec(&state->last_hello_time, &state->current_time);
 
-            HelloMessage hello;
-            bool request_replies = DA_replyHacksToHellos(state->args->algorithm) != NO_HACK_REPLY;
-            DF_createHello(state, &hello, request_replies);
-
-            unsigned char n_hacks = 0;
-            HackMessage* hacks = NULL;
-
-            PiggybackType hack_piggyback_type = DA_piggybackHacks(state->args->algorithm);
-            bool piggyback_hack = hack_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hack_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hack_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC || send_hack;
-            if( piggyback_hack ) {
-                DF_createHackBatch(state, &hacks, &n_hacks, state->neighbors);
-            }
+            YggMessage msg = {0};
+            DiscoverySendPack* dsp = DF_triggerDiscoveryEvent(state, DPE_HELLO_TIMER, NULL, &msg);
+            assert(dsp);
 
             #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-            char aux_str[30];
-            if( piggyback_hack )
-            sprintf(aux_str, "%d hacks", n_hacks);
-            else
-            sprintf(aux_str, "NULL");
+                char hack_str[10];
+                if( dsp->hacks ) {
+                    sprintf(hack_str, "%d", dsp->n_hacks);
+                } else {
+                    sprintf(hack_str, "-");
+                }
 
-            char str[200];
-            sprintf(str, "HELLO=[SEQ=%hu PERIOD=%d s] HACK=[%s]", hello.seq, hello.period, aux_str);
-            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO TIMER", str);
+                char str[200];
+                sprintf(str, "HELLO=[SEQ=%hu] HACK=[%s]", dsp->hello->seq, hack_str);
+                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO TIMER", str);
             #endif
 
-            bool sent = false;
-            //  if( periodic ) {
-                sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
-            /*
-            } else {
-                void* aux_info = &state->neighbor_change_summary;
-                sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, NEIGHBOR_CHANGE_MSG, aux_info);
+            if(dsp->hacks) {
+                state->stats.piggybacked_hacks += dsp->n_hacks;
             }
-            */
 
-            assert(sent);
-
-            if( sent ) {
-                if(piggyback_hack) {
-                    state->stats.piggybacked_hacks += n_hacks;
-                }
-            }
+            DF_sendMessage(state, dsp, &msg);
 
             // Re-schedule
             // scheduleHelloTimer(state, false);
-
-            if( hacks ) {
-                free(hacks);
-            }
 
         } else {
             struct timespec remaining;
@@ -501,94 +424,53 @@ void DF_uponHelloTimer(discovery_framework_state* state, bool periodic, bool sen
     }
 }
 
-void DF_uponHackTimer(discovery_framework_state* state, bool periodic) {
+void DF_uponHackTimer(discovery_framework_state* state) {
     assert( state->hack_timer_active );
 
     if( DA_periodicHack(state->args->algorithm) ) {
 
         if( compare_timespec(&state->current_time, &state->next_hack_time) >= 0 ) {
-            /*{
-                unsigned long hack_period_ms = DA_getHackTransmitPeriod(state->args->algorithm, &state->current_time)*1000;
-                unsigned long real_period_ms = hack_period_ms - state->args->period_margin_ms;
-
-                struct timespec diff_ = {0};
-                subtract_timespec(&diff_, &state->current_time, &state->last_hack_time);
-                unsigned long diff = timespec_to_milli(&diff_);
-
-                bool first_timer = compare_timespec(&state->last_hack_time, (struct timespec*)&zero_timespec) == 0;
-
-                assert( first_timer ? true : diff <= real_period_ms );
-            }*/
 
             state->hack_timer_active = false;
             // copy_timespec(&state->last_hack_time, &state->current_time);
 
-            // Create an hack for each neighbor
-            byte n_hacks = 0;
-            HackMessage* hacks = NULL;
-            DF_createHackBatch(state, &hacks, &n_hacks, state->neighbors);
-
-            PiggybackType hello_piggyback_type = DA_piggybackHellos(state->args->algorithm);
-            bool piggyback_hello = hello_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC;
-
-
-
-            HelloMessage hello_ = {0};
-            HelloMessage* hello = NULL;
-            /*
-if( periodic ) {
-                if( piggyback_hello ) {
-                    DF_createHello(state, &hello, false);
-                    sent = DF_sendMessage(state, &hello, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
-
-                    if( sent ) {
-                        state->stats.piggybacked_hellos++;
-                    }
-                } else {
-                    sent = DF_sendMessage(state, NULL, hacks, n_hacks, NULL, PERIODIC_MSG, NULL);
-                }
-            } else {
-                assert(!piggyback_hello);
-                void* aux_info = &state->neighbor_change_summary;
-                sent = DF_sendMessage(state, NULL, hacks, n_hacks, NULL, NEIGHBOR_CHANGE_MSG, aux_info);
-            }
-            */
-
-            if( n_hacks > 0 && piggyback_hello ) {
-                hello = &hello_;
-                DF_createHello(state, hello, false);
-            }
+            YggMessage msg = {0};
+            DiscoverySendPack* dsp = DF_triggerDiscoveryEvent(state, DPE_HACK_TIMER, NULL, &msg);
 
             #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-                char aux_str[30];
-                if( piggyback_hello )
-                sprintf(aux_str, "SEQ=%hu PERIOD=%d s", hello->seq, hello->period);
-                else
-                sprintf(aux_str, "NULL");
+                char hello_str[10];
+                if( dsp && dsp->hello ) {
+                    sprintf(hello_str, "SEQ=%hu", dsp->hello->seq);
+                } else {
+                    sprintf(hello_str, "-");
+                }
+
+                char hack_str[10];
+                if( dsp && dsp->n_hacks > 0 ) {
+                    sprintf(hack_str, "%d", dsp->n_hacks);
+                } else {
+                    sprintf(hack_str, "-");
+                }
 
                 char str[200];
-                sprintf(str, "HELLO=[%s] HACK=[%d hacks]", aux_str, n_hacks);
+                sprintf(str, "HELLO=[%s] HACK=[%s]", hello_str, hack_str);
                 ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK TIMER", str);
             #endif
 
-            bool sent = false;
-            if( n_hacks > 0) {
-                sent = DF_sendMessage(state, hello, hacks, n_hacks, NULL, periodic ? PERIODIC_MSG : NEIGHBOR_CHANGE_MSG, periodic ? NULL : &state->neighbor_change_summary);
-            } else {
-                scheduleHackTimer(state, false);
+            if(dsp) {
+                if(dsp->hello) {
+                    state->stats.piggybacked_hellos++;
+                }
+
+                if(dsp->n_hacks == 0) {
+                    scheduleHackTimer(state, false);
+                }
             }
 
-            if( piggyback_hello && sent ) {
-                state->stats.piggybacked_hellos++;
-            }
+            DF_sendMessage(state, dsp, &msg);
 
             // Re-schedule
             //scheduleHackTimer(state, false);
-
-            if( hacks ) {
-                free(hacks);
-            }
-
         } else {
             struct timespec remaining;
             subtract_timespec(&remaining, &state->next_hack_time, &state->current_time);
@@ -605,55 +487,35 @@ if( periodic ) {
 void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_payload, unsigned short timer_payload_size) {
     assert(timer_payload);
 
-    HackReplyType reply_type = DA_replyHacksToHellos(state->args->algorithm);
-
-    assert( reply_type != NO_HACK_REPLY );
-
-    unsigned char* neigh_id = timer_payload;
-    NeighborEntry* neigh = NT_getNeighbor(state->neighbors, neigh_id);
-    assert(neigh);
-
-    unsigned char n_hacks = 1;
-    HackMessage hack;
-    DF_createHack(state, &hack, neigh, true);
-
-    WLANAddr* addr = NULL;
-    if( reply_type == UNICAST_HACK_REPLY ) {
-        addr = NE_getNeighborMAC(neigh);
-    }
-
-    PiggybackType hello_piggyback_type = DA_piggybackHellos(state->args->algorithm);
-    bool piggyback_hello = hello_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC;
-
-    HelloMessage hello_;
-    HelloMessage* hello = NULL;
-    if( piggyback_hello ) {
-        hello = &hello_;
-        DF_createHello(state, hello, false); // request_replies is set to false
-    }
+    YggMessage msg = {0};
+    DiscoverySendPack* dsp = DF_triggerDiscoveryEvent(state, DPE_REPLY_TIMER, timer_payload, &msg);
+    assert(dsp);
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-    char hello_str[30];
-    if( piggyback_hello ) {
-        sprintf(hello_str, "SEQ=%hu PERIOD=%d s", hello->seq, hello->period);
-    } else {
-        sprintf(hello_str, "NULL");
-    }
+        char hello_str[10];
+        if( dsp->hello ) {
+            sprintf(hello_str, "SEQ=%hu", dsp->hello->seq);
+        } else {
+            sprintf(hello_str, "-");
+        }
 
-    char id_str[UUID_STR_LEN+1];
-    id_str[UUID_STR_LEN] = '\0';
-    uuid_unparse(hack.dest_process_id, id_str);
+        char hack_str[10];
+        if( dsp->n_hacks > 0 ) {
+            sprintf(hack_str, "%d", dsp->n_hacks);
+        } else {
+            sprintf(hack_str, "-");
+        }
 
-    char str[200];
-    sprintf(str, "HELLO=[%s] HACK=[to %s SEQ=%hu]", hello_str, id_str, hack.seq);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REPLY TIMER", str);
+        char str[200];
+        sprintf(str, "HELLO=[%s] HACK=[%s]", hello_str, hack_str);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REPLY TIMER", str);
     #endif
 
-    bool sent = DF_sendMessage(state, hello, &hack, n_hacks, addr, REPLY_MSG, NULL);
-
-    if( piggyback_hello && sent) {
+    if(dsp->hello) {
         state->stats.piggybacked_hellos++;
     }
+
+    DF_sendMessage(state, dsp, &msg);
 }
 
 bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh) {
@@ -693,6 +555,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
             // Update Link Quality
             double old_rx_lq = NE_getRxLinkQuality(neigh);
             double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 0, lost, false, &state->current_time);
+            new_rx_lq = roundPrecision(new_rx_lq, state->args->lq_precision);
 
             double lq_delta = fabs(old_rx_lq - new_rx_lq);
             if( lq_delta >= state->args->lq_epsilon || (lq_delta > 0 && (new_rx_lq == 1.0 || new_rx_lq == 0.0)) ) {
@@ -822,10 +685,10 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
             if( compare_timespec(NE_getNeighborRemovalTime(neigh), &state->current_time) <= 0 ) {
 
                 #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-                char id_str[UUID_STR_LEN+1];
-                id_str[UUID_STR_LEN] = '\0';
-                uuid_unparse(NE_getNeighborID(neigh), id_str);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REMOVED NEIGHBOR", id_str);
+                    char id_str[UUID_STR_LEN+1];
+                    id_str[UUID_STR_LEN] = '\0';
+                    uuid_unparse(NE_getNeighborID(neigh), id_str);
+                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REMOVED NEIGHBOR", id_str);
                 #endif
 
                 flushNeighbor(state, neigh);
@@ -889,13 +752,15 @@ void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state) {
         neighbors_density /= (n_neighbors+1);
     }
 
+    neighbors_density = roundPrecision(neighbors_density, state->args->neigh_density_precision);
+
     changed |= DE_setInTraffic(state->environment, in_traffic, state->args->traffic_epsilon);
 
-    changed |= DE_computeOutTraffic(state->environment, &state->current_time, state->args->traffic_window_type, state->args->traffic_epsilon);
+    changed |= DE_computeOutTraffic(state->environment, &state->current_time, state->args->traffic_window_type, state->args->traffic_epsilon, state->args->traffic_precision);
 
-    changed |= DE_computeNewNeighborsFlux(state->environment, &state->current_time, state->args->churn_window_type, state->args->churn_epsilon);
+    changed |= DE_computeNewNeighborsFlux(state->environment, &state->current_time, state->args->churn_window_type, state->args->churn_epsilon, state->args->churn_precision);
 
-    changed |= DE_computeLostNeighborsFlux(state->environment, &state->current_time, state->args->churn_window_type, state->args->churn_epsilon);
+    changed |= DE_computeLostNeighborsFlux(state->environment, &state->current_time, state->args->churn_window_type, state->args->churn_epsilon, state->args->churn_precision);
 
     changed |= DE_setNNeighbors(state->environment, n_neighbors);
 
@@ -1020,7 +885,7 @@ void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
     DA_destroyMessageAttributes(state->args->algorithm, msg_attrs);
 }
 
-void scheduleReply(discovery_framework_state* state, HelloMessage* hello) {
+void scheduleReply(discovery_framework_state* state, HelloMessage* hello, HelloDeliverSummary* summary) {
 
     if( DA_replyHacksToHellos(state->args->algorithm) != NO_HACK_REPLY  && hello->request_replies ) {
 
@@ -1029,7 +894,12 @@ void scheduleReply(discovery_framework_state* state, HelloMessage* hello) {
         struct timespec t_ = {0};
         milli_to_timespec(&t_, jitter);
 
-        SetTimerWithPayload(&t_, NULL, DISCOVERY_FRAMEWORK_PROTO_ID, REPLY_TIMER, hello->process_id, sizeof(uuid_t));
+        unsigned int buffer_size = sizeof(uuid_t) + sizeof(bool);
+        byte buffer[buffer_size];
+        memcpy(buffer, hello->process_id, sizeof(uuid_t));
+        memcpy(buffer+sizeof(uuid_t), &summary->new_neighbor, sizeof(bool));
+
+        SetTimerWithPayload(&t_, NULL, DISCOVERY_FRAMEWORK_PROTO_ID, REPLY_TIMER, buffer, buffer_size);
     }
 
 }
@@ -1039,65 +909,32 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
 
     NeighborChangeSummary* summary = &state->neighbor_change_summary;
 
-    DiscoveryAlgorithm* alg = state->args->algorithm;
-
-    bool other = summary->other;
-
-    bool new_neighbor = summary->new_neighbor;
-    bool lost_neighbor = summary->lost_neighbor;
-    bool updated_neighbor = summary->updated_neighbor;
-
-    bool new_2hop_neighbor = summary->added_2hop_neighbor;
-    bool lost_2hop_neighbor = summary->lost_2hop_neighbor;
-    bool updated_2hop_neighbor = summary->updated_2hop_neighbor;
-
-    bool send_hello = other || \
-    (DA_HelloNewNeighbor(alg) && new_neighbor) || \
-    (DA_HelloLostNeighbor(alg)  && lost_neighbor) || \
-    (DA_HelloUpdateNeighbor(alg) && updated_neighbor) || \
-    (DA_HelloNew2HopNeighbor(alg) && new_2hop_neighbor) || \
-    (DA_HelloLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
-    (DA_HelloUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
-
-    bool send_hack = other || \
-    (DA_HackNewNeighbor(alg) && new_neighbor) || \
-    (DA_HackLostNeighbor(alg)  && lost_neighbor) || \
-    (DA_HackUpdateNeighbor(alg) && updated_neighbor) || \
-    (DA_HackNew2HopNeighbor(alg) && new_2hop_neighbor) || \
-    (DA_HackLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
-    (DA_HackUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
-
-    //WLANAddr* bcast_addr = getBroadcastAddr();
-
-    HelloMessage hello_;
-    HelloMessage* hello = NULL;
-    if( send_hello ) {
-        hello = &hello_;
-        DF_createHello(state, hello, false);
-    }
-
-    unsigned char n_hacks = 0;
-    HackMessage* hacks = NULL;
-
-    if( send_hack ) {
-        DF_createHackBatch(state, &hacks, &n_hacks, state->neighbors);
-    }
+    YggMessage msg = {0};
+    DiscoverySendPack* dsp = DF_triggerDiscoveryEvent(state, DPE_NEIGHBORHOOD_CHANGE_TIMER, summary, &msg);
+    assert(dsp);
 
     // Log
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+    char hello_str[10];
+    if( dsp->hello ) {
+        sprintf(hello_str, "SEQ=%hu", dsp->hello->seq);
+    } else {
+        sprintf(hello_str, "-");
+    }
+
+    char hack_str[10];
+    if( dsp->n_hacks > 0 ) {
+        sprintf(hack_str, "%d", dsp->n_hacks);
+    } else {
+        sprintf(hack_str, "-");
+    }
+
     char str[200];
-    sprintf(str, "HELLO=[%s] HACK=[%s]", (send_hello ? "yes" : "no"), (send_hack ? "yes" : "no"));
+    sprintf(str, "HELLO=[%s] HACK=[%s]", hello_str, hack_str);
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR-CHANGE TIMER", str);
     #endif
 
-    if( send_hello || send_hack ) {
-        void* aux_info = &state->neighbor_change_summary;
-        /*bool sent = */DF_sendMessage(state, hello, hacks, n_hacks, NULL, NEIGHBOR_CHANGE_MSG, aux_info);
-    }
-
-    if( hacks ) {
-        free(hacks);
-    }
+    DF_sendMessage(state, dsp, &msg);
 
     state->neighbor_change_timer_active = false;
     memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
@@ -1336,13 +1173,13 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
     // Log
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-    char id_str[UUID_STR_LEN+1];
-    id_str[UUID_STR_LEN] = '\0';
-    uuid_unparse(hello->process_id, id_str);
+        char id_str[UUID_STR_LEN+1];
+        id_str[UUID_STR_LEN] = '\0';
+        uuid_unparse(hello->process_id, id_str);
 
-    char str[200];
-    sprintf(str, "from %s with SEQ=%hu and PERIOD=%d s", id_str, hello->seq, hello->period);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RCV HELLO", str);
+        char str[200];
+        sprintf(str, "SRC=%s SEQ=%hu P=%d s", id_str, hello->seq, hello->period);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RECEIVED HELLO", str);
     #endif
 
     HelloDeliverSummary* summary = newHelloDeliverSummary();
@@ -1366,11 +1203,11 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
             if(summary->rebooted) {
                 // Log
                 #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
-                char id_str[UUID_STR_LEN+1];
-                id_str[UUID_STR_LEN] = '\0';
-                uuid_unparse(hello->process_id, id_str);
+                    char id_str[UUID_STR_LEN+1];
+                    id_str[UUID_STR_LEN] = '\0';
+                    uuid_unparse(hello->process_id, id_str);
 
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
+                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
                 #endif
             }
         }
@@ -1402,9 +1239,9 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
                 // Log
                 #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-                char str[200];
-                sprintf(str, "prev_missed_hellos=%u   seq_missed_hellos=%d", missed_hellos, seq_missed_hellos);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO SEQ ERROR", str);
+                    char str[200];
+                    sprintf(str, "prev_missed_hellos=%u   seq_missed_hellos=%d", missed_hellos, seq_missed_hellos);
+                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO SEQ ERROR", str);
                 #endif
             }
         } else {
@@ -1413,9 +1250,9 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
             // Log
             #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
-            char str[200];
-            sprintf(str, "seq=%hu", previous_seq);
-            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REPEATED HELLO SEQ", str);
+                char str[200];
+                sprintf(str, "seq=%hu", previous_seq);
+                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REPEATED HELLO SEQ", str);
             #endif
         }
         assert(missed_hellos >= 0);
@@ -1456,6 +1293,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     // Update Link Quality
     double old_rx_lq = NE_getRxLinkQuality(neigh);
     double new_rx_lq = DA_computeLinkQuality(state->args->algorithm, NE_getLinkQualityAttributes(neigh), old_rx_lq, 1, summary->missed_hellos, summary->new_neighbor, &state->current_time);
+    new_rx_lq = roundPrecision(new_rx_lq, state->args->lq_precision);
 
     double lq_delta = fabs(old_rx_lq - new_rx_lq);
     if( lq_delta >= state->args->lq_epsilon || (lq_delta > 0 && (new_rx_lq == 1.0 || new_rx_lq == 0.0)) ) {
@@ -1514,7 +1352,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
     summary->neigh = neigh;
 
-    scheduleReply(state, hello);
+    scheduleReply(state, hello, summary);
 
     return summary;
 }
@@ -1523,17 +1361,17 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
     // Log
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-    char id_str1[UUID_STR_LEN+1];
-    id_str1[UUID_STR_LEN] = '\0';
-    uuid_unparse(hack->src_process_id, id_str1);
+        char id_str1[UUID_STR_LEN+1];
+        id_str1[UUID_STR_LEN] = '\0';
+        uuid_unparse(hack->src_process_id, id_str1);
 
-    char id_str2[UUID_STR_LEN+1];
-    id_str2[UUID_STR_LEN] = '\0';
-    uuid_unparse(hack->dest_process_id, id_str2);
+        char id_str2[UUID_STR_LEN+1];
+        id_str2[UUID_STR_LEN] = '\0';
+        uuid_unparse(hack->dest_process_id, id_str2);
 
-    char str[200];
-    sprintf(str, "from %s to %s with SEQ=%hu and PERIOD=%d s", id_str1, id_str2, hack->seq, hack->period);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RCV HACK", str);
+        char str[200];
+        sprintf(str, "SRC=%s DEST=%s SEQ=%hu P=%d s", id_str1, id_str2, hack->seq, hack->period);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RECEIVED HACK", str);
     #endif
 
     HackDeliverSummary* summary = newHackDeliverSummary();
@@ -1612,9 +1450,9 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                                 // Log
                                 #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
-                                char str[200];
-                                sprintf(str, "prev_missed_hacks=%u   seq_cmp-1=%d", missed_hacks, seq_cmp-1);
-                                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK SEQ ERROR", str);
+                                    char str[200];
+                                    sprintf(str, "prev_missed_hacks=%u   seq_cmp-1=%d", missed_hacks, seq_cmp-1);
+                                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK SEQ ERROR", str);
                                 #endif
                             }
                         } else {
@@ -1636,13 +1474,13 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         if( summary->became_bi ) {
                             // Log
                             #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-                            char id_str[UUID_STR_LEN+1];
-                            id_str[UUID_STR_LEN] = '\0';
-                            uuid_unparse(hack->src_process_id, id_str);
+                                char id_str[UUID_STR_LEN+1];
+                                id_str[UUID_STR_LEN] = '\0';
+                                uuid_unparse(hack->src_process_id, id_str);
 
-                            char str[200];
-                            sprintf(str, "%s", id_str);
-                            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "BECAME BI", str);
+                                char str[200];
+                                sprintf(str, "%s", id_str);
+                                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "BECAME BI", str);
                             #endif
                         }
 
@@ -1766,13 +1604,13 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                         // Log
                         #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-                        char id_str[UUID_STR_LEN+1];
-                        id_str[UUID_STR_LEN] = '\0';
-                        uuid_unparse(hack->src_process_id, id_str);
+                            char id_str[UUID_STR_LEN+1];
+                            id_str[UUID_STR_LEN] = '\0';
+                            uuid_unparse(hack->src_process_id, id_str);
 
-                        char str[200];
-                        sprintf(str, "%s", id_str);
-                        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
+                            char str[200];
+                            sprintf(str, "%s", id_str);
+                            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
                         #endif
                     }
                 }
@@ -1844,6 +1682,8 @@ void DF_setNotifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry*
 
 
 
+/*
+
 bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info) {
     assert(msg);
 
@@ -1907,81 +1747,57 @@ bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMe
     return send;
 }
 
+
+*/
+
+
+
 void DF_piggybackDiscovery(discovery_framework_state* state, YggMessage* msg) {
-
-    WLANAddr* bcast_addr = getBroadcastAddr();
-    WLANAddr* addr = &msg->destAddr;
-    bool is_unicast_addr = memcmp(addr->data, bcast_addr->data, WLAN_ADDR_LEN) != 0;
-    WLANAddr* dest_addr = is_unicast_addr ? addr : bcast_addr;
-
-    // Piggyback Hello
-    PiggybackType hello_piggyback_type = DA_piggybackHellos(state->args->algorithm);
-    bool piggyback_hello = !is_unicast_addr && (hello_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hello_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC);
-
-    HelloMessage hello_;
-    HelloMessage* hello = &hello_;
-    if( piggyback_hello ) {
-        DF_createHello(state, hello, false);
-    } else {
-        hello = NULL;
-    }
-
-    // Piggyback Hacks
-    PiggybackType hack_piggyback_type = DA_piggybackHacks(state->args->algorithm);
-    bool piggyback_hack = (!is_unicast_addr && (hack_piggyback_type == PIGGYBACK_ON_BROADCAST_TRAFFIC || hack_piggyback_type == PIGGYBACK_ON_DISCOVERY_TRAFFIC || hack_piggyback_type == PIGGYBACK_ON_ALL_TRAFFIC)) || (hack_piggyback_type == PIGGYBACK_ON_UNICAST_TRAFFIC && is_unicast_addr);
-    unsigned char n_hacks = 0;
-    HackMessage* hacks = NULL;
-    if( piggyback_hack ) {
-
-        bool unicast_hack = hack_piggyback_type == PIGGYBACK_ON_UNICAST_TRAFFIC;
-        if( unicast_hack ) {
-            // Find Neighbor with the corresponding MAC addr
-            void* iterator = NULL;
-            NeighborEntry* current_neigh = NULL;
-            NeighborEntry* found_neigh = NULL;
-            while ( (current_neigh = NT_nextNeighbor(state->neighbors, &iterator)) ) {
-                if( memcmp(NE_getNeighborMAC(current_neigh)->data, addr->data, WLAN_ADDR_LEN) == 0 ) {
-                    found_neigh = current_neigh;
-                    break;
-                }
-            }
-
-            if( found_neigh != NULL ) {
-                n_hacks = 1;
-                hacks = malloc(n_hacks * sizeof(HackMessage));
-
-                DF_createHack(state, hacks, current_neigh, true);
-            } else {
-                n_hacks = 0;
-                hacks = NULL;
-            }
-        }
-
-        else {
-            DF_createHackBatch(state, &hacks, &n_hacks, state->neighbors);
-        }
-    }
 
     // TODO: try to leverage promiscuous mode in the future
 
-    bool send = DF_createMessage(state, msg, hello, hacks, n_hacks, dest_addr, PIGGYBACK_MSG, msg);
+    DiscoverySendPack* dsp = DF_handleDiscoveryEvent(state, DPE_DOWNSTREAM_MESSAGE, msg, msg);
 
-    if( send ) {
+    if( dsp ) {
+        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
+        char hello_str[10];
+        if( dsp->hello ) {
+            sprintf(hello_str, "SEQ=%hu", dsp->hello->seq);
+        } else {
+            sprintf(hello_str, "-");
+        }
 
-        if( piggyback_hello ) {
+        char hack_str[10];
+        if( dsp->n_hacks > 0 ) {
+            sprintf(hack_str, "%d", dsp->n_hacks);
+        } else {
+            sprintf(hack_str, "-");
+        }
+
+        const char* addr_str = is_unicast_message(msg) ? "UNICAST" : "BROADCAST";
+
+        char str[200];
+        sprintf(str, "HELLO=[%s] HACK=[%s] [%s]", hello_str, hack_str, addr_str);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "PIGGYBACK MESSAGE", str);
+        #endif
+
+        if( dsp->hello ) {
             state->stats.piggybacked_hellos++;
+            state->stats.total_hellos++;
+
+            free(dsp->hello);
         }
 
-        if( piggyback_hack ) {
-            state->stats.piggybacked_hacks += n_hacks;
+        if( dsp->hacks ) {
+            state->stats.piggybacked_hacks += dsp->n_hacks;
+            state->stats.total_hacks += dsp->n_hacks;
+
+            free(dsp->hacks);
         }
+
+        free(dsp);
     }
 
-    if( hacks ) {
-        free(hacks);
-    }
-
-    free(bcast_addr);
 }
 
 /*
@@ -2130,10 +1946,10 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
     }
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-    char id_str[UUID_STR_LEN+1];
-    id_str[UUID_STR_LEN] = '\0';
-    uuid_unparse(NE_getNeighborID(neigh), id_str);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEW NEIGHBOR", id_str);
+        char id_str[UUID_STR_LEN+1];
+        id_str[UUID_STR_LEN] = '\0';
+        uuid_unparse(NE_getNeighborID(neigh), id_str);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEW NEIGHBOR", id_str);
     #endif
 
     deliverEvent(ev);
@@ -2198,10 +2014,10 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
     }
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-    char id_str[UUID_STR_LEN+1];
-    id_str[UUID_STR_LEN] = '\0';
-    uuid_unparse(NE_getNeighborID(neigh), id_str);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "UPDATE NEIGHBOR", id_str);
+        char id_str[UUID_STR_LEN+1];
+        id_str[UUID_STR_LEN] = '\0';
+        uuid_unparse(NE_getNeighborID(neigh), id_str);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "UPDATE NEIGHBOR", id_str);
     #endif
 
     deliverEvent(ev);
@@ -2246,10 +2062,10 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
     }
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-    char id_str[UUID_STR_LEN+1];
-    id_str[UUID_STR_LEN] = '\0';
-    uuid_unparse(NE_getNeighborID(neigh), id_str);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST NEIGHBOR", id_str);
+        char id_str[UUID_STR_LEN+1];
+        id_str[UUID_STR_LEN] = '\0';
+        uuid_unparse(NE_getNeighborID(neigh), id_str);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST NEIGHBOR", id_str);
     #endif
 
     deliverEvent(ev);
@@ -2273,19 +2089,23 @@ void DF_notifyNeighborhood(discovery_framework_state* state) {
     free(buffer);
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-    char* str1 = NULL, *str2 = NULL;
+    //char* str1 = NULL, *str2 = NULL;
+    char* str2 = NULL;
 
-    DF_uponDiscoveryEnvironmentTimer(state); // temp
-    NE_print(state->environment, &str1);
+    //DF_uponDiscoveryEnvironmentTimer(state); // temp
+    //NE_print(state->environment, &str1);
 
     NT_print(state->neighbors, &str2, &state->current_time, state->myID, &state->myAddr, state->my_seq);
 
-    char str3[strlen(str1)+strlen(str2)+1];
-    sprintf(str3, "\n%s\n%s", str1, str2);
+    //char str3[strlen(str1)+strlen(str2)+1];
+    //sprintf(str3, "\n%s\n%s", str1, str2);
+
+    char str3[strlen(str2)+1];
+    sprintf(str3, "\n%s", str2);
 
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORHOOD", str3);
 
-    free(str1);
+    //free(str1);
     free(str2);
     #endif
 
@@ -2309,9 +2129,9 @@ void DF_notifyGenericEvent(char* type, void* buffer, unsigned int size) {
     YggEvent_addPayload(ev, buffer, size);
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-    char str[30];
-    sprintf(str, "[%s]", type);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "GENERIC EVENT", str);
+        char str[30];
+        sprintf(str, "[%s]", type);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "GENERIC EVENT", str);
     #endif
 
     deliverEvent(ev);
@@ -2328,4 +2148,184 @@ MessageSummary* newMessageSummary() {
     summary->hack_summaries = list_init();
 
     return summary;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DiscoverySendPack* DF_triggerDiscoveryEvent(discovery_framework_state* state, DiscoveryInternalEventType event_type, void* event_args, YggMessage* msg) {
+
+    YggMessage_initBcast(msg, DISCOVERY_FRAMEWORK_PROTO_ID);
+    DiscoverySendPack* dsp = DF_handleDiscoveryEvent(state, event_type, event_args, msg);
+
+    return dsp;
+}
+
+void DF_sendMessage(discovery_framework_state* state, DiscoverySendPack* dsp, YggMessage* msg) {
+
+    if(dsp) {
+        // Insert into dispatcher queue
+        DF_dispatchMessage(state->dispatcher_queue, msg);
+
+        state->stats.discovery_messages++;
+
+        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
+        char hello_str[10];
+        if( dsp->hello ) {
+            sprintf(hello_str, "SEQ=%hu", dsp->hello->seq);
+        } else {
+            sprintf(hello_str, "-");
+        }
+
+        char hack_str[10];
+        if( dsp->n_hacks > 0 ) {
+            sprintf(hack_str, "%d", dsp->n_hacks);
+        } else {
+            sprintf(hack_str, "-");
+        }
+
+        const char* addr_str = is_unicast_message(msg) ? "UNICAST" : "BROADCAST";
+
+        char str[200];
+        sprintf(str, "HELLO=[%s] HACK=[%s] [%s]", hello_str, hack_str, addr_str);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "SEND MESSAGE", str);
+        #endif
+
+        if( dsp->hello ) {
+            state->stats.total_hellos++;
+            free(dsp->hello);
+        }
+
+        if( dsp->hacks ) {
+            state->stats.total_hacks += dsp->n_hacks;
+
+            free(dsp->hacks);
+        }
+
+        free(dsp);
+    }
+
+}
+
+DiscoverySendPack* DF_handleDiscoveryEvent(discovery_framework_state* state, DiscoveryInternalEventType event_type, void* event_args, YggMessage* msg) {
+
+    DiscoveryInternalEventResult* der = DA_triggerEvent(state->args->algorithm, event_type, event_args, state->neighbors, msg);
+
+    if( der ) {
+        HelloMessage* hello = NULL;
+        unsigned char n_hacks = 0;
+        HackMessage* hacks = NULL;
+
+        if( der->create_hello ) {
+            hello = malloc(sizeof(HelloMessage));
+            DF_createHello(state, hello, der->request_replies);
+        }
+
+        if( der->create_hack ) {
+            if( der->hack_dest ) {
+                n_hacks = 1;
+                hacks = malloc(sizeof(HackMessage));
+                DF_createHack(state, hacks, der->hack_dest, true);
+            } else {
+                DF_createHackBatch(state, &hacks, &n_hacks, state->neighbors);
+            }
+        }
+
+        DiscoverySendPack* dsp = NULL;
+
+        // If no hello nor hacks don't even call create msg.
+        if( hello || hacks ) {
+            DF_createMessage(state, hello, hacks, n_hacks, event_type, event_args, msg, (is_memory_zero(&der->dest_addr, WLAN_ADDR_LEN) != 0 ? NULL : &der->dest_addr));
+
+            dsp = newDiscoverySendPack(hello, n_hacks, hacks);
+        }
+
+        free(der);
+        return dsp;
+    } else {
+        unsigned short buffer_size = 0;
+        pushPayload(msg, (char*)&buffer_size, sizeof(buffer_size), DISCOVERY_FRAMEWORK_PROTO_ID, &msg->destAddr);
+        return NULL;
+    }
+
+}
+
+void DF_createMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, DiscoveryInternalEventType event_type, void* event_args, YggMessage* msg, WLANAddr* addr) {
+    assert(msg && (hello || hacks));
+
+    // Serialize Message
+    byte buffer[YGG_MESSAGE_PAYLOAD];
+    unsigned short buffer_size = 0;
+
+    bool send = false;
+    if( hello || hacks ) {
+        DA_createDiscoveryMessage(state->args->algorithm, state->myID, &state->current_time, state->neighbors, event_type, event_args, hello, hacks, n_hacks, buffer + sizeof(buffer_size), &buffer_size);
+
+        memcpy(buffer, &buffer_size, sizeof(buffer_size));
+
+        // only non periodic nor reply msgs can be canceled
+        //send = (msg_type == PERIODIC_MSG || msg_type == REPLY_MSG) ? true : result;
+        send = true;
+    }
+
+    if(send) {
+        WLANAddr* bcast_addr = getBroadcastAddr();
+        bool is_unicast = addr != NULL;
+        WLANAddr* dest_addr = is_unicast ? addr : bcast_addr;
+
+        pushPayload(msg, (char*)buffer, sizeof(buffer_size) + buffer_size, DISCOVERY_FRAMEWORK_PROTO_ID, dest_addr);
+
+        free(bcast_addr);
+
+        if( hello ) {
+            copy_timespec(&state->last_hello_time, &state->current_time);
+
+            // Re-schedule
+            scheduleHelloTimer(state, false);
+
+            state->stats.total_hellos++;
+        }
+
+        if( hacks ) {
+            copy_timespec(&state->last_hack_time, &state->current_time);
+
+            if( !is_unicast ) {
+                // Re-schedule
+                scheduleHackTimer(state, false);
+            }
+
+            state->stats.total_hacks += n_hacks;
+        }
+
+        //ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REGISTER TRAFFIC", "");
+        DE_registerOutTraffic(state->environment, &state->current_time);
+    }
+
+    /*
+    else {
+        buffer_size = 0;
+
+        pushPayload(msg, (char*)&buffer_size, sizeof(buffer_size), DISCOVERY_FRAMEWORK_PROTO_ID, addr);
+
+        if(hello) {
+            // Decrement SEQ
+            state->my_seq = dec_seq(state->my_seq, state->args->ignore_zero_seq);
+        }
+    }
+*/
+
 }

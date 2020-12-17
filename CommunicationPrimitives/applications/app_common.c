@@ -27,6 +27,7 @@
 #include "utility/my_time.h"
 #include "utility/my_misc.h"
 #include "utility/my_string.h"
+#include "utility/my_math.h"
 
 struct option long_options[] = {
     { "app", required_argument, NULL, 'a' },
@@ -135,4 +136,117 @@ void unparse_host(char* hostname, unsigned int hostname_length, char* interface,
             strcpy(hostname, "hostname");
         }
     }
+}
+
+unsigned long getNextDelay(const char* type, unsigned long elapsed_ms) {
+    unsigned long t = 0L;
+
+    char aux[strlen(type)+1];
+    strcpy(aux, type);
+
+    char* ptr = NULL;
+    char* token  = strtok_r(aux, " ", &ptr);
+
+    if(token == NULL) {
+        fprintf(stderr, "No parameter passed");
+        exit(-1);
+    }
+    char* name;
+    if(strcmp(token, (name = "Exponential")) == 0) {
+        double lambda = 0.0;
+
+        token = strtok_r(NULL, " ", &ptr);
+		if(token != NULL) {
+            if(strcmp(token, "Oscillating") == 0) {
+                token = strtok_r(NULL, " ", &ptr);
+        		if(token != NULL) {
+                    double dev = strtod(token, NULL);
+
+                    token = strtok_r(NULL, " ", &ptr);
+            		if(token != NULL) {
+                        double stretching = strtod(token, NULL);
+
+                        token = strtok_r(NULL, " ", &ptr);
+                		if(token != NULL) {
+                            double min_lambda = strtod(token, NULL);
+
+                            token = strtok_r(NULL, " ", &ptr);
+                    		if(token != NULL) {
+                                double max_lambda = strtod(token, NULL);
+
+                                token = strtok_r(NULL, " ", &ptr);
+                        		if(token != NULL) {
+                                    unsigned long duration_s = strtol(token, NULL, 10);
+
+                                    double seconds = elapsed_ms / 1000.0;
+
+                                    double aux = dev + stretching*(seconds / duration_s);
+                                    double f = (1.0 + cos(2.0*M_PI*aux))/2.0;
+
+                                    lambda = min_lambda + (max_lambda - min_lambda)*f;
+                                    //printf("lambda = %f seconds = %f\n", lambda, seconds);
+                        		} else {
+                        			printf("Parameter 5 of %s not passed!\n", name);
+                        			exit(-1);
+                        		}
+                    		} else {
+                    			printf("Parameter 5 of %s not passed!\n", name);
+                    			exit(-1);
+                    		}
+                		} else {
+                			printf("Parameter 4 of %s not passed!\n", name);
+                			exit(-1);
+                		}
+            		} else {
+            			printf("Parameter 3 of %s not passed!\n", name);
+            			exit(-1);
+            		}
+        		} else {
+        			printf("Parameter 2 of %s not passed!\n", name);
+        			exit(-1);
+        		}
+            } else if(strcmp(token, "Constant") == 0) {
+                token = strtok_r(NULL, " ", &ptr);
+        		if(token != NULL) {
+                    lambda = strtod(token, NULL);
+        		} else {
+        			printf("Parameter 2 of %s not passed!\n", name);
+        			exit(-1);
+        		}
+            }
+		} else {
+			printf("Parameter 1 of %s not passed!\n", name);
+			exit(-1);
+		}
+
+        t = lround(randomExponential(lambda/1000.0)); // t is in millis, lambda is per second
+    } else if(strcmp(token, (name="Periodic")) == 0) {
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+            double prob = strtod(token, NULL);
+
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                unsigned long periodic_timer_s = strtol(token, NULL, 10);
+
+                // Compute how many times should not send to accumulate in a single timer
+                int counter = 1;
+                while( prob < 1.0 && getRandomProb() > prob ) {
+                    counter++;
+                }
+
+                t = counter*periodic_timer_s*1000;
+            } else {
+                printf("Parameter 2 of %s not passed!\n", name);
+                exit(-1);
+            }
+        } else {
+            printf("Parameter 1 of %s not passed!\n", name);
+            exit(-1);
+        }
+    }
+
+    //printf("getNextDelay t = %lu\n", t);
+
+    return t;
 }

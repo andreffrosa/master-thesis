@@ -33,13 +33,14 @@ typedef enum {false, true} bool;
 #define min(x,y) (((x) < (y))? (x) : (y))
 #define max(x,y) (((x) > (y))? (x) : (y))
 
+void ygg_loginit_2(const char* hostname_);
+void ygg_log_flush();
 
 const char* getHostname();
 
 void ygg_log_change_output(FILE* _out);
 
 void ygg_loginit();
-void ygg_loginit_2(const char* hostname_);
 void ygg_log(char* proto, char* event, char* desc);
 void ygg_log_multi(int n, ...);
 void ygg_logflush();

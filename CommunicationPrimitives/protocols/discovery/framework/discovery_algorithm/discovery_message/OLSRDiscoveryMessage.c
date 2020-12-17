@@ -59,9 +59,9 @@ static void OLSR_destroyAttrs(ModuleState* state, void* d_msg_attrs) {
 }
 */
 
-static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time);
-static list* compute_broadcast_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time);
-static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time);
+static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time, list* old_mprs);
+static list* compute_broadcast_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time, list* old_mprs);
+static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time, list* old_mprs);
 
 static NeighMPRType getMPRType(bool flooding_mpr, bool routing_mpr) {
     if( flooding_mpr && !routing_mpr ) {
@@ -79,8 +79,8 @@ static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespe
 
     bool changed = false;
 
-    list* new_flooding_mprs = compute_broadcast_mprs(neighbors, myID, current_time);
-    list* new_routing_mprs = compute_routing_mprs(neighbors, myID, current_time);
+    list* new_flooding_mprs = compute_broadcast_mprs(neighbors, myID, current_time, state->flooding_mprs);
+    list* new_routing_mprs = compute_routing_mprs(neighbors, myID, current_time, state->routing_mprs);
 
     // printf("\n\n\t\t\tRECOMPUTE MPRS Flooding %d -> %d Routing %d -> %d \n\n", state->flooding_mprs->size, new_flooding_mprs->size, state->routing_mprs->size, new_routing_mprs->size);
 
@@ -161,25 +161,27 @@ static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespe
     return changed;
 }
 
-static bool OLSR_createMessage(ModuleState* m_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+static void OLSR_createMessage(ModuleState* m_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
 
     OLSRState* state = (OLSRState*)m_state->vars;
 
     // Recompute mprs if necessary
-    if( msg_type == NEIGHBOR_CHANGE_MSG ) {
-        NeighborChangeSummary* s = (NeighborChangeSummary*)aux_info;
+    if( event_type == DPE_NEIGHBORHOOD_CHANGE_TIMER ) {
+        NeighborChangeSummary* s = (NeighborChangeSummary*)event_args;
 
         bool one_hop_change = s->new_neighbor || s->updated_neighbor || s->lost_neighbor;
         bool two_hop_change = s->updated_2hop_neighbor || s->added_2hop_neighbor || s->lost_2hop_neighbor;
 
         if( one_hop_change || two_hop_change ) {
-            bool changed = recompute_mprs(state, myID, current_time, neighbors);
+            /*bool changed =*/ recompute_mprs(state, myID, current_time, neighbors);
 
             // if the mprs didn't change and the changes where only at two hop neighbors and is not periodic, then don't send a message
+            /*
             if( !changed && !one_hop_change && two_hop_change ) {
                 return false;
             }
+            */
         }
     }
 
@@ -213,7 +215,7 @@ static bool OLSR_createMessage(ModuleState* m_state, unsigned char* myID, struct
         *size += sizeof(aux);
     }
 
-    return true;
+    // return true;
 }
 
 
@@ -355,26 +357,33 @@ DiscoveryMessage* OLSRDiscoveryMessage() {
     return newDiscoveryMessage(NULL, state, &OLSR_createMessage, &OLSR_processMessage, &OLSR_createAttrs, NULL, &OLSR_destructor);
 }
 
-static list* compute_broadcast_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time) {
-    return compute_mprs(true, neighbors, myID, current_time);
+static list* compute_broadcast_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time, list* old_mprs) {
+    return compute_mprs(true, neighbors, myID, current_time, old_mprs);
 }
 
-static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time) {
-    return compute_mprs(false, neighbors, myID, current_time);
+static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time, list* old_mprs) {
+    return compute_mprs(false, neighbors, myID, current_time, old_mprs);
 }
 
-static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time) {
+static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time, list* old_mprs) {
     hash_table* n1 = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
     list* n2 = list_init();
+
+    printf("COMPUTING N1 AND N2:\n");
 
     void* iterator = NULL;
     NeighborEntry* current_neigh = NULL;
     while ( (current_neigh = NT_nextNeighbor(neighbors, &iterator)) ) {
+
         if( NE_getNeighborType(current_neigh, current_time) == BI_NEIGH /* && willingness > NEVER*/ ) {
 
-            // Iterate through the 2 hop neighbors
+            char id_str[UUID_STR_LEN+1] = {0};
+            uuid_unparse(NE_getNeighborID(current_neigh), id_str);
+            printf("%s\n", id_str);
+
             list* ns = list_init();
 
+            // Iterate through the 2 hop neighbors
             hash_table* nneighs = NE_getTwoHopNeighbors(current_neigh);
             void* iterator2 = NULL;
             hash_table_item* hit = NULL;
@@ -382,20 +391,30 @@ static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned ch
             while ( (hit = hash_table_iterator_next(nneighs, &iterator2)) ) {
                 current_2hop_neigh = (TwoHopNeighborEntry*)hit->value;
 
-                bool to_add = THNE_isBi(current_2hop_neigh) && uuid_compare(THNE_getID(current_2hop_neigh), myID) != 0 && list_find_item(n2, &equalN2Tuple, THNE_getID(current_2hop_neigh)) == NULL;
+                bool is_bi = THNE_isBi(current_2hop_neigh);
+                bool is_not_me = uuid_compare(THNE_getID(current_2hop_neigh), myID) != 0;
+                bool is_not_in_n2_yet = list_find_item(n2, &equalN2Tuple, THNE_getID(current_2hop_neigh)) == NULL;
 
-                if( to_add ) {
+                char id_str2[UUID_STR_LEN+1] = {0};
+                uuid_unparse(THNE_getID(current_2hop_neigh), id_str2);
+                printf("    %s is_bi=%s is_not_me=%s is_not_in_n2_yet=%s\n", id_str2, (is_bi?"T":"F"), (is_not_me?"T":"F"), (is_not_in_n2_yet?"T":"F"));
+
+                if( is_bi && is_not_me ) {
+                    if( is_not_in_n2_yet ) {
+                        unsigned char* id = malloc(sizeof(uuid_t));
+                        uuid_copy(id, THNE_getID(current_2hop_neigh));
+                        list_add_item_to_tail(n2, id);
+                    }
+
                     N2_Tuple* n2_tuple = newN2Tuple(THNE_getID(current_2hop_neigh), THNE_getTxLinkQuality(current_2hop_neigh)); // lq from 1 hop to 2 hops
                     list_add_item_to_tail(ns, n2_tuple);
-
-                    unsigned char* id = malloc(sizeof(uuid_t));
-                    uuid_copy(id, THNE_getID(current_2hop_neigh));
-                    list_add_item_to_tail(n2, id);
                 }
             }
 
             double lq = broadcast ? NE_getTxLinkQuality(current_neigh) : NE_getRxLinkQuality(current_neigh);
-            N1_Tuple* n1_tuple = newN1Tuple(NE_getNeighborID(current_neigh), lq, DEFAULT_WILLINGNESS, ns);
+            bool already_mpr = list_find_item(old_mprs, &equalID, NE_getNeighborID(current_neigh)) != NULL;
+
+            N1_Tuple* n1_tuple = newN1Tuple(NE_getNeighborID(current_neigh), lq, DEFAULT_WILLINGNESS, ns, already_mpr);
             void* old = hash_table_insert(n1, n1_tuple->id, n1_tuple);
             assert(old == NULL);
         }

@@ -14,13 +14,9 @@
 #ifndef _DISCOVERY_PATTERN_COMMON_H_
 #define _DISCOVERY_PATTERN_COMMON_H_
 
-typedef enum {
-    NO_PIGGYBACK,
-    PIGGYBACK_ON_UNICAST_TRAFFIC,
-    PIGGYBACK_ON_BROADCAST_TRAFFIC,
-    PIGGYBACK_ON_DISCOVERY_TRAFFIC,
-    PIGGYBACK_ON_ALL_TRAFFIC,
-} PiggybackType;
+#include "../common.h"
+
+#include "piggyback_filter.h"
 
 typedef enum {
     NO_PERIODIC,

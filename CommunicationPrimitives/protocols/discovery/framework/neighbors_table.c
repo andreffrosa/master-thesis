@@ -113,14 +113,32 @@ unsigned int NT_getSize(NeighborsTable* nt) {
 }
 
 void NT_addNeighbor(NeighborsTable* nt, NeighborEntry* neigh) {
-    assert(nt);
+    assert(nt && neigh);
     void* old = hash_table_insert(nt->neighbors, neigh->id, neigh);
     assert(old == NULL);
 }
 
 NeighborEntry* NT_getNeighbor(NeighborsTable* nt, unsigned char* neigh_id) {
-    assert(nt);
+    assert(nt && neigh_id);
     return (NeighborEntry*)hash_table_find_value(nt->neighbors, neigh_id);
+}
+
+NeighborEntry* NT_getNeighborByAddr(NeighborsTable* nt, WLANAddr* neigh_addr) {
+    assert(nt && neigh_addr);
+
+    void* iterator = NULL;
+    NeighborEntry* current_neigh = NULL;
+    while ( (current_neigh = NT_nextNeighbor(nt, &iterator)) ) {
+        if( memcmp(NE_getNeighborMAC(current_neigh)->data, neigh_addr->data, WLAN_ADDR_LEN) == 0 ) {
+            break;
+        }
+    }
+
+    if( iterator ) {
+        free(iterator);
+    }
+
+    return current_neigh;
 }
 
 NeighborEntry* NT_removeNeighbor(NeighborsTable* nt, unsigned char* neigh_id) {

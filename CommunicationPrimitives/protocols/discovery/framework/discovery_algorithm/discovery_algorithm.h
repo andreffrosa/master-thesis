@@ -41,7 +41,7 @@ void DA_setDiscoveryMessage(DiscoveryAlgorithm* alg, DiscoveryMessage* new_d_mes
 
 PeriodicType DA_periodicHello(DiscoveryAlgorithm* alg);
 
-PiggybackType DA_piggybackHellos(DiscoveryAlgorithm* alg);
+// PiggybackType DA_piggybackHellos(DiscoveryAlgorithm* alg);
 
 bool DA_HelloNewNeighbor(DiscoveryAlgorithm* alg);
 
@@ -57,7 +57,7 @@ bool DA_HelloUpdate2HopNeighbor(DiscoveryAlgorithm* alg);
 
 HelloSchedulerType DA_getHelloType(DiscoveryAlgorithm* alg);
 
-PiggybackType DA_piggybackHacks(DiscoveryAlgorithm* alg);
+// PiggybackType DA_piggybackHacks(DiscoveryAlgorithm* alg);
 
 PeriodicType DA_periodicHack(DiscoveryAlgorithm* alg);
 
@@ -76,6 +76,8 @@ bool DA_HackLost2HopNeighbor(DiscoveryAlgorithm* alg);
 bool DA_HackUpdate2HopNeighbor(DiscoveryAlgorithm* alg);
 
 HelloSchedulerType DA_getHackType(DiscoveryAlgorithm* alg);
+
+DiscoveryInternalEventResult* DA_triggerEvent(DiscoveryAlgorithm* alg, DiscoveryInternalEventType event_type, void* event_args, NeighborsTable* neighbors, YggMessage* msg);
 
 /*
 byte DA_getHelloPeriod(DiscoveryAlgorithm* alg);
@@ -105,7 +107,7 @@ void* DA_createLinkQualityAttributes(DiscoveryAlgorithm* alg);
 
 void DA_destroyLinkQualityAttributes(DiscoveryAlgorithm* alg, void* lq_attrs);
 
-bool DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size);
+void DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size);
 
 bool DA_processDiscoveryMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary);
 

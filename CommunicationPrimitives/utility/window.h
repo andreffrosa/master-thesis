@@ -18,7 +18,7 @@
 
 #include "utility/my_time.h"
 
-typedef struct _Window Window;
+typedef struct Window_ Window;
 
 Window* newWindow(unsigned int n_buckets, unsigned int bucket_duration_s);
 

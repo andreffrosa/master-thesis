@@ -29,14 +29,14 @@ typedef struct LENWBDiscoveryState_ {
 
 static void notify(LENWBDiscoveryState* state);
 
-static bool LENWBDiscovery_createMessage(ModuleState* m_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+static void LENWBDiscovery_createMessage(ModuleState* m_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
 
     LENWBDiscoveryState* state = (LENWBDiscoveryState*)m_state->vars;
 
     //
-    if( msg_type == NEIGHBOR_CHANGE_MSG ) {
-        NeighborChangeSummary* s = (NeighborChangeSummary*)aux_info;
+    if( event_type == DPE_NEIGHBORHOOD_CHANGE_TIMER ) {
+        NeighborChangeSummary* s = (NeighborChangeSummary*)event_args;
 
         bool one_hop_change = s->new_neighbor || s->updated_neighbor || s->lost_neighbor;
         bool two_hop_change = s->updated_2hop_neighbor || s->added_2hop_neighbor || s->lost_2hop_neighbor;
@@ -78,10 +78,9 @@ static bool LENWBDiscovery_createMessage(ModuleState* m_state, unsigned char* my
             if( changed ) {
                 notify(state);
             }
-
-            if( !changed && !one_hop_change && two_hop_change ) {
+            /* if( !changed && !one_hop_change && two_hop_change ) {
                 return false;
-            }
+            }*/
         }
     }
 
@@ -119,7 +118,7 @@ static bool LENWBDiscovery_createMessage(ModuleState* m_state, unsigned char* my
         *size += sizeof(n_neighs);
     }
 
-    return true;
+    // return true;
 }
 
 static bool LENWBDiscovery_processMessage(ModuleState* m_state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {

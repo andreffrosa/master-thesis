@@ -112,7 +112,19 @@ double randomExponential(double lambda) {
         return 0;
     } else {
         double u = randomProb();
-        double exp = u < 0.01 ? 0.01 : -1.0*log(u) / lambda;
+        //double exp = u < 0.01 ? 0.01 : -1.0*log(u) / lambda;
+        double exp = u == 0 ? 0.0 : (-1.0*log(u) / lambda);
         return exp;
     }
+}
+
+
+double roundPrecision(double value, int precision) {
+
+    /* if(precision == 0) {
+        return value;
+    } else { */
+        double x = pow(10, precision);
+        return round(value/x)*x;
+    //}
 }

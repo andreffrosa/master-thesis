@@ -40,6 +40,8 @@ void NT_addNeighbor(NeighborsTable* neighbors, NeighborEntry* neigh);
 
 NeighborEntry* NT_getNeighbor(NeighborsTable* neighbors, unsigned char* neigh_id);
 
+NeighborEntry* NT_getNeighborByAddr(NeighborsTable* neighbors, WLANAddr* neigh_addr);
+
 NeighborEntry* NT_removeNeighbor(NeighborsTable* neighbors, unsigned char* neigh_id);
 
 NeighborEntry* newNeighborEntry(WLANAddr* mac_addr, unsigned char* id, unsigned short seq, unsigned long hello_period_s, double out_traffic, struct timespec* rx_exp_time, struct timespec* found_time);

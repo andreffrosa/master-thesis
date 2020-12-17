@@ -86,10 +86,12 @@ PeriodicType DA_periodicHello(DiscoveryAlgorithm* alg) {
     return HELLO_periodicType(DP_getHelloScheduler(alg->d_pattern));
 }
 
+/*
 PiggybackType DA_piggybackHellos(DiscoveryAlgorithm* alg) {
     assert(alg);
     return HELLO_piggybackType(DP_getHelloScheduler(alg->d_pattern));
 }
+*/
 
 bool DA_HelloNewNeighbor(DiscoveryAlgorithm* alg) {
     assert(alg);
@@ -131,10 +133,12 @@ PeriodicType DA_periodicHack(DiscoveryAlgorithm* alg) {
     return HACK_periodicType(DP_getHackScheduler(alg->d_pattern));
 }
 
+/*
 PiggybackType DA_piggybackHacks(DiscoveryAlgorithm* alg) {
     assert(alg);
     return HACK_piggybackType(DP_getHackScheduler(alg->d_pattern));
 }
+*/
 
 HackReplyType DA_replyHacksToHellos(DiscoveryAlgorithm* alg) {
     assert(alg);
@@ -174,6 +178,11 @@ bool DA_HackUpdate2HopNeighbor(DiscoveryAlgorithm* alg) {
 HelloSchedulerType DA_getHackType(DiscoveryAlgorithm* alg) {
     assert(alg);
     return HACK_getType(DP_getHackScheduler(alg->d_pattern));
+}
+
+DiscoveryInternalEventResult* DA_triggerEvent(DiscoveryAlgorithm* alg, DiscoveryInternalEventType event_type, void* event_args, NeighborsTable* neighbors, YggMessage* msg) {
+    assert(alg);
+    return DP_triggerEvent(alg->d_pattern, event_type, event_args, neighbors, msg);
 }
 
 /*
@@ -246,10 +255,10 @@ void DA_destroyLinkQualityAttributes(DiscoveryAlgorithm* alg, void* lq_attrs) {
     LQ_destroyAttrs(alg->lq_metric, lq_attrs);
 }
 
-bool DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+void DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(alg != NULL);
 
-    return DM_create(alg->d_message, myID, current_time, neighbors, msg_type, aux_info, hello, hacks, n_hacks, buffer, size);
+    DM_create(alg->d_message, myID, current_time, neighbors, event_type, event_args, hello, hacks, n_hacks, buffer, size);
 }
 
 bool DA_processDiscoveryMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {

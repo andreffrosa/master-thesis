@@ -184,6 +184,12 @@ void ygg_logflush_stdout() {
 	}
 }
 
+void ygg_log_flush() {
+	pthread_mutex_lock(&loglock);
+    fflush(out);
+	pthread_mutex_unlock(&loglock);
+}
+
 #define NANOSEC 1*1000*1000*1000
 
 void setNanoTime(struct timespec* time, unsigned long nano) {
