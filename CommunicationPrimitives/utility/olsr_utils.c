@@ -71,7 +71,7 @@ n is the set of nodes who are strict two hop neighbors or are also 1-hop neighbo
 static list* compute_n(hash_table* n1, list* n2) {
     list* n = list_init();
 
-    printf("COMPUTING N\n");
+    //printf("COMPUTING N\n");
 
     N1_Tuple* y_n1_tuple = NULL;
     unsigned char* y = NULL;
@@ -86,9 +86,13 @@ static list* compute_n(hash_table* n1, list* n2) {
             list_add_item_to_tail(n, aux);
 
 
-            char id_str[UUID_STR_LEN+1] = {0};
+            /*
+char id_str[UUID_STR_LEN+1] = {0};
             uuid_unparse(it->data, id_str);
             printf("%s is strict two hop\n", id_str);
+*/
+
+
         }
 
         // Is also 1-hop neighbor
@@ -116,11 +120,15 @@ static list* compute_n(hash_table* n1, list* n2) {
                             list_add_item_to_tail(n, aux);
 
 
-                            char id_str[UUID_STR_LEN+1] = {0};
+                            /*
+char id_str[UUID_STR_LEN+1] = {0};
                             uuid_unparse(y, id_str);
                             char id_str2[UUID_STR_LEN+1] = {0};
                             uuid_unparse(x_n1_tuple->id, id_str2);
                             printf("%s exists a better path through %s : my_d = %f its_d = %f %.15f\n", id_str, id_str2, d1_y, d_x_y, (d_x_y - d1_y));
+*/
+
+
                         }
                     }
                 }
@@ -366,9 +374,9 @@ while( not_covered > 0 ) {
                         // New criteria
                         if( (n1_tuple->already_mpr && !max_already_mpr) ) {
                             select = true;
-                        } else {
+                        } /*else {
                             select = getRandomProb() <= 0.5; // If are tied, choose one randomly
-                        }
+                        }*/
 
                         // TODO: apply other tie breakers
                     }
