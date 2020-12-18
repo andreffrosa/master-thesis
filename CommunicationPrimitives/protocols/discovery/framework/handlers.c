@@ -854,7 +854,9 @@ void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neig
                     }
                 }
             }
-
+            if(iterator)
+                free(iterator);
+                
             if(!first) {
                 if(compare_timespec(&min_exp, &state->current_time) < 0) {
                     next_timer = 0;
@@ -1008,7 +1010,7 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
     DiscoveryAlgorithm* alg = state->args->algorithm;
 
     // New schedule
-    if( !state->neighbor_change_timer_active ) { 
+    if( !state->neighbor_change_timer_active ) {
         bool context_updates = summary.context_updates;
 
         bool new_neighbor = summary.new_neighbor;
