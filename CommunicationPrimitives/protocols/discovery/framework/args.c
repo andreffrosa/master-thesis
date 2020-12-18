@@ -207,6 +207,12 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
 }
 
 static LinkQuality* parse_lq(char* value, bool nested) {
+    
+    if(value == NULL) {
+        printf("No parameter passed");
+        exit(-1);
+    }
+    
     LinkQuality* lq_metric = NULL;
 
     char* name = NULL;
@@ -316,6 +322,12 @@ static LinkQuality* parse_lq(char* value, bool nested) {
 }
 
 static DiscoveryPeriod* parse_d_period(char* value, bool nested) {
+    
+    if(value == NULL) {
+        printf("No parameter passed");
+        exit(-1);
+    }
+    
     DiscoveryPeriod* d_period = NULL;
 
     char* name = NULL;
@@ -361,6 +373,11 @@ static DiscoveryPeriod* parse_d_period(char* value, bool nested) {
 }
 
 static DiscoveryContext* parse_d_context(char* value, bool nested) {
+    
+    if(value == NULL) {
+        printf("No parameter passed");
+        exit(-1);
+    }
 
     char* name = NULL;
     char* ptr = NULL;
@@ -390,6 +407,11 @@ static DiscoveryContext* parse_d_context(char* value, bool nested) {
 }
 
 static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
+    
+    if(value == NULL) {
+        printf("No parameter passed");
+        exit(-1);
+    }
 
     char* name = NULL;
     char* ptr = NULL;
@@ -731,6 +753,11 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
 }
 
 static PiggybackFilter* parse_piggyback_filter(char* value, bool nested) {
+    
+    if(value == NULL) {
+        printf("No parameter passed");
+        exit(-1);
+    }
 
     char* name = NULL;
     char* ptr = NULL;
@@ -774,6 +801,11 @@ static PiggybackFilter* parse_piggyback_filter(char* value, bool nested) {
 }
 
 static PeriodicType parse_periodic_type(char* token) {
+    if(value == NULL) {
+        printf("No parameter passed");
+        exit(-1);
+    }
+    
     char* name = NULL;
 
     if( strcmp(token, (name = "NO_PERIODIC")) == 0 ) {
