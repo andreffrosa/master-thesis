@@ -18,15 +18,15 @@
 
 #include "utility/my_misc.h"
 
-DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, DiscoveryPeriod* d_period, LinkQuality* lq_metric, DiscoveryMessage* d_message) {
-    assert(d_pattern && d_period && lq_metric && d_message);
+DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, DiscoveryPeriod* d_period, LinkQuality* lq_metric, DiscoveryContext* d_context) {
+    assert(d_pattern && d_period && lq_metric && d_context);
 
     DiscoveryAlgorithm* alg = (DiscoveryAlgorithm*)malloc(sizeof(DiscoveryAlgorithm));
 
     alg->d_pattern = d_pattern;
     alg->d_period = d_period;
     alg->lq_metric = lq_metric;
-    alg->d_message = d_message;
+    alg->d_context = d_context;
 
 	return alg;
 }
@@ -36,7 +36,7 @@ void destroyDiscoveryAlgorithm(DiscoveryAlgorithm* alg) {
         destroyDiscoveryPattern(alg->d_pattern);
         destroyDiscoveryPeriod(alg->d_period);
         destroyLinkQualityMetric(alg->lq_metric);
-        destroyDiscoveryMessage(alg->d_message);
+        destroyDiscoveryContext(alg->d_context);
         free(alg);
     }
 }
@@ -71,14 +71,14 @@ void DA_setLinkQuality(DiscoveryAlgorithm* alg, LinkQuality* new_lq_metric) {
     alg->lq_metric = new_lq_metric;
 }
 
-void DA_setDiscoveryMessage(DiscoveryAlgorithm* alg, DiscoveryMessage* new_d_message) {
-    assert(alg && new_d_message);
+void DA_setDiscoveryContext(DiscoveryAlgorithm* alg, DiscoveryContext* new_d_context) {
+    assert(alg && new_d_context);
 
-    if(alg->d_message) {
-        destroyDiscoveryMessage(alg->d_message);
+    if(alg->d_context) {
+        destroyDiscoveryContext(alg->d_context);
     }
 
-    alg->d_message = new_d_message;
+    alg->d_context = new_d_context;
 }
 
 PeriodicType DA_periodicHello(DiscoveryAlgorithm* alg) {
@@ -108,19 +108,9 @@ bool DA_HelloUpdateNeighbor(DiscoveryAlgorithm* alg) {
     return HELLO_updateNeighbor(DP_getHelloScheduler(alg->d_pattern));
 }
 
-bool DA_HelloNew2HopNeighbor(DiscoveryAlgorithm* alg) {
+bool DA_HelloContextUpdate(DiscoveryAlgorithm* alg) {
     assert(alg);
-    return HELLO_new2HopNeighbor(DP_getHelloScheduler(alg->d_pattern));
-}
-
-bool DA_HelloLost2HopNeighbor(DiscoveryAlgorithm* alg) {
-    assert(alg);
-    return HELLO_lost2HopNeighbor(DP_getHelloScheduler(alg->d_pattern));
-}
-
-bool DA_HelloUpdate2HopNeighbor(DiscoveryAlgorithm* alg) {
-    assert(alg);
-    return HELLO_update2HopNeighbor(DP_getHelloScheduler(alg->d_pattern));
+    return HELLO_updateContext(DP_getHelloScheduler(alg->d_pattern));
 }
 
 HelloSchedulerType DA_getHelloType(DiscoveryAlgorithm* alg) {
@@ -160,19 +150,9 @@ bool DA_HackUpdateNeighbor(DiscoveryAlgorithm* alg) {
     return HACK_updateNeighbor(DP_getHackScheduler(alg->d_pattern));
 }
 
-bool DA_HackNew2HopNeighbor(DiscoveryAlgorithm* alg) {
+bool DA_HackContextUpdate(DiscoveryAlgorithm* alg) {
     assert(alg);
-    return HACK_new2HopNeighbor(DP_getHackScheduler(alg->d_pattern));
-}
-
-bool DA_HackLost2HopNeighbor(DiscoveryAlgorithm* alg) {
-    assert(alg);
-    return HACK_lost2HopNeighbor(DP_getHackScheduler(alg->d_pattern));
-}
-
-bool DA_HackUpdate2HopNeighbor(DiscoveryAlgorithm* alg) {
-    assert(alg);
-    return HACK_update2HopNeighbor(DP_getHackScheduler(alg->d_pattern));
+    return HACK_updateContext(DP_getHackScheduler(alg->d_pattern));
 }
 
 HelloSchedulerType DA_getHackType(DiscoveryAlgorithm* alg) {
@@ -255,28 +235,34 @@ void DA_destroyLinkQualityAttributes(DiscoveryAlgorithm* alg, void* lq_attrs) {
     LQ_destroyAttrs(alg->lq_metric, lq_attrs);
 }
 
-void DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+void DA_createMessage(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(alg != NULL);
 
-    DM_create(alg->d_message, myID, current_time, neighbors, event_type, event_args, hello, hacks, n_hacks, buffer, size);
+    DC_create(alg->d_context, myID, neighbors, event_type, event_args, current_time, hello, hacks, n_hacks, buffer, size);
 }
 
-bool DA_processDiscoveryMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {
+bool DA_processMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {
     assert(alg != NULL);
 
-    return DM_process(alg->d_message, f_state, myID, current_time, neighbors, piggybacked, mac_addr, buffer, size, msg_summary);
+    return DC_process(alg->d_context, f_state, myID, neighbors, current_time, piggybacked, mac_addr, buffer, size, msg_summary);
 }
 
-void* DA_createMessageAttributes(DiscoveryAlgorithm* alg) {
+bool DA_updateContext(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
     assert(alg != NULL);
 
-    return DM_createAttrs(alg->d_message);
+    return DC_update(alg->d_context, myID, neighbor, neighbors, current_time, summary);
 }
 
-void DA_destroyMessageAttributes(DiscoveryAlgorithm* alg, void* msg_attributes) {
+void* DA_createContextAttributes(DiscoveryAlgorithm* alg) {
     assert(alg != NULL);
 
-    DM_destroyAttrs(alg->d_message, msg_attributes);
+    return DC_createAttrs(alg->d_context);
+}
+
+void DA_destroyContextAttributes(DiscoveryAlgorithm* alg, void* context_attributes) {
+    assert(alg != NULL);
+
+    DC_destroyAttrs(alg->d_context, context_attributes);
 }
 
 

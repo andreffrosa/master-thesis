@@ -213,7 +213,7 @@ void DF_processMessage(discovery_framework_state* state, byte* data, unsigned sh
 
     MessageSummary* msg_summary = newMessageSummary();
 
-    bool neighbor_change = DA_processDiscoveryMessage(state->args->algorithm, state, state->myID, &state->current_time, state->neighbors, piggybacked, mac_addr, data, size, msg_summary);
+    bool neighbor_change = DA_processMessage(state->args->algorithm, state, state->myID, state->neighbors, &state->current_time, piggybacked, mac_addr, data, size, msg_summary);
 
     assert(msg_summary->hello_summary || msg_summary->hack_summaries->size > 0);
 
@@ -703,19 +703,35 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
 
     if( !summary->removed ) {
 
+        bool changed = false;
+        bool schedule = false;
+
         if( summary->lost_neighbor ) {
             DF_notifyLostNeighbor(state, neigh);
 
-            scheduleNeighborChange(state, NULL, NULL, summary, false);
+            changed = true;
+            schedule = true;
 
             DE_registerLostNeighbor(state->environment, &state->current_time);
         } else {
             if( summary->updated_neighbor || summary->lost_2hop_neighbor ) {
                 DF_notifyUpdateNeighbor(state, neigh);
 
+                changed = true;
+
                 if( summary->lost_bi || summary->updated_quality_threshold || summary->lost_2hop_neighbor ) {
-                    scheduleNeighborChange(state, NULL, NULL, summary, false);
+                    schedule = true;
                 }
+            }
+        }
+
+        if( changed ) {
+            bool updated_context = DA_updateContext(state->args->algorithm, state->myID, neigh, state->neighbors, &state->current_time, summary);
+
+            schedule |= (updated_context && ( DA_HelloContextUpdate(state->args->algorithm) || DA_HackContextUpdate(state->args->algorithm) ));
+
+            if( schedule ) {
+                scheduleNeighborChange(state, NULL, NULL, summary, updated_context);
             }
         }
 
@@ -882,7 +898,7 @@ void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
 
     DA_destroyLinkQualityAttributes(state->args->algorithm, lq_attrs);
 
-    DA_destroyMessageAttributes(state->args->algorithm, msg_attrs);
+    DA_destroyContextAttributes(state->args->algorithm, msg_attrs);
 }
 
 void scheduleReply(discovery_framework_state* state, HelloMessage* hello, HelloDeliverSummary* summary) {
@@ -940,7 +956,7 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
     memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
 }
 
-void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummary* hello_summary, HackDeliverSummary* hack_summary, NeighborTimerSummary* neighbor_timer_summary, bool other) {
+void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummary* hello_summary, HackDeliverSummary* hack_summary, NeighborTimerSummary* neighbor_timer_summary, bool context_updates) {
 
     NeighborChangeSummary summary;
     memset(&summary, 0, sizeof(summary));
@@ -986,38 +1002,30 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
     }
 
     //if( other ) {
-        summary.other = other;
+        summary.context_updates = context_updates;
     //}
 
     DiscoveryAlgorithm* alg = state->args->algorithm;
 
     // New schedule
-    if( !state->neighbor_change_timer_active ) {
-        bool other = summary.other;
+    if( !state->neighbor_change_timer_active ) { 
+        bool context_updates = summary.context_updates;
 
         bool new_neighbor = summary.new_neighbor;
         bool lost_neighbor = summary.lost_neighbor;
         bool updated_neighbor = summary.updated_neighbor;
 
-        bool new_2hop_neighbor = summary.added_2hop_neighbor;
-        bool lost_2hop_neighbor = summary.lost_2hop_neighbor;
-        bool updated_2hop_neighbor = summary.updated_2hop_neighbor;
-
-        bool send_hello = other || \
+        bool send_hello = \
         (DA_HelloNewNeighbor(alg) && new_neighbor) || \
         (DA_HelloLostNeighbor(alg)  && lost_neighbor) || \
         (DA_HelloUpdateNeighbor(alg) && updated_neighbor) || \
-        (DA_HelloNew2HopNeighbor(alg) && new_2hop_neighbor) || \
-        (DA_HelloLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
-        (DA_HelloUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
+        (DA_HelloContextUpdate(alg) && context_updates);
 
-        bool send_hack = other || \
+        bool send_hack =  \
         (DA_HackNewNeighbor(alg) && new_neighbor) || \
         (DA_HackLostNeighbor(alg)  && lost_neighbor) || \
         (DA_HackUpdateNeighbor(alg) && updated_neighbor) || \
-        (DA_HackNew2HopNeighbor(alg) && new_2hop_neighbor) || \
-        (DA_HackLost2HopNeighbor(alg)  && lost_2hop_neighbor) || \
-        (DA_HackUpdate2HopNeighbor(alg) && updated_2hop_neighbor);
+        (DA_HackContextUpdate(alg) && context_updates);
 
         if( send_hello || send_hack ) {
 
@@ -1067,7 +1075,7 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
         s->updated_2hop_neighbor |= summary.updated_2hop_neighbor;
         s->added_2hop_neighbor |= summary.added_2hop_neighbor;
         s->lost_2hop_neighbor |= summary.lost_2hop_neighbor;
-        s->other |= summary.other;
+        s->context_updates |= summary.context_updates;
         s->removed |= summary.removed;
         s->rebooted |= summary.rebooted;
         s->lost_bi |= summary.lost_bi;
@@ -1275,7 +1283,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
         NE_setLinkQualityAttributes(neigh, DA_createLinkQualityAttributes(state->args->algorithm));
 
-        NE_setMessageAttributes(neigh, DA_createMessageAttributes(state->args->algorithm));
+        NE_setContextAttributes(neigh, DA_createContextAttributes(state->args->algorithm));
 
         NT_addNeighbor(state->neighbors, neigh);
 
@@ -2273,7 +2281,7 @@ void DF_createMessage(discovery_framework_state* state, HelloMessage* hello, Hac
 
     bool send = false;
     if( hello || hacks ) {
-        DA_createDiscoveryMessage(state->args->algorithm, state->myID, &state->current_time, state->neighbors, event_type, event_args, hello, hacks, n_hacks, buffer + sizeof(buffer_size), &buffer_size);
+        DA_createMessage(state->args->algorithm, state->myID, state->neighbors, event_type, event_args, &state->current_time, hello, hacks, n_hacks, buffer + sizeof(buffer_size), &buffer_size);
 
         memcpy(buffer, &buffer_size, sizeof(buffer_size));
 

@@ -15,11 +15,11 @@
 
 #include <assert.h>
 
-HackScheduler* newHackScheduler(HackSchedulerType hack_type, PiggybackFilter* piggyback_filter, PeriodicType periodic_type, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+HackScheduler* newHackScheduler(HackSchedulerType hack_type, PiggybackFilter* piggyback_filter, PeriodicType periodic_type, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates) {
 
     HackScheduler* hack_sh = malloc(sizeof(HackScheduler));
 
-    HACK_update(hack_sh, hack_type, piggyback_filter, periodic_type, reply_to_hellos, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
+    HACK_update(hack_sh, hack_type, piggyback_filter, periodic_type, reply_to_hellos, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates);
 
     return hack_sh;
 }
@@ -30,31 +30,31 @@ void destroyHackScheduler(HackScheduler* hack_sh) {
 }
 
 HackScheduler* NoHACK() {
-    return newHackScheduler(NO_HACK, NoPiggyback(), NO_PERIODIC, NO_HACK_REPLY, false, false, false, false, false, false);
+    return newHackScheduler(NO_HACK, NoPiggyback(), NO_PERIODIC, NO_HACK_REPLY, false, false, false, false);
 }
 
 HackScheduler* PiggybackHACK(PiggybackFilter* piggyback_filter) {
-    return newHackScheduler(PIGGYBACK_HACK, piggyback_filter, NO_PERIODIC, NO_HACK_REPLY, false, false, false, false, false, false);
+    return newHackScheduler(PIGGYBACK_HACK, piggyback_filter, NO_PERIODIC, NO_HACK_REPLY, false, false, false, false);
 }
 
-HackScheduler* PeriodicHACK(PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+HackScheduler* PeriodicHACK(PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates) {
 
-    return newHackScheduler(PERIODIC_HACK, NoPiggyback(), periodic_type, NO_HACK_REPLY, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
+    return newHackScheduler(PERIODIC_HACK, NoPiggyback(), periodic_type, NO_HACK_REPLY, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates);
 }
 
-HackScheduler* HybridHACK(PiggybackFilter* piggyback_filter, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
-    return newHackScheduler(HYBRID_HACK, piggyback_filter, RESET_PERIODIC, NO_HACK_REPLY, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
+HackScheduler* HybridHACK(PiggybackFilter* piggyback_filter, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates) {
+    return newHackScheduler(HYBRID_HACK, piggyback_filter, RESET_PERIODIC, NO_HACK_REPLY, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates);
 }
 
 HackScheduler* ReplyHACK(HackReplyType reply_to_hellos) {
-    return newHackScheduler(REPLY_HACK, NoPiggyback(), NO_PERIODIC, reply_to_hellos, false, false, false, false, false, false);
+    return newHackScheduler(REPLY_HACK, NoPiggyback(), NO_PERIODIC, reply_to_hellos, false, false, false, false);
 }
 
-static bool HackRepresentationInvariant(HackScheduler* hack_sh, HackSchedulerType hack_type, PiggybackFilter* piggyback_filter, PeriodicType periodic_type, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+static bool HackRepresentationInvariant(HackScheduler* hack_sh, HackSchedulerType hack_type, PiggybackFilter* piggyback_filter, PeriodicType periodic_type, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates) {
     if(hack_sh == NULL)
         return false;
 
-    bool react = react_to_new_neighbor || react_to_lost_neighbor || react_to_update_neighbor || react_to_new_2hop_neighbor || react_to_lost_2hop_neighbor || react_to_update_2hop_neighbor;
+    bool react = react_to_new_neighbor || react_to_lost_neighbor || react_to_update_neighbor || react_to_context_updates;
 
     switch( hack_type ) {
         case NO_HACK:
@@ -71,9 +71,9 @@ static bool HackRepresentationInvariant(HackScheduler* hack_sh, HackSchedulerTyp
     }
 }
 
-void HACK_update(HackScheduler* hack_sh, HackSchedulerType hack_type, PiggybackFilter* piggyback_filter, PeriodicType periodic_type, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor) {
+void HACK_update(HackScheduler* hack_sh, HackSchedulerType hack_type, PiggybackFilter* piggyback_filter, PeriodicType periodic_type, HackReplyType reply_to_hellos, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates) {
 
-    assert( HackRepresentationInvariant(hack_sh, hack_type, piggyback_filter, periodic_type, reply_to_hellos, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor) );
+    assert( HackRepresentationInvariant(hack_sh, hack_type, piggyback_filter, periodic_type, reply_to_hellos, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates) );
 
     hack_sh->type = hack_type;
     hack_sh->piggyback_filter = piggyback_filter;
@@ -82,9 +82,7 @@ void HACK_update(HackScheduler* hack_sh, HackSchedulerType hack_type, PiggybackF
     hack_sh->react_to_new_neighbor = react_to_new_neighbor;
     hack_sh->react_to_lost_neighbor = react_to_lost_neighbor;
     hack_sh->react_to_update_neighbor = react_to_update_neighbor;
-    hack_sh->react_to_new_2hop_neighbor = react_to_new_2hop_neighbor;
-    hack_sh->react_to_lost_2hop_neighbor = react_to_lost_2hop_neighbor;
-    hack_sh->react_to_update_2hop_neighbor = react_to_update_2hop_neighbor;
+    hack_sh->react_to_context_updates = react_to_context_updates;
 }
 
 PeriodicType HACK_periodicType(HackScheduler* hack_sh) {
@@ -120,19 +118,9 @@ bool HACK_updateNeighbor(HackScheduler* hack_sh) {
     return hack_sh->react_to_update_neighbor;
 }
 
-bool HACK_new2HopNeighbor(HackScheduler* hack_sh) {
+bool HACK_updateContext(HackScheduler* hack_sh) {
     assert(hack_sh);
-    return hack_sh->react_to_update_2hop_neighbor;
-}
-
-bool HACK_lost2HopNeighbor(HackScheduler* hack_sh) {
-    assert(hack_sh);
-    return hack_sh->react_to_update_2hop_neighbor;
-}
-
-bool HACK_update2HopNeighbor(HackScheduler* hack_sh) {
-    assert(hack_sh);
-    return hack_sh->react_to_update_2hop_neighbor;
+    return hack_sh->react_to_context_updates;
 }
 
 HackSchedulerType HACK_getType(HackScheduler* hack_sh) {

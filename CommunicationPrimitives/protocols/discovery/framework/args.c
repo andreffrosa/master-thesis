@@ -61,10 +61,10 @@ discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algor
 discovery_framework_args* default_discovery_framework_args() {
 
     DiscoveryAlgorithm* algorithm = newDiscoveryAlgorithm(
-        PeriodicJointDiscovery(RESET_PERIODIC, true, true, true, true, true, true),    // Discovery Pattern
+        PeriodicJointDiscovery(RESET_PERIODIC, true, true, true, true),    // Discovery Pattern
         StaticDiscoveryPeriod(5, 5),                        // Discovery Period
         EMALinkQuality(0.5, 0.7, 5, 5),                    // LinkQuality
-        SimpleDiscoveryMessage()                              // Discovery Message
+        EmptyDiscoveryContext()                              // Discovery Message
     );
 
     return new_discovery_framework_args(
@@ -98,7 +98,7 @@ discovery_framework_args* default_discovery_framework_args() {
 
 static LinkQuality* parse_lq(char* value, bool nested);
 static DiscoveryPeriod* parse_d_period(char* value, bool nested);
-static DiscoveryMessage* parse_d_message(char* value, bool nested);
+static DiscoveryContext* parse_d_context(char* value, bool nested);
 static DiscoveryPattern* parse_d_pattern(char* value, bool nested);
 static PiggybackFilter* parse_piggyback_filter(char* value, bool nested);
 static PeriodicType parse_periodic_type(char* token);
@@ -127,8 +127,8 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
             if( strcmp(key, "algorithm") == 0 ) {
                 // TODO
             } else if( strcmp(key, "d_message") == 0 ) {
-                DiscoveryMessage* new_d_mesage = parse_d_message(value, false);
-                DA_setDiscoveryMessage(args->algorithm, new_d_mesage);
+                DiscoveryContext* new_d_context = parse_d_context(value, false);
+                DA_setDiscoveryContext(args->algorithm, new_d_context);
             } else if( strcmp(key, "d_period") == 0 ) {
                 DiscoveryPeriod* new_d_period = parse_d_period(value, false);
                 DA_setDiscoveryPeriod(args->algorithm, new_d_period);
@@ -360,8 +360,7 @@ static DiscoveryPeriod* parse_d_period(char* value, bool nested) {
     return d_period;
 }
 
-static DiscoveryMessage* parse_d_message(char* value, bool nested) {
-    DiscoveryMessage* d_message = NULL;
+static DiscoveryContext* parse_d_context(char* value, bool nested) {
 
     char* name = NULL;
     char* ptr = NULL;
@@ -377,18 +376,17 @@ static DiscoveryMessage* parse_d_message(char* value, bool nested) {
         token  = value;
     }
 
-    if( strcmp(token, (name = "Simple")) == 0 || strcmp(token, (name = "SimpleDiscoveryMessage")) == 0 ) {
-        d_message = SimpleDiscoveryMessage();
-    } else if( strcmp(token, (name = "OLSR")) == 0 || strcmp(token, (name = "OLSRDiscoveryMessage")) == 0 ) {
-        d_message = OLSRDiscoveryMessage();
-    } else if( strcmp(token, (name = "LENWB")) == 0 || strcmp(token, (name = "LENWBDiscoveryMessage")) == 0 ) {
-        d_message = LENWBDiscoveryMessage();
+    if( strcmp(token, (name = "Empty")) == 0 || strcmp(token, (name = "EmptyDiscoveryContext")) == 0 ) {
+        return EmptyDiscoveryContext();
+    } else if( strcmp(token, (name = "OLSR")) == 0 || strcmp(token, (name = "OLSRDiscoveryContext")) == 0 ) {
+        return OLSRDiscoveryContext();
+    } else if( strcmp(token, (name = "LENWB")) == 0 || strcmp(token, (name = "LENWBDiscoveryContext")) == 0 ) {
+        return LENWBDiscoveryContext();
     } else {
-        printf("Unrecognized DiscoveryMessage! \n");
+        printf("Unrecognized DiscoveryContext! \n");
         exit(-1);
     }
 
-    return d_message;
 }
 
 static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
@@ -474,33 +472,17 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
 
                 token = strtok_r(NULL, " ", &ptr);
                 if(token != NULL) {
-                    bool react_to_lost_neighbor = parse_bool(token);
+                    bool react_to_update_neighbor = parse_bool(token);
 
                     token = strtok_r(NULL, " ", &ptr);
                     if(token != NULL) {
-                        bool react_to_update_neighbor = parse_bool(token);
+                        bool react_to_lost_neighbor = parse_bool(token);
 
                         token = strtok_r(NULL, " ", &ptr);
                         if(token != NULL) {
-                            bool react_to_new_2hop_neighbor = parse_bool(token);
+                            bool react_to_context_updates = parse_bool(token);
 
-                            token = strtok_r(NULL, " ", &ptr);
-                            if(token != NULL) {
-                                bool react_to_lost_2hop_neighbor = parse_bool(token);
-
-                                token = strtok_r(NULL, " ", &ptr);
-                                if(token != NULL) {
-                                    bool react_to_update_2hop_neighbor = parse_bool(token);
-
-                                    return PeriodicJointDiscovery(periodic_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
-                                } else {
-                                    printf("Parameter 7 of %s not passed!\n", name);
-                                    exit(-1);
-                                }
-                            } else {
-                                printf("Parameter 6 of %s not passed!\n", name);
-                                exit(-1);
-                            }
+                            return PeriodicJointDiscovery(periodic_type, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates);
                         } else {
                             printf("Parameter 5 of %s not passed!\n", name);
                             exit(-1);
@@ -532,33 +514,17 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
 
                 token = strtok_r(NULL, " ", &ptr);
                 if(token != NULL) {
-                    bool react_to_lost_neighbor = parse_bool(token);
+                    bool react_to_update_neighbor = parse_bool(token);
 
                     token = strtok_r(NULL, " ", &ptr);
                     if(token != NULL) {
-                        bool react_to_update_neighbor = parse_bool(token);
+                        bool react_to_lost_neighbor = parse_bool(token);
 
                         token = strtok_r(NULL, " ", &ptr);
                         if(token != NULL) {
-                            bool react_to_new_2hop_neighbor = parse_bool(token);
+                            bool react_to_context_updates = parse_bool(token);
 
-                            token = strtok_r(NULL, " ", &ptr);
-                            if(token != NULL) {
-                                bool react_to_lost_2hop_neighbor = parse_bool(token);
-
-                                token = strtok_r(NULL, " ", &ptr);
-                                if(token != NULL) {
-                                    bool react_to_update_2hop_neighbor = parse_bool(token);
-
-                                    return PeriodicDisjointDiscovery(periodic_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
-                                } else {
-                                    printf("Parameter 7 of %s not passed!\n", name);
-                                    exit(-1);
-                                }
-                            } else {
-                                printf("Parameter 6 of %s not passed!\n", name);
-                                exit(-1);
-                            }
+                            return PeriodicDisjointDiscovery(periodic_type, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates);
                         } else {
                             printf("Parameter 5 of %s not passed!\n", name);
                             exit(-1);
@@ -594,33 +560,18 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
 
                     token = strtok_r(NULL, " ", &ptr);
                     if(token != NULL) {
-                        bool react_to_lost_neighbor = parse_bool(token);
+                        bool react_to_update_neighbor = parse_bool(token);
 
                         token = strtok_r(NULL, " ", &ptr);
                         if(token != NULL) {
-                            bool react_to_update_neighbor = parse_bool(token);
+                            bool react_to_lost_neighbor = parse_bool(token);
 
                             token = strtok_r(NULL, " ", &ptr);
                             if(token != NULL) {
-                                bool react_to_new_2hop_neighbor = parse_bool(token);
+                                bool react_to_context_updates = parse_bool(token);
 
-                                token = strtok_r(NULL, " ", &ptr);
-                                if(token != NULL) {
-                                    bool react_to_lost_2hop_neighbor = parse_bool(token);
+                                return HybridDisjointDiscovery(hello_piggyback_filter, hack_piggyback_filter, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates);
 
-                                    token = strtok_r(NULL, " ", &ptr);
-                                    if(token != NULL) {
-                                        bool react_to_update_2hop_neighbor = parse_bool(token);
-
-                                        return HybridDisjointDiscovery(hello_piggyback_filter, hack_piggyback_filter, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
-                                    } else {
-                                        printf("Parameter 8 of %s not passed!\n", name);
-                                        exit(-1);
-                                    }
-                                } else {
-                                    printf("Parameter 7 of %s not passed!\n", name);
-                                    exit(-1);
-                                }
                             } else {
                                 printf("Parameter 6 of %s not passed!\n", name);
                                 exit(-1);
@@ -660,33 +611,17 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
 
                     token = strtok_r(NULL, " ", &ptr);
                     if(token != NULL) {
-                        bool react_to_lost_neighbor = parse_bool(token);
+                        bool react_to_update_neighbor = parse_bool(token);
 
                         token = strtok_r(NULL, " ", &ptr);
                         if(token != NULL) {
-                            bool react_to_update_neighbor = parse_bool(token);
+                            bool react_to_lost_neighbor = parse_bool(token);
 
                             token = strtok_r(NULL, " ", &ptr);
                             if(token != NULL) {
-                                bool react_to_new_2hop_neighbor = parse_bool(token);
+                                bool react_to_context_updates = parse_bool(token);
 
-                                token = strtok_r(NULL, " ", &ptr);
-                                if(token != NULL) {
-                                    bool react_to_lost_2hop_neighbor = parse_bool(token);
-
-                                    token = strtok_r(NULL, " ", &ptr);
-                                    if(token != NULL) {
-                                        bool react_to_update_2hop_neighbor = parse_bool(token);
-
-                                        return HybridHelloPeriodicHackDiscovery(hello_piggyback_filter, hack_periodic_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
-                                    } else {
-                                        printf("Parameter 8 of %s not passed!\n", name);
-                                        exit(-1);
-                                    }
-                                } else {
-                                    printf("Parameter 7 of %s not passed!\n", name);
-                                    exit(-1);
-                                }
+                                return HybridHelloPeriodicHackDiscovery(hello_piggyback_filter, hack_periodic_type, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates);
                             } else {
                                 printf("Parameter 6 of %s not passed!\n", name);
                                 exit(-1);
@@ -726,33 +661,17 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
 
                     token = strtok_r(NULL, " ", &ptr);
                     if(token != NULL) {
-                        bool react_to_lost_neighbor = parse_bool(token);
+                        bool react_to_update_neighbor = parse_bool(token);
 
                         token = strtok_r(NULL, " ", &ptr);
                         if(token != NULL) {
-                            bool react_to_update_neighbor = parse_bool(token);
+                            bool react_to_lost_neighbor = parse_bool(token);
 
                             token = strtok_r(NULL, " ", &ptr);
                             if(token != NULL) {
-                                bool react_to_new_2hop_neighbor = parse_bool(token);
+                                bool react_to_context_updates = parse_bool(token);
 
-                                token = strtok_r(NULL, " ", &ptr);
-                                if(token != NULL) {
-                                    bool react_to_lost_2hop_neighbor = parse_bool(token);
-
-                                    token = strtok_r(NULL, " ", &ptr);
-                                    if(token != NULL) {
-                                        bool react_to_update_2hop_neighbor = parse_bool(token);
-
-                                        return PeriodicHelloHybridHackDiscovery(hack_piggyback_filter, hello_periodic_type, react_to_new_neighbor, react_to_lost_neighbor, react_to_update_neighbor, react_to_new_2hop_neighbor, react_to_lost_2hop_neighbor, react_to_update_2hop_neighbor);
-                                    } else {
-                                        printf("Parameter 8 of %s not passed!\n", name);
-                                        exit(-1);
-                                    }
-                                } else {
-                                    printf("Parameter 7 of %s not passed!\n", name);
-                                    exit(-1);
-                                }
+                                return PeriodicHelloHybridHackDiscovery(hack_piggyback_filter, hello_periodic_type, react_to_new_neighbor, react_to_update_neighbor, react_to_lost_neighbor, react_to_context_updates);
                             } else {
                                 printf("Parameter 6 of %s not passed!\n", name);
                                 exit(-1);
@@ -805,7 +724,7 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
             exit(-1);
         }
     } else {
-        printf("Unrecognized DiscoveryMessage! \n");
+        printf("Unrecognized DiscoveryContext! \n");
         exit(-1);
     }
 

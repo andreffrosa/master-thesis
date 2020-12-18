@@ -96,7 +96,7 @@ typedef struct NeighborChangeSummary_ {
 
     //unsigned int deleted_2hop;
 
-    bool other;
+    bool context_updates;
 
     bool removed;
     bool rebooted;

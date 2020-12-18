@@ -110,9 +110,9 @@ double NE_getOutTraffic(NeighborEntry* neigh);
 
 void NE_setOutTraffic(NeighborEntry* neigh, double traffic);
 
-void* NE_getMessageAttributes(NeighborEntry* neigh);
+void* NE_getContextAttributes(NeighborEntry* neigh);
 
-void* NE_setMessageAttributes(NeighborEntry* neigh, void* msg_attributes);
+void* NE_setContextAttributes(NeighborEntry* neigh, void* context_attributes);
 
 NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator);
 

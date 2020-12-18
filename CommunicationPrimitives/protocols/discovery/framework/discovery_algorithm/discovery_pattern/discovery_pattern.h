@@ -60,55 +60,59 @@ DiscoveryPattern* PeriodicHelloDiscovery(PeriodicType periodic_type, bool react_
  * Hellos are periodically (1-hop) broadcasted. If there are hacks, they are
  * piggybacked on the hellos.
  * @Param periodic_type : specifies if the hello timer shoul be reset on each early hello or not
- * @Param react_to_new_neighbor : specifies if an hello should be sent when a
+ * @Param react_to_new_neighbor : specifies if an hello and hacks should be sent when a
  * new neighbor is found.
- * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
- * new neighbor is found.
- * @Param react_to_update_neighbor : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello and hacks should be sent when
  * there is any change in some neighbor.
+ * @Param react_to_lost_neighbor : specifies if an hello and hacks should be sent when a
+ * new neighbor is found.
+ * @Param react_to_context_updates : specifies if an hello and hacks should be sent when there are context updates.
  */
-DiscoveryPattern* PeriodicJointDiscovery(PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* PeriodicJointDiscovery(PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
 /*
  * Both Hellos and Hacks are periodically (1-hop) broadcasted, however, in
  separate messages, usually with different periodicity.
  * @Param periodic_type : specifies if the hello and hack timers should be reset on each early hello or hack, respectively, or not
- * @Param react_to_new_neighbor : specifies if an hello should be sent when a
+ * @Param react_to_new_neighbor : specifies if an hello and hacks should be sent when a
  * new neighbor is found.
- * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
- * new neighbor is found.
- * @Param react_to_update_neighbor : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello and hacks should be sent when
  * there is any change in some neighbor.
+ * @Param react_to_lost_neighbor : specifies if an hello and hacks should be sent when a
+ * new neighbor is found.
+ * @Param react_to_context_updates : specifies if an hello and hacks should be sent when there are context updates.
  */
-DiscoveryPattern* PeriodicDisjointDiscovery(PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* PeriodicDisjointDiscovery(PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
 /*
  * Hellos are piggybacked on regular traffic and are (1-hop) broadcasted if no
  * traffic was sent for some period. Hacks are only periodically (1-hop) broadcasted (with different periodicity than hellos)
  * @Param hack_periodic_type : specifies if the hack timer should be reset on each early hack or not
  * @Param hello_piggyback_filter : hello piggyback type.
- * @Param react_to_new_neighbor : specifies if an hello should be sent when a
+ * @Param react_to_new_neighbor : specifies if an hello and hacks should be sent when a
  * new neighbor is found.
- * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
- * new neighbor is found.
- * @Param react_to_update_neighbor : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello and hacks should be sent when
  * there is any change in some neighbor.
+ * @Param react_to_lost_neighbor : specifies if an hello and hacks should be sent when a
+ * new neighbor is found.
+ * @Param react_to_context_updates : specifies if an hello and hacks should be sent when there are context updates.
  */
-DiscoveryPattern* HybridHelloPeriodicHackDiscovery(PiggybackFilter* hello_piggyback_filter, PeriodicType hack_periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* HybridHelloPeriodicHackDiscovery(PiggybackFilter* hello_piggyback_filter, PeriodicType hack_periodic_type, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
 /*
  * Hellos are periodically (1-hop) broadcasted. are piggybacked on regular traffic and are (1-hop) broadcasted if no
  * traffic was sent for some period.
  * @Param hello_periodic_type : specifies if the hello timer should be reset on each early hello or not
  * @Param hack_piggyback_filter : hack piggyback type.
- * @Param react_to_new_neighbor : specifies if an hello should be sent when a
+ * @Param react_to_new_neighbor : specifies if an hello and hacks should be sent when a
  * new neighbor is found.
- * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
- * new neighbor is found.
- * @Param react_to_update_neighbor : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello and hacks should be sent when
  * there is any change in some neighbor.
+ * @Param react_to_lost_neighbor : specifies if an hello and hacks should be sent when a
+ * new neighbor is found.
+ * @Param react_to_context_updates : specifies if an hello and hacks should be sent when there are context updates.
  */
-DiscoveryPattern* PeriodicHelloHybridHackDiscovery(PiggybackFilter* hack_piggyback_filter, PeriodicType hello_periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* PeriodicHelloHybridHackDiscovery(PiggybackFilter* hack_piggyback_filter, PeriodicType hello_periodic_type, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
 /*
  * Hellos are piggybacked on regular traffic and are (1-hop) broadcasted if no
@@ -120,14 +124,15 @@ DiscoveryPattern* PeriodicHelloHybridHackDiscovery(PiggybackFilter* hack_piggyba
  * Hellos (with piggybacked Hacks) when there is not traffic.
  * @Param hello_piggyback_filter : hello piggyback type.
  * @Param hack_piggyback_filter : hack piggyback type.
- * @Param react_to_new_neighbor : specifies if an hello should be sent when a
+ * @Param react_to_new_neighbor : specifies if an hello and hacks should be sent when a
  * new neighbor is found.
- * @Param react_to_lost_neighbor : specifies if an hello should be sent when a
- * new neighbor is found.
- * @Param react_to_update_neighbor : specifies if an hello should be sent when
+ * @Param react_to_update_neighbor : specifies if an hello and hacks should be sent when
  * there is any change in some neighbor.
+ * @Param react_to_lost_neighbor : specifies if an hello and hacks should be sent when a
+ * new neighbor is found.
+ * @Param react_to_context_updates : specifies if an hello and hacks should be sent when there are context updates.
  */
-DiscoveryPattern* HybridDisjointDiscovery(PiggybackFilter* hello_piggyback_filter, PiggybackFilter* hack_piggyback_filter, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+DiscoveryPattern* HybridDisjointDiscovery(PiggybackFilter* hello_piggyback_filter, PiggybackFilter* hack_piggyback_filter, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
 /*
  * Hellos are periodically (1-hop) broadcasted. Hacks are explicitly immediatly

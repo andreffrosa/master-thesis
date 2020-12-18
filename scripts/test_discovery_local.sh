@@ -24,8 +24,8 @@ TESTS=(
 #"discovery/EchoDiscovery1"
 #"discovery/EchoDiscovery2"
 #"discovery/EchoDiscovery3"
-#"discovery/OLSRDiscovery"
-"discovery/LENWBDiscovery"
+"discovery/OLSRDiscovery"
+#"discovery/LENWBDiscovery"
 )
 
 i=1

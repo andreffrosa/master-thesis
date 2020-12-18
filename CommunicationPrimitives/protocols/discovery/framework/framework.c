@@ -159,7 +159,7 @@ static bool processMessage(discovery_framework_state* f_state, YggMessage* msg) 
         byte buffer[sizeof(piggyback_size) + piggyback_size];
         popPayload(msg, (char*)buffer, sizeof(piggyback_size) + piggyback_size);
 
-        assert( piggyback_size == *((unsigned char*)buffer) );
+        assert( piggyback_size == *((unsigned short*)buffer) );
 
         // Has discovery message
         if( piggyback_size > 0 ) {
