@@ -67,6 +67,9 @@ graph* graph_init_complete(key_comparator compare, delete_node del_node, delete_
 }
 
 void* graph_insert_node(graph* g, void* key, void* value) {
+    assert(g);
+    assert(key);
+
 	void* result = NULL;
 
     graph_node* node = graph_find_node(g, key);
@@ -91,6 +94,8 @@ void* graph_insert_node(graph* g, void* key, void* value) {
 }
 
 void* graph_insert_edge(graph* g, void* start, void* end, void* label) {
+    assert(g);
+    assert(start && end && start != end);
 
     graph_node* node1 = graph_find_node(g, start);
     graph_node* node2 = graph_find_node(g, end);
@@ -122,12 +127,18 @@ void* graph_insert_edge(graph* g, void* start, void* end, void* label) {
 }
 
 graph_node* graph_find_node(graph* g, void* key) {
+    assert(g);
+    assert(key);
+
     pair aux = (pair){key, g->key_cmp};
     graph_node* node = (graph_node*)list_find_item(g->nodes, &equal_nodes, &aux);
     return node;
 }
 
 graph_edge* graph_find_edge(graph* g, void* start, void* end) {
+    assert(g);
+    assert(start && end && start != end);
+
     pair aux1 = (pair){start, end};
     pair aux2 = (pair){&aux1, g->key_cmp};
     graph_edge* edge = (graph_edge*)list_find_item(g->edges, &equal_edges, &aux2);
@@ -135,26 +146,40 @@ graph_edge* graph_find_edge(graph* g, void* start, void* end) {
 }
 
 void* graph_find_value(graph* g, void* key) {
+    assert(g);
+    assert(key);
+
     graph_node* node = graph_find_node(g, key);
     return node ? node->value : NULL;
 }
 
 int graph_get_node_in_degree(graph* g, void* key) {
+    assert(g);
+    assert(key);
+
     graph_node* node = graph_find_node(g, key);
     return node ? node->in_adjacencies->size : -1;
 }
 
 int graph_get_node_out_degree(graph* g, void* key) {
+    assert(g);
+    assert(key);
+
     graph_node* node = graph_find_node(g, key);
     return node ? node->out_adjacencies->size : -1;
 }
 
 void* graph_find_label(graph* g, void* start, void* end) {
+    assert(g);
+    assert(start && end && start != end);
+
     graph_edge* edge = graph_find_edge(g, start, end);
     return edge ? edge->label : NULL;
 }
 
 void* graph_remove_edge(graph* g, void* start, void* end) {
+    assert(g);
+    assert(start && end && start != end);
 
     pair aux1 = (pair){start, end};
     pair aux2 = (pair){&aux1, g->key_cmp};
@@ -174,6 +199,9 @@ void* graph_remove_edge(graph* g, void* start, void* end) {
 }
 
 void* graph_remove_node(graph* g, void* key) {
+    assert(g);
+    assert(key);
+
     pair aux = (pair){key, g->key_cmp};
     graph_node* node = (graph_node*)list_remove_item(g->nodes, &equal_nodes, &aux);
 
@@ -209,6 +237,7 @@ void* graph_remove_node(graph* g, void* key) {
 }
 
 void graph_delete_node(graph_node* node, delete_node del_node) {
+    assert(node);
     assert(node->key != NULL);
 
     if(node->key == node->value) {
@@ -231,6 +260,9 @@ void graph_delete_node(graph_node* node, delete_node del_node) {
 }
 
 void graph_delete_edge(graph_edge* edge, delete_edge del_edge) {
+    assert(edge);
+    assert(edge->start_node && edge->end_node);
+
     if(edge->label != NULL) {
         if(del_edge != NULL)
             del_edge(edge->label);
@@ -263,6 +295,8 @@ void graph_delete(graph* g) {
 }
 
 list* graph_get_adjacencies(graph* g, void* key, AdjacencyType adj_type) {
+    assert(g);
+    assert(key);
 
     graph_node* node = graph_find_node(g, key);
 
@@ -296,6 +330,7 @@ static void* append_cmp(void* v, unsigned int argc, void** argv) {
 }
 
 list* graph_get_adjacencies_from_node(graph* g, graph_node* node, AdjacencyType adj_type) {
+    assert(g);
 
     if(node == NULL)
         return NULL;
@@ -339,6 +374,7 @@ list* graph_get_adjacencies_from_node(graph* g, graph_node* node, AdjacencyType 
 }
 
 graph* graph_clone(graph* g) {
+    assert(g);
 
     graph* cl = graph_init_complete(g->key_cmp, g->del_node, g->del_edge, g->key_size, g->value_size, g->label_size);
 

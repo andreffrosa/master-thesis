@@ -11,11 +11,11 @@
  * (C) 2020
  *********************************************************/
 
-#include "discovery_message_private.h"
+#include "discovery_context_private.h"
 
 #include <assert.h>
 
-static bool SDM_createMessage(ModuleState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
+static void EDC_createMessage(ModuleState* state, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     byte* ptr = buffer;
 
     // Serialize Hello
@@ -50,10 +50,9 @@ static bool SDM_createMessage(ModuleState* state, unsigned char* myID, struct ti
         *size += 1;
     }
 
-    return true;
 }
 
-static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size) {
+static bool EDC_processMessage(ModuleState* state, void* f_state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {
 
     byte* ptr = buffer;
 
@@ -66,7 +65,7 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
         memcpy(&hello, ptr, sizeof(HelloMessage));
         ptr += sizeof(HelloMessage);
 
-        HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr);
+        HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr, msg_summary);
         free(summary);
     }
 
@@ -81,7 +80,7 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
             memcpy(&hacks[i], ptr, sizeof(HackMessage));
             ptr += sizeof(HackMessage);
 
-            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i]);
+            HackDeliverSummary* summary = deliverHack(f_state, &hacks[i], msg_summary);
             free(summary);
         }
     }
@@ -90,11 +89,11 @@ static bool SDM_processMessage(ModuleState* state, void* f_state, unsigned char*
 }
 
 /*
-static void SDM_destructor(ModuleState* state) {
+static void EDC_destructor(ModuleState* state) {
     // TODO
 }
 */
 
-DiscoveryMessage* SimpleDiscoveryMessage() {
-    return newDiscoveryMessage(NULL, NULL, &SDM_createMessage, &SDM_processMessage, NULL, NULL, NULL);
+DiscoveryContext* EmptyDiscoveryContext() {
+    return newDiscoveryContext(NULL, NULL, &EDC_createMessage, &EDC_processMessage, NULL, NULL, NULL, NULL);
 }

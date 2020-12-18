@@ -113,12 +113,12 @@ static bool processTimer(discovery_framework_state* f_state, YggTimer* timer) {
 
     // HELLO Timer
     if( timer->timer_type == HELLO_TIMER ) {
-        DF_uponHelloTimer(f_state, true, false);
+        DF_uponHelloTimer(f_state);
         return true;
     }
     // HACK Timer
     else if( timer->timer_type == HACK_TIMER ) {
-        DF_uponHackTimer(f_state, true);
+        DF_uponHackTimer(f_state);
         return true;
     }
     // Reply Timer
@@ -159,7 +159,7 @@ static bool processMessage(discovery_framework_state* f_state, YggMessage* msg) 
         byte buffer[sizeof(piggyback_size) + piggyback_size];
         popPayload(msg, (char*)buffer, sizeof(piggyback_size) + piggyback_size);
 
-        assert( piggyback_size == *((unsigned char*)buffer) );
+        assert( piggyback_size == *((unsigned short*)buffer) );
 
         // Has discovery message
         if( piggyback_size > 0 ) {

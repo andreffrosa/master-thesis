@@ -77,7 +77,7 @@ static bool AHBPContextQueryHeader(ModuleState* context_state, void* header, uns
 
         double* tx_lq = graph_find_label(neighborhood, myID, neigh_id);
         assert(tx_lq);
-        N1_Tuple* n1_tuple = newN1Tuple(neigh_id, *tx_lq, DEFAULT_WILLINGNESS, ns);
+        N1_Tuple* n1_tuple = newN1Tuple(neigh_id, *tx_lq, DEFAULT_WILLINGNESS, ns, false);
         void* old = hash_table_insert(n1, n1_tuple->id, n1_tuple);
         assert(old == NULL);
     }

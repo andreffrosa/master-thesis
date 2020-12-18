@@ -35,4 +35,6 @@ long randomLong();
 double randomProb();
 double randomExponential(double lambda);
 
+double roundPrecision(double value, int precision);
+
 #endif /* MY_MATH_H_ */

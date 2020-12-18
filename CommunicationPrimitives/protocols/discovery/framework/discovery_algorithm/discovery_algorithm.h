@@ -22,12 +22,12 @@
 
 #include "discovery_pattern/discovery_pattern.h"
 #include "discovery_period/discovery_period.h"
-#include "discovery_message/discovery_message.h"
+#include "discovery_context/discovery_context.h"
 #include "link_quality/link_quality.h"
 
 typedef struct _DiscoveryAlgorithm DiscoveryAlgorithm;
 
-DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, DiscoveryPeriod* d_period, LinkQuality* lq_metric, DiscoveryMessage* d_message);
+DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, DiscoveryPeriod* d_period, LinkQuality* lq_metric, DiscoveryContext* d_context);
 
 void destroyDiscoveryAlgorithm(DiscoveryAlgorithm* alg);
 
@@ -37,11 +37,11 @@ void DA_setDiscoveryPeriod(DiscoveryAlgorithm* alg, DiscoveryPeriod* new_d_perio
 
 void DA_setLinkQuality(DiscoveryAlgorithm* alg, LinkQuality* new_lq_metric);
 
-void DA_setDiscoveryMessage(DiscoveryAlgorithm* alg, DiscoveryMessage* new_d_message);
+void DA_setDiscoveryContext(DiscoveryAlgorithm* alg, DiscoveryContext* new_d_context);
 
-bool DA_periodicHello(DiscoveryAlgorithm* alg);
+PeriodicType DA_periodicHello(DiscoveryAlgorithm* alg);
 
-PiggybackType DA_piggybackHellos(DiscoveryAlgorithm* alg);
+// PiggybackType DA_piggybackHellos(DiscoveryAlgorithm* alg);
 
 bool DA_HelloNewNeighbor(DiscoveryAlgorithm* alg);
 
@@ -49,17 +49,13 @@ bool DA_HelloLostNeighbor(DiscoveryAlgorithm* alg);
 
 bool DA_HelloUpdateNeighbor(DiscoveryAlgorithm* alg);
 
-bool DA_HelloNew2HopNeighbor(DiscoveryAlgorithm* alg);
-
-bool DA_HelloLost2HopNeighbor(DiscoveryAlgorithm* alg);
-
-bool DA_HelloUpdate2HopNeighbor(DiscoveryAlgorithm* alg);
+bool DA_HelloContextUpdate(DiscoveryAlgorithm* alg);
 
 HelloSchedulerType DA_getHelloType(DiscoveryAlgorithm* alg);
 
-PiggybackType DA_piggybackHacks(DiscoveryAlgorithm* alg);
+// PiggybackType DA_piggybackHacks(DiscoveryAlgorithm* alg);
 
-bool DA_periodicHack(DiscoveryAlgorithm* alg);
+PeriodicType DA_periodicHack(DiscoveryAlgorithm* alg);
 
 HackReplyType DA_replyHacksToHellos(DiscoveryAlgorithm* alg);
 
@@ -69,13 +65,11 @@ bool DA_HackLostNeighbor(DiscoveryAlgorithm* alg);
 
 bool DA_HackUpdateNeighbor(DiscoveryAlgorithm* alg);
 
-bool DA_HackNew2HopNeighbor(DiscoveryAlgorithm* alg);
-
-bool DA_HackLost2HopNeighbor(DiscoveryAlgorithm* alg);
-
-bool DA_HackUpdate2HopNeighbor(DiscoveryAlgorithm* alg);
+bool DA_HackContextUpdate(DiscoveryAlgorithm* alg);
 
 HelloSchedulerType DA_getHackType(DiscoveryAlgorithm* alg);
+
+DiscoveryInternalEventResult* DA_triggerEvent(DiscoveryAlgorithm* alg, DiscoveryInternalEventType event_type, void* event_args, NeighborsTable* neighbors, YggMessage* msg);
 
 /*
 byte DA_getHelloPeriod(DiscoveryAlgorithm* alg);
@@ -105,12 +99,14 @@ void* DA_createLinkQualityAttributes(DiscoveryAlgorithm* alg);
 
 void DA_destroyLinkQualityAttributes(DiscoveryAlgorithm* alg, void* lq_attrs);
 
-bool DA_createDiscoveryMessage(DiscoveryAlgorithm* alg, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, MessageType msg_type, void* aux_info, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size);
+void DA_createMessage(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size);
 
-bool DA_processDiscoveryMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size);
+bool DA_processMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary);
 
-void* DA_createMessageAttributes(DiscoveryAlgorithm* alg);
+bool DA_updateContext(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary);
 
-void DA_destroyMessageAttributes(DiscoveryAlgorithm* alg, void* msg_attributes);
+void* DA_createContextAttributes(DiscoveryAlgorithm* alg);
+
+void DA_destroyContextAttributes(DiscoveryAlgorithm* alg, void* context_attributes);
 
 #endif /* _DISCOVERY_ALGORITHM_H_ */

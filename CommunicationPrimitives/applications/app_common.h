@@ -11,13 +11,15 @@
  * (C) 2020
  *********************************************************/
 
-#ifndef COMMUNICATION_PRIMITIVES_APP_COMMON_H_
-#define COMMUNICATION_PRIMITIVES_APP_COMMON_H_
+ #ifndef COMMUNICATION_PRIMITIVES_APP_COMMON_H_
+ #define COMMUNICATION_PRIMITIVES_APP_COMMON_H_
 
-#include "data_structures/hash_table.h"
+ #include "data_structures/hash_table.h"
 
-hash_table* parse_args(int argc, char* argv[]);
+ hash_table* parse_args(int argc, char* argv[]);
 
-void unparse_host(char* hostname, unsigned int hostname_length, char* interface, unsigned int interface_length, hash_table* args);
+ void unparse_host(char* hostname, unsigned int hostname_length, char* interface, unsigned int interface_length, hash_table* args);
 
-#endif /* COMMUNICATION_PRIMITIVES_APP_COMMON_H_ */
+ unsigned long getNextDelay(const char* type, unsigned long elapsed_ms);
+
+ #endif /* COMMUNICATION_PRIMITIVES_APP_COMMON_H_ */

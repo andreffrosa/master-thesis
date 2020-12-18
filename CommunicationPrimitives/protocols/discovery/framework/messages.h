@@ -25,7 +25,7 @@ typedef struct _HelloMessage {
     uuid_t process_id;
     unsigned short seq;
     byte period;
-    float traffic;
+    double traffic;
     bool request_replies;
 } HelloMessage;
 #pragma pack()
@@ -35,10 +35,10 @@ typedef struct _HackMessage {
     uuid_t src_process_id;
     uuid_t dest_process_id;
     unsigned short seq;
-    float rx_lq;
-    float tx_lq;
+    double rx_lq;
+    double tx_lq;
     byte period;
-    float traffic;
+    double traffic;
     byte neigh_type;
 } HackMessage;
 #pragma pack()

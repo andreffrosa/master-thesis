@@ -1,8 +1,9 @@
 
 # Directories to ignore
-./bin/
-./lib/
-./debug/
+bin/
+lib/
+debug/
+experiments/debug/
 
 .tags
 .tags1

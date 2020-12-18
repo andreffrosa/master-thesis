@@ -38,9 +38,7 @@ typedef struct _NeighborsContextState {
 	//bool append_neighbors;
 } NeighborsContextArgs;*/
 
-static void newNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* ev);
-static void updateNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* ev);
-static void removeNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* ev);
+static graph* extractNeighborhood(YggEvent* ev);
 static void updateEnvironment(NeighborsContextState* state, YggEvent* ev);
 
 static unsigned int minMaxNeighs(graph* neighborhood, unsigned char* myID, bool max, AdjacencyType adj_type);
@@ -52,18 +50,18 @@ static list* notCovered(graph* neighborhood, unsigned char* myID, double_list* c
 static bool allCovered(graph* neighborhood, unsigned char* myID, double_list* copies);
 
 static void NeighborsContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
-    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);
-    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_UPDATE);
-    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_LOST);
+    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
+    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
+    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
+    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
 
     NeighborsContextState* state = (NeighborsContextState*) (context_state->vars);
-    if(state->neighborhood == NULL) {
-        unsigned char* my_id = malloc(sizeof(uuid_t));
-        uuid_copy(my_id, myID);
-        graph_insert_node(state->neighborhood, my_id, NULL);
-    }
+
+    unsigned char* my_id = malloc(sizeof(uuid_t));
+    uuid_copy(my_id, myID);
+    graph_insert_node(state->neighborhood, my_id, NULL);
 }
 
 static void NeighborsContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, list* visited) {
@@ -71,14 +69,11 @@ static void NeighborsContextEvent(ModuleState* context_state, queue_t_elem* elem
 
     if(elem->type == YGG_EVENT) {
         YggEvent* ev = &elem->data.event;
-		if(ev->notification_id == NEIGHBOR_FOUND) {
-            newNeighbor(state->neighborhood, myID, ev);
-		} else if(elem->data.event.notification_id == NEIGHBOR_UPDATE) {
-			updateNeighbor(state->neighborhood, myID, ev);
-		} else if(elem->data.event.notification_id == NEIGHBOR_LOST) {
-            removeNeighbor(state->neighborhood, myID, ev);
+        unsigned short nid = ev->notification_id;
+		if(nid == NEIGHBORHOOD) {
+            graph_delete(state->neighborhood);
+            state->neighborhood = extractNeighborhood(ev);
 		/*} else if(elem->data.event.notification_id == GENERIC_DISCOVERY_EVENT) {
-
 		*/
         } else if(elem->data.event.notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
             updateEnvironment(state, ev);
@@ -93,7 +88,7 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
 		*((graph**)result) = graph_clone(state->neighborhood);
 		return true;
 	} else if(strcmp(query, "degree") == 0 ) {
-        unsigned char* id = hash_table_find_value(query_args, "id");
+        unsigned char* id = query_args ? hash_table_find_value(query_args, "id") : NULL;
         id = id ? id : myID;
 
         list* sym_neighs = graph_get_adjacencies(state->neighborhood, id, SYM_ADJ);
@@ -103,7 +98,7 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
         *((unsigned int*)result) = deg;
 		return true;
 	} else if(strcmp(query, "in_degree") == 0 || strcmp(query, "n_neighbors") == 0) {
-        unsigned char* id = hash_table_find_value(query_args, "id");
+        unsigned char* id = query_args ? hash_table_find_value(query_args, "id") : NULL;
         id = id ? id : myID;
 
 		int deg = graph_get_node_in_degree(state->neighborhood, id);
@@ -112,7 +107,7 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
         *((unsigned int*)result) = deg;
 		return true;
 	} else if(strcmp(query, "out_degree") == 0) {
-        unsigned char* id = hash_table_find_value(query_args, "id");
+        unsigned char* id = query_args ? hash_table_find_value(query_args, "id") : NULL;
         id = id ? id : myID;
 
 		int deg = graph_get_node_out_degree(state->neighborhood, id);
@@ -121,37 +116,37 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
         *((unsigned int*)result) = deg;
 		return true;
 	} else if(strcmp(query, "in_neighbors") == 0 || strcmp(query, "neighbors") == 0 ) {
-        unsigned char* id = hash_table_find_value(query_args, "id");
+        unsigned char* id = query_args ? hash_table_find_value(query_args, "id") : NULL;
         id = id ? id : myID;
 
         *((list**)result) = graph_get_adjacencies(state->neighborhood, id, IN_ADJ);
 		return true;
 	} else if(strcmp(query, "out_neighbors") == 0 ) {
-        unsigned char* id = hash_table_find_value(query_args, "id");
+        unsigned char* id = query_args ? hash_table_find_value(query_args, "id") : NULL;
         id = id ? id : myID;
 
         *((list**)result) = graph_get_adjacencies(state->neighborhood, id, OUT_ADJ);
 		return true;
 	} else if(strcmp(query, "sym_neighbors") == 0 || strcmp(query, "bi_neighbors") == 0 ) {
-        unsigned char* id = hash_table_find_value(query_args, "id");
+        unsigned char* id = query_args ? hash_table_find_value(query_args, "id") : NULL;
         id = id ? id : myID;
 
         *((list**)result) = graph_get_adjacencies(state->neighborhood, id, SYM_ADJ);
 		return true;
 	} else if(strcmp(query, "max_neighbors") == 0) {
-        AdjacencyType* aux = hash_table_find_value(query_args, "adj_type");
+        AdjacencyType* aux = query_args ? hash_table_find_value(query_args, "adj_type") : NULL;
         AdjacencyType adj_type = aux ? *aux : IN_ADJ;
 
 		*((unsigned int*)result) = minMaxNeighs(state->neighborhood, myID, true, adj_type);
 		return true;
 	} else if(strcmp(query, "min_neighbors") == 0) {
-        AdjacencyType* aux = hash_table_find_value(query_args, "adj_type");
+        AdjacencyType* aux = query_args ? hash_table_find_value(query_args, "adj_type") : NULL;
         AdjacencyType adj_type = aux ? *aux : IN_ADJ;
 
 		*((unsigned int*)result) = minMaxNeighs(state->neighborhood, myID, false, adj_type);
 		return true;
 	} else if(strcmp(query, "avg_neighbors") == 0) {
-        bool* aux = hash_table_find_value(query_args, "include_me");
+        bool* aux = query_args ? hash_table_find_value(query_args, "include_me") : NULL;
         bool include_me = aux ? *aux : true;
 
 		*((double*)result) = avgNeighs(state->neighborhood, myID, include_me, IN_ADJ);
@@ -160,11 +155,14 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
 		getneighborsDistribution(state->neighborhood, myID, (double*)result);
 		return true;
 	} else if(strcmp(query, "coverage") == 0) {
-		PendingMessage* p_msg = hash_table_find_value(query_args, "p_msg");
+        assert(query_args);
+        void** aux1 = hash_table_find_value(query_args, "p_msg");
+        assert(aux1);
+		PendingMessage* p_msg = *aux1;
         assert(p_msg);
 
-        char* aux = hash_table_find_value(query_args, "coverage");
-        char* coverage = aux ? aux : "all";
+        char* aux2 = hash_table_find_value(query_args, "coverage");
+        char* coverage = aux2 ? aux2 : "all";
 
         if(strcmp(coverage, "first")==0) {
             *((list**)result) = getCoverage(state->neighborhood, myID, getCopies(p_msg), true);
@@ -175,13 +173,19 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
         }
 		return true;
 	} else if(strcmp(query, "not_covered") == 0) {
-        PendingMessage* p_msg = hash_table_find_value(query_args, "p_msg");
+        assert(query_args);
+        void** aux1 = hash_table_find_value(query_args, "p_msg");
+        assert(aux1);
+		PendingMessage* p_msg = *aux1;
         assert(p_msg);
 
 		*((list**)result) = notCovered(state->neighborhood, myID, getCopies(p_msg));
 		return true;
 	} else if(strcmp(query, "all_covered") == 0) {
-        PendingMessage* p_msg = hash_table_find_value(query_args, "p_msg");
+        assert(query_args);
+        void** aux1 = hash_table_find_value(query_args, "p_msg");
+        assert(aux1);
+		PendingMessage* p_msg = *aux1;
         assert(p_msg);
 
 		*((bool*)result) = allCovered(state->neighborhood, myID, getCopies(p_msg));
@@ -237,6 +241,8 @@ RetransmissionContext* NeighborsContext() {
     );
 }
 
+/*
+
 static void newNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* ev) {
     assert(ev && ev->payload && ev->length > 0);
 
@@ -244,7 +250,7 @@ static void newNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* ev) 
 
     // Read ID
     uuid_t neigh_id;
-    ptr = YggEvent_readPayload(ev, ptr, &neigh_id, sizeof(uuid_t));
+    ptr = YggEvent_readPayload(ev, ptr, neigh_id, sizeof(uuid_t));
 
     // Skip MAC Addr
     ptr += WLAN_ADDR_LEN;
@@ -263,7 +269,8 @@ static void newNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* ev) 
     ptr = YggEvent_readPayload(ev, ptr, &is_bi, sizeof(byte));
 
     graph_node* node = graph_find_node(neighborhood, neigh_id);
-    if( !node ) {
+    // The node might alredy exist and not be my neighbor
+    if( node == NULL ) {
         unsigned char* key = malloc(sizeof(uuid_t));
         uuid_copy(key, neigh_id);
 
@@ -292,7 +299,7 @@ static void newNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* ev) 
     for(int i = 0; i < n_neighs; i++) {
         // Read Neigh ID
         uuid_t two_hop_neigh_id;
-        ptr = YggEvent_readPayload(ev, ptr, &two_hop_neigh_id, sizeof(uuid_t));
+        ptr = YggEvent_readPayload(ev, ptr, two_hop_neigh_id, sizeof(uuid_t));
 
         // Read Neigh LQ
         ptr = YggEvent_readPayload(ev, ptr, &rx_lq, sizeof(double));
@@ -305,24 +312,31 @@ static void newNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* ev) 
         ptr = YggEvent_readPayload(ev, ptr, &is_bi, sizeof(byte));
 
         node = graph_find_node(neighborhood, two_hop_neigh_id);
-        if( !node ) {
+        if( node == NULL ) {
             unsigned char* key = malloc(sizeof(uuid_t));
             uuid_copy(key, two_hop_neigh_id);
 
             graph_insert_node(neighborhood, key, NULL);
         }
 
-        label = malloc(sizeof(double));
-        *label = rx_lq;
-        graph_insert_edge(neighborhood, two_hop_neigh_id, neigh_id, label);
+        edge = graph_find_edge(neighborhood, two_hop_neigh_id, neigh_id);
+        if(edge == NULL) {
+            label = malloc(sizeof(double));
+            *label = rx_lq;
+            graph_insert_edge(neighborhood, two_hop_neigh_id, neigh_id, label);
+        } else {
+            *((double*)edge->label) = rx_lq;
+        }
 
         if( is_bi ) {
             edge = graph_find_edge(neighborhood, neigh_id, two_hop_neigh_id);
-            assert(edge == NULL);
-
-            label = malloc(sizeof(double));
-            *label = tx_lq;
-            graph_insert_edge(neighborhood, neigh_id, two_hop_neigh_id, label);
+            if(edge == NULL) {
+                label = malloc(sizeof(double));
+                *label = tx_lq;
+                graph_insert_edge(neighborhood, neigh_id, two_hop_neigh_id, label);
+            } else {
+                *((double*)edge->label) = tx_lq;
+            }
         }
     }
 }
@@ -334,7 +348,7 @@ static void updateNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* e
 
     // Read ID
     uuid_t neigh_id;
-    ptr = YggEvent_readPayload(ev, ptr, &neigh_id, sizeof(uuid_t));
+    ptr = YggEvent_readPayload(ev, ptr, neigh_id, sizeof(uuid_t));
 
     // Skip MAC Addr
     ptr += WLAN_ADDR_LEN;
@@ -479,6 +493,59 @@ static void removeNeighbor(graph* neighborhood, unsigned char* myID, YggEvent* e
 
     void* value = graph_remove_node(neighborhood, neigh_id);
     assert(value == NULL);
+}
+
+*/
+
+
+static graph* extractNeighborhood(YggEvent* ev) {
+    assert(ev && ev->payload && ev->length > 0);
+
+    void* ptr = NULL;
+
+    graph* neighborhood = graph_init((key_comparator)&uuid_compare, sizeof(uuid_t));
+
+    // Nodes
+    byte n_nodes = 0;
+    ptr = YggEvent_readPayload(ev, ptr, &n_nodes, sizeof(n_nodes));
+
+    for(int i = 0; i < n_nodes; i++) {
+        // node id
+        unsigned char* node_id = malloc(sizeof(uuid_t));
+        ptr = YggEvent_readPayload(ev, ptr, node_id, sizeof(uuid_t));
+
+        // node mac addr (being ignored)
+        byte node_addr[WLAN_ADDR_LEN] = {0};
+        ptr = YggEvent_readPayload(ev, ptr, node_addr, WLAN_ADDR_LEN);
+
+        // node out traffic
+        double* node_out_traffic = malloc(sizeof(double));
+        ptr = YggEvent_readPayload(ev, ptr, node_out_traffic, sizeof(double));
+
+        graph_insert_node(neighborhood, node_id, node_out_traffic);
+    }
+
+    // Edges
+    byte n_edges = 0;
+    ptr = YggEvent_readPayload(ev, ptr, &n_edges, sizeof(n_edges));
+
+    for(int i = 0; i < n_edges; i++) {
+        // start node id
+        uuid_t start_node_id = {0};
+        ptr = YggEvent_readPayload(ev, ptr, start_node_id, sizeof(uuid_t));
+
+        // end node id
+        uuid_t end_node_id = {0};
+        ptr = YggEvent_readPayload(ev, ptr, end_node_id, sizeof(uuid_t));
+
+        // link quality
+        double* lq = malloc(sizeof(double));
+        ptr = YggEvent_readPayload(ev, ptr, lq, sizeof(double));
+
+        graph_insert_edge(neighborhood, start_node_id, end_node_id, lq);
+    }
+
+    return neighborhood;
 }
 
 static void updateEnvironment(NeighborsContextState* state, YggEvent* ev) {

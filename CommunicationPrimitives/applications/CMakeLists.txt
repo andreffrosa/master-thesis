@@ -9,12 +9,15 @@ set(CMAKE_C_LINK_EXECUTABLE "${CMAKE_C_LINK_EXECUTABLE} -lm -lnl-genl-3 -lnl-3 -
 
 link_directories(${PROJECT_SOURCE_DIR})
 
+#
+add_executable(connect_test ${PROJECT_SOURCE_DIR}/connect.c ${PROJECT_SOURCE_DIR}/app_common.c)
+target_link_libraries(connect_test utility yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
 # DISCOVERY
 
 link_directories(${PROJECT_SOURCE_DIR}/discovery/)
 add_executable(discovery_test ${PROJECT_SOURCE_DIR}/discovery/discovery_test.c ${PROJECT_SOURCE_DIR}/app_common.c)
-target_link_libraries(discovery_test discovery_algorithm discovery_framework utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
-
+target_link_libraries(discovery_test discovery_framework discovery_algorithm utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
 
 # BROADCAST
 

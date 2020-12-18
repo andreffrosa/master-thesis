@@ -40,13 +40,17 @@
 
 typedef struct DiscoveryAppArgs_ {
     bool periodic_messages;
+    bool verbose;
+    char timer_type[100];
     // TODO:
 } DiscoveryAppArgs;
 
 static DiscoveryAppArgs* default_discovery_app_args();
 static DiscoveryAppArgs* load_discovery_app_args(const char* file_path);
 
-static void processNotification(YggEvent* notification);
+static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_args);
+static void setTimer(unsigned char* timer_id, struct timespec* start_time, struct timespec* current_time, DiscoveryAppArgs* app_args);
+static void sendMessage(unsigned char* dest, char* txt);
 
 int main(int argc, char* argv[]) {
 
@@ -97,9 +101,10 @@ int main(int argc, char* argv[]) {
     // Register this app
     app_def* myApp = create_application_definition(APP_ID, APP_NAME);
 
-    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_FOUND);
-	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_UPDATE);
-	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_LOST);
+    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
+	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
+	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
+    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
 
@@ -111,47 +116,51 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Start App
 
-	// Set periodic timer
-    struct timespec t;
-    milli_to_timespec(&t, 6000);
-    uuid_t tid;
-    genUUID(tid);
-    if(app_args->periodic_messages) {
-        SetPeriodicTimer(&t, tid, APP_ID, -1);
-    }
-
     ygg_log(APP_NAME, "INIT", "init");
 
-
-    uuid_t myID, destination_id;
+    uuid_t myID;
     getmyId(myID);
+
+    struct timespec start_time = {0};
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    struct timespec current_time = start_time;
+
+	// Set timer
+    uuid_t send_timer_id;
+    genUUID(send_timer_id);
+    if(app_args->periodic_messages) {
+        setTimer(send_timer_id, &start_time, &current_time, app_args);
+    }
+
+    /*
+    uuid_t destination_id;
     getmyId(destination_id);
     destination_id[15] = '\003';
+    */
 
 	queue_t_elem elem;
 	while(1) {
-		queue_pop(inBox, &elem);
+        queue_pop(inBox, &elem);
+
+        // Update current time
+		clock_gettime(CLOCK_MONOTONIC, &current_time);
 
 		switch(elem.type) {
 		case YGG_TIMER:
-            ; YggMessage m;
-
-
-            YggMessage_initBcast(&m, APP_ID);
-            char* str = "msg";
-            YggMessage_addPayload(&m, str, strlen(str)+1);
-            dispatch(&m);
+            sendMessage(NULL, "msg");
+            setTimer(send_timer_id, &start_time, &current_time, app_args);
 			break;
 		/*case YGG_REQUEST:
 			break;*/
 		case YGG_MESSAGE:
-            ;
-            YggMessage* msg = &elem.data.msg;
-            ygg_log(APP_NAME, "RCV MESSAGE", msg->data);
+            if(app_args->verbose) {
+                YggMessage* msg = &elem.data.msg;
+                ygg_log(APP_NAME, "RECEIVED MESSAGE", msg->data);
+            }
 			break;
         case YGG_EVENT:
     			if( elem.data.event.proto_dest == APP_ID ) {
-    				processNotification(&elem.data.event);
+    				processNotification(&elem.data.event, app_args);
     			} else {
     				char s[100];
     				sprintf(s, "Received notification from protocol %d meant for protocol %d", elem.data.event.proto_origin, elem.data.event.proto_dest);
@@ -169,23 +178,53 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-static void processNotification(YggEvent* notification) {
+static void sendMessage(unsigned char* dest_addr, char* txt) {
+    YggMessage m;
+    if(dest_addr) {
+        YggMessage_init(&m, dest_addr, APP_ID);
+    } else {
+        YggMessage_initBcast(&m, APP_ID);
+    }
+
+    YggMessage_addPayload(&m, txt, strlen(txt)+1);
+    dispatch(&m);
+}
+
+static void setTimer(unsigned char* timer_id, struct timespec* start_time, struct timespec* current_time, DiscoveryAppArgs* app_args) {
+
+    struct timespec elapsed_ms_t;
+    subtract_timespec(&elapsed_ms_t, current_time, start_time);
+    unsigned long elapsed_ms = timespec_to_milli(&elapsed_ms_t);
+
+    unsigned long t = getNextDelay(app_args->timer_type, elapsed_ms);
+
+    struct timespec t_;
+    milli_to_timespec(&t_, t);
+    SetTimer(&t_, timer_id, APP_ID, 0);
+}
+
+static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_args) {
+
+    if(!app_args->verbose)
+        return;
 
     char id[UUID_STR_LEN+1];
     id[UUID_STR_LEN] = '\0';
 	unsigned char* ptr = notification->payload;
 
-	if(notification->notification_id == NEIGHBOR_FOUND) {
+	if(notification->notification_id == NEW_NEIGHBOR) {
         uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "NEIGHBOR FOUND", id);
+		ygg_log(APP_NAME, "NEW NEIGHBOR", id);
 
-	} else if(notification->notification_id == NEIGHBOR_UPDATE) {
+	} else if(notification->notification_id == UPDATE_NEIGHBOR) {
         uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "NEIGHBOR UPDATE", id);
+		ygg_log(APP_NAME, "UPDATE NEIGHBOR", id);
 
-	} else if(notification->notification_id == NEIGHBOR_LOST) {
+	} else if(notification->notification_id == LOST_NEIGHBOR) {
         uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "NEIGHBOR LOST", id);
+		ygg_log(APP_NAME, "LOST NEIGHBOR", id);
+	} else if(notification->notification_id == NEIGHBORHOOD) {
+        ygg_log(APP_NAME, "NEIGHBORHOOD", "");
 	} else if(notification->notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
         ygg_log(APP_NAME, "DISCOVERY ENVIRONMENT UPDATE", "");
 	}
@@ -256,6 +295,8 @@ static DiscoveryAppArgs* default_discovery_app_args() {
     DiscoveryAppArgs* d_args = malloc(sizeof(DiscoveryAppArgs));
 
     d_args->periodic_messages = false;
+    d_args->verbose = false;
+    strcpy(d_args->timer_type, "Periodic 1.0 6"); // trans every 6 seconds with 1.0 probability
 
     return d_args;
 }
@@ -283,6 +324,10 @@ static DiscoveryAppArgs* load_discovery_app_args(const char* file_path) {
         if( value != NULL ) {
             if( strcmp(key, "periodic_messages") == 0 ) {
                 d_args->periodic_messages = strcmp("false", value) == 0 ? false : true;
+            } else if( strcmp(key, "verbose") == 0 ) {
+                d_args->verbose = strcmp("false", value) == 0 ? false : true;
+            } else if( strcmp(key, "timer_type") == 0 ) {
+                strcpy(d_args->timer_type, value);
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);

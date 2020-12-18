@@ -18,6 +18,7 @@
 
 #include "data_structures/hash_table.h"
 #include "utility/window.h"
+#include "utility/byte.h"
 
 typedef struct NeighborsTable_ NeighborsTable;
 typedef struct NeighborEntry_ NeighborEntry;
@@ -38,6 +39,8 @@ unsigned int NT_getSize(NeighborsTable* neighbors);
 void NT_addNeighbor(NeighborsTable* neighbors, NeighborEntry* neigh);
 
 NeighborEntry* NT_getNeighbor(NeighborsTable* neighbors, unsigned char* neigh_id);
+
+NeighborEntry* NT_getNeighborByAddr(NeighborsTable* neighbors, WLANAddr* neigh_addr);
 
 NeighborEntry* NT_removeNeighbor(NeighborsTable* neighbors, unsigned char* neigh_id);
 
@@ -107,9 +110,9 @@ double NE_getOutTraffic(NeighborEntry* neigh);
 
 void NE_setOutTraffic(NeighborEntry* neigh, double traffic);
 
-void* NE_getMessageAttributes(NeighborEntry* neigh);
+void* NE_getContextAttributes(NeighborEntry* neigh);
 
-void* NE_setMessageAttributes(NeighborEntry* neigh, void* msg_attributes);
+void* NE_setContextAttributes(NeighborEntry* neigh, void* context_attributes);
 
 NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator);
 
@@ -150,5 +153,7 @@ TwoHopNeighborEntry* NE_removeTwoHopNeighborEntry(NeighborEntry* neigh, unsigned
 TwoHopNeighborEntry* NE_addTwoHopNeighborEntry(NeighborEntry* neigh, TwoHopNeighborEntry* nn);
 
 char* NT_print(NeighborsTable* neighbors, char** str, struct timespec* current_time, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq);
+
+void NT_serialize(NeighborsTable* nt, unsigned char* myID, WLANAddr* myMAC, double out_traffic, struct timespec* current_time, byte** buffer, unsigned int* size);
 
 #endif /* _NEIGHBORS_TABLE_H_ */
