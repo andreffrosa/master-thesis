@@ -854,7 +854,9 @@ void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neig
                     }
                 }
             }
-
+            if(iterator)
+                free(iterator);
+                
             if(!first) {
                 if(compare_timespec(&min_exp, &state->current_time) < 0) {
                     next_timer = 0;
