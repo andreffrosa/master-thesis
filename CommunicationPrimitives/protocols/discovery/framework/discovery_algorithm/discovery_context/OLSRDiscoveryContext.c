@@ -260,9 +260,6 @@ static bool update(OLSRState* state, unsigned char* myID, NeighborsTable* neighb
 }
 
 static void notify(char* type, list* flooding_set, list* routing_set) {
-    char str[40];
-    sprintf(str, "flooding_set = %d routing_set = %d", flooding_set->size, routing_set->size);
-    ygg_log("OLSRDiscoveryContext", type, str);
 
     unsigned int size = 2*sizeof(unsigned int) + (flooding_set->size + routing_set->size)*sizeof(uuid_t);
     byte buffer[size];
