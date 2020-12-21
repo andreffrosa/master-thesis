@@ -14,6 +14,7 @@
 #include "framework.h"
 
 #include "utility/my_sys.h"
+#include "utility/my_string.h"
 
 #include <assert.h>
 
@@ -102,7 +103,6 @@ static DiscoveryContext* parse_d_context(char* value, bool nested);
 static DiscoveryPattern* parse_d_pattern(char* value, bool nested);
 static PiggybackFilter* parse_piggyback_filter(char* value, bool nested);
 static PeriodicType parse_periodic_type(char* token);
-static bool parse_bool(char* token);
 
 discovery_framework_args* load_discovery_framework_args(const char* file_path) {
     list* order = list_init();
@@ -787,9 +787,4 @@ static PeriodicType parse_periodic_type(char* token) {
         exit(-1);
     }
 
-}
-
-static bool parse_bool(char* token) {
-    assert(token);
-    return strcmp(token, "True") == 0 || strcmp(token, "true") == 0;
 }

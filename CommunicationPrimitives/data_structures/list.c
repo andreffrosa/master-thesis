@@ -35,10 +35,12 @@ void list_append(list* l1, list* l2) {
 }
 
 void list_delete(list* l) {
-	void* it = NULL;
-	while( (it = list_remove_head(l)) )
-		free(it);
-	free(l);
+    if(l) {
+        void* it = NULL;
+    	while( (it = list_remove_head(l)) )
+    		free(it);
+    	free(l);
+    }
 }
 
 void list_delete_keep(list* l) {

@@ -23,7 +23,7 @@ BroadcastAlgorithm* Gossip1(unsigned long t, double p) {
 	return newBroadcastAlgorithm(EmptyContext(), RandomDelay(t), ProbabilityPolicy(p), 1);
 }
 
-BroadcastAlgorithm* Gossip1_hops(unsigned long t, double p, unsigned int k) {
+BroadcastAlgorithm* Gossip1Horizon(unsigned long t, double p, unsigned int k) {
 	return newBroadcastAlgorithm(HopsContext(), RandomDelay(t), HorizonProbabilityPolicy(p, k), 1);
 }
 
@@ -47,6 +47,10 @@ BroadcastAlgorithm* Counting(unsigned long t, unsigned int c) {
 	return newBroadcastAlgorithm(EmptyContext(), RandomDelay(t), CountPolicy(c), 1);
 }
 
+BroadcastAlgorithm* CountingParents(unsigned long t, unsigned int c, bool count_same_parent) {
+	return newBroadcastAlgorithm(ParentsContext(1), RandomDelay(t), CountParentsPolicy(c, count_same_parent), 1);
+}
+
 BroadcastAlgorithm* HopCountAided(unsigned long t) {
 	return newBroadcastAlgorithm(HopsContext(), RandomDelay(t), HopCountAidedPolicy(), 1);
 }
@@ -68,15 +72,15 @@ BroadcastAlgorithm* NABA2(unsigned long t, unsigned int c1, unsigned int c2) {
 }
 
 BroadcastAlgorithm* NABA3(unsigned long t) {
-	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(true, false, 0.0), 1);
+	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(false, true, 0.0), 1);
 }
 
 BroadcastAlgorithm* NABA4(unsigned long t) {
-	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(true, false, 1.0), 2);
+	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(false, true, 1.0), 2);
 }
 
 BroadcastAlgorithm* NABA3e4(unsigned long t, unsigned int np) {
-	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(true, false, 1.0), np);
+	return newBroadcastAlgorithm(LabelNeighsContext(NeighborsContext()), DensityNeighDelay(t), CriticalNeighPolicy(false, true, 1.0), np);
 }
 
 BroadcastAlgorithm* MPR(unsigned long t) {
@@ -87,10 +91,10 @@ BroadcastAlgorithm* MPR(unsigned long t) {
     );
 }
 
-BroadcastAlgorithm* AHBP(int ex, unsigned long t, unsigned int route_max_len) {
+BroadcastAlgorithm* AHBP(unsigned long t, unsigned int route_max_len, bool mobility_extension) {
     return newBroadcastAlgorithm(
         AHBPContext(NeighborsContext(), RouteContext(route_max_len)), RandomDelay(t),
-        AHBPPolicy(ex),
+        AHBPPolicy(mobility_extension),
         1
     );
 }

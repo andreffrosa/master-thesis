@@ -17,7 +17,11 @@
 #include "utility/my_time.h"
 #include "utility/my_misc.h"
 
+#include "debug.h"
+
 #include "broadcast_algorithm/bcast_algorithms.h"
+
+#include <limits.h>
 
 #include <assert.h>
 
@@ -39,27 +43,7 @@ void init(broadcast_framework_state* state) {
 
 void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage* p_msg, bool isCopy) {
 
-    if(!isPendingMessageActive(p_msg)){
-        #ifdef DEBUG_BROADCAST
-        {
-            char id_str[UUID_STR_LEN+1];
-            id_str[UUID_STR_LEN] = '\0';
-            uuid_unparse(getPendingMessageID(p_msg), id_str);
-            char str[300];
-
-            unsigned int current_phase = getCurrentPhase(p_msg);
-            unsigned long total_duration = 0L;
-            for(int i = 0; i < current_phase; i++) {
-                total_duration += getPhaseDuration(getPhaseStats(p_msg, current_phase));
-            }
-            sprintf(str, "[%s] copy = %d total_phase = %d total_duration = %lu", id_str, getCopies(p_msg)->size, current_phase, total_duration);
-
-            ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELAY", str);
-        }
-        #endif
-        return;
-    }
-
+    assert(isPendingMessageActive(p_msg));
 
     unsigned long elapsed, remaining;
     splitDuration(p_msg, &state->current_time, &elapsed, &remaining);
@@ -86,7 +70,7 @@ void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage
         }
     }
 
-    #ifdef DEBUG_BROADCAST
+    #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, ADVANCED_DEBUG)
     {
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
@@ -183,10 +167,7 @@ void DeliverMessage(broadcast_framework_state* state, PendingMessage* p_msg) {
         assert(add_result != FAILED);
     }
 
-    //YggMessage* toDeliver = getToDeliver(p_msg);
-	deliver(&toDeliver);
-
-    #ifdef DEBUG_BROADCAST
+    #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, SIMPLE_DEBUG)
     {
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
@@ -196,6 +177,9 @@ void DeliverMessage(broadcast_framework_state* state, PendingMessage* p_msg) {
         ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
     }
     #endif
+
+    //YggMessage* toDeliver = getToDeliver(p_msg);
+    deliver(&toDeliver);
 
 	state->stats.messages_delivered++;
 }
@@ -216,9 +200,11 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
     state->stats.messages_bcasted++;
 
     unsigned short ttl = 0;
-    YggRequest_readPayload(req, NULL, &ttl, sizeof(ttl));
-    void* data = (char*)(req->payload) + sizeof(ttl);
+    void* ptr = YggRequest_readPayload(req, NULL, &ttl, sizeof(ttl));
+
     unsigned short size = req->length - sizeof(ttl);
+    byte data[size];
+    ptr = YggRequest_readPayload(req, ptr, (char*)data, size);
 
 	// Generate a unique message id
 	uuid_t msg_id;
@@ -244,17 +230,7 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
     // Insert on seen_msgs
     pushPendingMessage(state->seen_msgs, p_msg);
 
-    if(!state->args->late_delivery) {
-        // Deliver the message to the upper layer
-        DeliverMessage(state, p_msg);
-    }
-
-    if(ttl > 0) {
-        // Retransmit Message
-    	RetransmitMessage(state, p_msg, ttl);
-    }
-
-    #ifdef DEBUG_BROADCAST
+    #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, SIMPLE_DEBUG)
     {
         YggMessage* ym = getToDeliver(p_msg);
         char content[ym->dataLen+1];
@@ -265,12 +241,29 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(getPendingMessageID(p_msg), id_str);
 
-        char str[ym->dataLen+UUID_STR_LEN+1];
-        sprintf(str, "[%s] %s", id_str, content);
+        char ttl_str[10];
+        if(ttl == USHRT_MAX) {
+            sprintf(ttl_str, "infinite");
+        } else {
+            sprintf(ttl_str, "%d", ttl);
+        }
 
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "BROADCAST", str);
+        char str[ym->dataLen+UUID_STR_LEN+1];
+        sprintf(str, "[%s] ttl=%s : %s", id_str, ttl_str, content);
+
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "BROADCAST REQ", str);
     }
     #endif
+
+    if(!state->args->late_delivery) {
+        // Deliver the message to the upper layer
+        DeliverMessage(state, p_msg);
+    }
+
+    if(ttl > 0) {
+        // Retransmit Message
+    	RetransmitMessage(state, p_msg, ttl);
+    }
 
 	// Check if there are more phases
 	changePhase(state, p_msg);
@@ -286,8 +279,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 	void* context_header;
 	deserializeMessage(msg, &header, &context_header, &toDeliver);
 
-    // Decrement TTL
-    header.ttl--;
+    assert(header.ttl > 0);
 
     PendingMessage* p_msg = getPendingMessage(state->seen_msgs, header.msg_id);
 
@@ -316,21 +308,44 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 
         BA_processCopy(state->args->algorithm, p_msg, state->myID);
 
-        // Potentially Current Phase's Retransmission Delay
-		ComputeRetransmissionDelay(state, p_msg, true);
+        if( isPendingMessageActive(p_msg) ){
+            // Compute Retransmission Delay
+    		ComputeRetransmissionDelay(state, p_msg, true);
+        }
 	}
 
-    #ifdef DEBUG_BROADCAST
+    #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, ADVANCED_DEBUG)
     {
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(getPendingMessageID(p_msg), id_str);
+
         char parent_str[UUID_STR_LEN+1];
         parent_str[UUID_STR_LEN] = '\0';
         uuid_unparse(getBcastHeader((MessageCopy*)(getCopies(p_msg)->head->data))->sender_id, parent_str);
         char str[150];
-        sprintf(str, "[%s] Received copy %d on phase %d from %s with ttl=%d", id_str, getCopies(p_msg)->size, getCurrentPhase(p_msg), parent_str, header.ttl);
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "COPY", str);
+
+        char ttl_str[10];
+        if(header.ttl == USHRT_MAX) {
+            sprintf(ttl_str, "infinite");
+        } else {
+            sprintf(ttl_str, "%d", header.ttl);
+        }
+
+        if(isPendingMessageActive(p_msg)) {
+            sprintf(str, "[%s] %d copy on phase %d from %s with ttl=%s", id_str, getCopies(p_msg)->size, getCurrentPhase(p_msg), parent_str, ttl_str);
+        } else {
+            /*
+            unsigned int current_phase = getCurrentPhase(p_msg);
+            unsigned long total_duration = 0L;
+            for(int i = 0; i < current_phase; i++) {
+            total_duration += getPhaseDuration(getPhaseStats(p_msg, current_phase));
+            }
+            */
+            sprintf(str, "[%s] %d copy on inactive from %s with ttl=%s", id_str, getCopies(p_msg)->size, parent_str, ttl_str);
+        }
+
+        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "RECEIVED MESSAGE", str);
     }
     #endif
 }
@@ -349,15 +364,18 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
             struct timespec _remaining = {0, 0};
         	milli_to_timespec(&_remaining, remaining);
 
-        	if(timespec_is_zero(&_remaining))
-        		_remaining.tv_nsec = 1;
-
         	SetTimer(&_remaining, getPendingMessageID(p_msg), BROADCAST_FRAMEWORK_PROTO_ID, TIMER_BROADCAST_MESSAGE_TIMEOUT);
         } else {
+            // Find the maximum TTL received
             unsigned short max_ttl = 0;
             for(double_list_item* it = getCopies(p_msg)->head; it; it = it->next) {
                 MessageCopy* msg_copy = (MessageCopy*)(it->data);
                 max_ttl = iMax(max_ttl, getBcastHeader(msg_copy)->ttl);
+            }
+
+            // Decrement TTL
+            if(max_ttl != USHRT_MAX) { // Different than infinity
+                max_ttl--;
             }
 
             bool retransmit = false;
@@ -377,13 +395,21 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
                 state->stats.messages_not_transmitted++;
             }
 
-            #ifdef DEBUG_BROADCAST
+            #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, SIMPLE_DEBUG)
             {
                 char id_str[UUID_STR_LEN+1];
                 id_str[UUID_STR_LEN] = '\0';
                 uuid_unparse(getPendingMessageID(p_msg), id_str);
+
+                char ttl_str[10];
+                if(max_ttl == USHRT_MAX) {
+                    sprintf(ttl_str, "infinite");
+                } else {
+                    sprintf(ttl_str, "%d", max_ttl);
+                }
+
                 char str [100];
-                sprintf(str, "[%s] Decision %s on phase %d", id_str, retransmit?"true":"false", getCurrentPhase(p_msg));
+                sprintf(str, "[%s] Decision %s on phase %d max_ttl=%s", id_str, retransmit?"true":"false", getCurrentPhase(p_msg), ttl_str);
                 ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "POLICY", str);
             }
             #endif
@@ -479,7 +505,7 @@ void runGarbageCollector(broadcast_framework_state* state) {
     struct timespec seen_expiration = {0, 0};
     milli_to_timespec(&seen_expiration, state->args->seen_expiration_ms);
 
-    #ifdef DEBUG_BROADCAST
+    #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, ADVANCED_DEBUG)
         unsigned int counter = runGarbageCollectorPM(state->seen_msgs, &state->current_time, &seen_expiration);
 
         char s[100];

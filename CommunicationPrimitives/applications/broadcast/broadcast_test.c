@@ -34,6 +34,7 @@
 #include "utility/my_math.h"
 #include "utility/my_time.h"
 #include "utility/my_sys.h"
+#include "utility/my_string.h"
 
 typedef struct BroadcastAppArgs_ {
     char broadcast_type[100];
@@ -51,6 +52,7 @@ typedef struct BroadcastAppArgs_ {
     //char overlay_path[PATH_MAX];
     //char interface_name[100];
     //char hostname[100];
+    bool verbose;
 } BroadcastAppArgs;
 
 static BroadcastAppArgs* default_broadcast_app_args();
@@ -58,14 +60,13 @@ static BroadcastAppArgs* parse_broadcast_app_args(const char* file_path);
 
 static void printDiscoveryStats(YggRequest* req);
 static void printBcastStats(YggRequest* req);
-static void sendMessage(const char* pi, unsigned int counter);
-static void rcvMessage(YggMessage* msg);
+static void sendMessage(const char* pi, unsigned int counter, BroadcastAppArgs* app_args);
+static void rcvMessage(YggMessage* msg, BroadcastAppArgs* app_args);
 static void uponNotification(YggEvent* ev, BroadcastAppArgs* app_args);
 
 static void requestDiscoveryStats();
 static void requestBroadcastStats();
 
-static unsigned long getTimerDuration(BroadcastAppArgs* app_args, bool isFirst, struct timespec* start_time);
 static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_timer_id, bool isFirst, struct timespec* start_time);
 
 #define APP_ID 400
@@ -191,7 +192,7 @@ int main(int argc, char* argv[]) {
 			} else if( uuid_compare(elem.data.timer.id, bcast_timer_id ) == 0 ) {
 
 				if (!app_args->rcv_only && !finished) {
-                    sendMessage(hostname, ++counter);
+                    sendMessage(hostname, ++counter, app_args);
 
                     if( counter < app_args->max_broadcasts || app_args->max_broadcasts == ULONG_MAX ) {
 						setBroadcastTimer(app_args, bcast_timer_id, false, &start_time);
@@ -224,7 +225,7 @@ int main(int argc, char* argv[]) {
 			}
 			break;
 		case YGG_MESSAGE:
-			rcvMessage(&elem.data.msg);
+			rcvMessage(&elem.data.msg, app_args);
             /*if(finished) {
                 deliverRequest(&framework_stats_req);
                 deliverRequest(&discovery_stats_req);
@@ -244,7 +245,7 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-static void sendMessage(const char* hostname, unsigned int counter) {
+static void sendMessage(const char* hostname, unsigned int counter, BroadcastAppArgs* app_args) {
 	char payload[1000];
 	struct timespec current_time;
 	clock_gettime(CLOCK_MONOTONIC, &current_time);
@@ -253,12 +254,13 @@ static void sendMessage(const char* hostname, unsigned int counter) {
 
     sprintf(payload, "I'm %s and this is my %d%s message.", hostname, counter, ordinal);
 
-    BroadcastMessage(APP_ID, -1, (byte*)payload, strlen(payload));
+    BroadcastMessage(APP_ID, -1, (byte*)payload, strlen(payload)+1);
 
-	ygg_log(APP_NAME, "BROADCAST SENT", payload);
+    if(app_args->verbose)
+	   ygg_log(APP_NAME, "BROADCAST SENT", payload);
 }
 
-static void rcvMessage(YggMessage* msg) {
+static void rcvMessage(YggMessage* msg, BroadcastAppArgs* app_args) {
     assert(msg->dataLen > 0 && msg->data != NULL);
 
     void* ptr = NULL;
@@ -268,19 +270,20 @@ static void rcvMessage(YggMessage* msg) {
 
     const char* empty_msg = "[EMPTY MESSAGE]";
 
-    unsigned short str_size = payload_size > 0 ? payload_size+1 : strlen(empty_msg)+1;
+    unsigned short str_size = payload_size > 0 ? payload_size : strlen(empty_msg)+1;
 
     char m[str_size];
 	//memset(m, 0, str_size);
 
     if(payload_size > 0) {
-        m[str_size-1] = '\0';
+        //m[str_size-1] = '\0';
         ptr = YggMessage_readPayload(msg, ptr, m, payload_size);
     } else {
         strcpy(m, empty_msg);
     }
 
-	ygg_log(APP_NAME, "RECEIVED MESSAGE", m);
+    if(app_args->verbose)
+	   ygg_log(APP_NAME, "RECEIVED MESSAGE", m);
 }
 
 static void requestDiscoveryStats() {
@@ -349,121 +352,27 @@ static void uponNotification(YggEvent* ev, BroadcastAppArgs* app_args) {
 
 }
 
-static unsigned long getTimerDuration(BroadcastAppArgs* app_args, bool isFirst, struct timespec* start_time) {
-    unsigned long t = 0L;
 
-    char aux[strlen(app_args->broadcast_type)+1];
-    strcpy(aux, app_args->broadcast_type);
+static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_timer_id, bool isFirst, struct timespec* start_time) {
 
-    char* ptr = NULL;
-    char* token  = strtok_r(aux, " ", &ptr);
+    struct timespec current_time;
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    subtract_timespec(&current_time, &current_time, start_time);
+    unsigned long elapsed_ms = timespec_to_milli(&current_time);
 
-    if(token == NULL) {
-        fprintf(stderr, "No parameter passed");
-        exit(-1);
-    }
-    char* name;
-    if(strcmp(token, (name = "Exponential")) == 0) {
-        double lambda = 0.0;
-
-        token = strtok_r(NULL, " ", &ptr);
-		if(token != NULL) {
-            if(strcmp(token, "Oscillating") == 0) {
-                token = strtok_r(NULL, " ", &ptr);
-        		if(token != NULL) {
-                    double dev = strtod(token, NULL);
-
-                    token = strtok_r(NULL, " ", &ptr);
-            		if(token != NULL) {
-                        double stretching = strtod(token, NULL);
-
-                        token = strtok_r(NULL, " ", &ptr);
-                		if(token != NULL) {
-                            double min_lambda = strtod(token, NULL);
-
-                            token = strtok_r(NULL, " ", &ptr);
-                    		if(token != NULL) {
-                                double max_lambda = strtod(token, NULL);
-
-                                struct timespec current_time;
-                                clock_gettime(CLOCK_MONOTONIC, &current_time);
-                                subtract_timespec(&current_time, &current_time, start_time);
-                                double seconds = timespec_to_milli(&current_time) / 1000.0;
-
-                                double aux = dev + stretching*(seconds / app_args->exp_duration_s);
-                                double f = (1.0+cos(2.0*M_PI*aux))/2.0;
-
-                                lambda = min_lambda + (max_lambda - min_lambda)*f;
-                                //printf("lambda = %f seconds = %f\n", lambda, seconds);
-                    		} else {
-                    			printf("Parameter 5 of %s not passed!\n", name);
-                    			exit(-1);
-                    		}
-                		} else {
-                			printf("Parameter 4 of %s not passed!\n", name);
-                			exit(-1);
-                		}
-            		} else {
-            			printf("Parameter 3 of %s not passed!\n", name);
-            			exit(-1);
-            		}
-        		} else {
-        			printf("Parameter 2 of %s not passed!\n", name);
-        			exit(-1);
-        		}
-            } else if(strcmp(token, "Constant") == 0) {
-                token = strtok_r(NULL, " ", &ptr);
-        		if(token != NULL) {
-                    lambda = strtod(token, NULL);
-        		} else {
-        			printf("Parameter 2 of %s not passed!\n", name);
-        			exit(-1);
-        		}
-            }
-		} else {
-			printf("Parameter 1 of %s not passed!\n", name);
-			exit(-1);
-		}
-
-        t = round(randomExponential(lambda/1000.0)); // t is in millis, lambda is transmissions per second
-    } else if(strcmp(token, (name="Periodic")) == 0) {
-        token = strtok_r(NULL, " ", &ptr);
-        if(token != NULL) {
-            double bcast_prob = strtod(token, NULL);
-
-            token = strtok_r(NULL, " ", &ptr);
-            if(token != NULL) {
-                unsigned long periodic_timer_ms = strtol(token, NULL, 10);
-
-                int counter = 1;
-                while( bcast_prob < 1.0 && getRandomProb() > bcast_prob )
-                    counter++;
-                t = counter*periodic_timer_ms;
-            } else {
-                printf("Parameter 2 of %s not passed!\n", name);
-                exit(-1);
-            }
-        } else {
-            printf("Parameter 1 of %s not passed!\n", name);
-            exit(-1);
-        }
-    }
+    unsigned long t = getNextDelay(app_args->broadcast_type, elapsed_ms);
 
     if(isFirst) {
         t += app_args->initial_grace_period_s*1000;
     }
 
+    /*
     #ifdef DEBUG_BROADCAST_TEST
     char str[100];
     sprintf(str, "broadcast_timer = %lu\n", t);
     ygg_log(APP_NAME, "BROADCAST TIMER", str);
     #endif
-
-    return t;
-}
-
-static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_timer_id, bool isFirst, struct timespec* start_time) {
-    unsigned long t = getTimerDuration(app_args, isFirst, start_time);
+    */
 
     struct timespec t_;
     milli_to_timespec(&t_, t);
@@ -479,6 +388,7 @@ static BroadcastAppArgs* default_broadcast_app_args() {
     app_args->max_broadcasts = ULONG_MAX; // infinite
     app_args->exp_duration_s = 5*60; // 5 min
     app_args->rcv_only = false;
+    app_args->verbose = true;
 
     return app_args;
 }
@@ -510,12 +420,14 @@ static BroadcastAppArgs* parse_broadcast_app_args(const char* file_path) {
             } else if( strcmp(key, "final_grace_period_s") == 0 ) {
                 app_args->final_grace_period_s = (unsigned long) strtol(value, NULL, 10);
             } else if( strcmp(key, "max_broadcasts") == 0 ) {
-                bool is_infinite = (strcmp(value, "infinite") == 0 || strcmp(value, "inf") == 0);
+                bool is_infinite = (strcmp(value, "infinite") == 0 || strcmp(value, "infinity") == 0 || strcmp(value, "inf") == 0);
                 app_args->max_broadcasts = is_infinite ? ULONG_MAX : (unsigned int) strtol(value, NULL, 10);
             } else if( strcmp(key, "exp_duration_s") == 0 ) {
                 app_args->exp_duration_s = (unsigned long) strtol(value, NULL, 10);
             } else if( strcmp(key, "rcv_only") == 0 ) {
-                app_args->rcv_only = strcmp("false", value) == 0 ? false : true;
+                app_args->rcv_only = parse_bool(value);
+            } else if( strcmp(key, "verbose") == 0 ) {
+                app_args->verbose = parse_bool(value);
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);

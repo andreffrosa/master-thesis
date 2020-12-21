@@ -119,10 +119,21 @@ static bool MPRContextQuery(ModuleState* context_state, const char* query, void*
 	if( strcmp(query, "mprs") == 0 || strcmp(query, "broadcast_mprs") == 0 || strcmp(query, "delegated_neighbors") == 0 ) {
         *((list**)result) = list_clone(state->broadcast_mprs, sizeof(uuid_t));
 		return true;
-	} else if( strcmp(query, "mpr_selectors") == 0 || strcmp(query, "broadcast_mpr_selectors") == 0 || strcmp(query, "neigh_delegated_neighbors") == 0) {
+	} else if( strcmp(query, "mpr_selectors") == 0 || strcmp(query, "broadcast_mpr_selectors") == 0 ) {
         *((list**)result) = list_clone(state->broadcast_mpr_selectors, sizeof(uuid_t));
 		return true;
-	} else {
+	} else if( strcmp(query, "delegated") == 0 ) {
+        assert(query_args);
+        void** aux1 = hash_table_find_value(query_args, "p_msg");
+        assert(aux1);
+		PendingMessage* p_msg = *aux1;
+        assert(p_msg);
+
+        unsigned char* parent_id = getBcastHeader((((MessageCopy*)getCopies(p_msg)->head->data)))->sender_id;
+
+        *((bool*)result) = (list_find_item(state->broadcast_mpr_selectors, &equalID, parent_id) != NULL);
+		return true;
+	}  else {
         return RC_query(args->neighbors_context, query, result, query_args, myID, visited);
     }
 }

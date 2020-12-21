@@ -162,7 +162,7 @@ static hash_table* compute_labels(graph* neighborhood, unsigned char* myID) {
     for(list_item* it = neighs->head; it; it = it->next) {
         unsigned char* neigh_id = (unsigned char*)it->data;
 
-        graph_node* neigh = graph_find_node(neighborhood, myID);
+        graph_node* neigh = graph_find_node(neighborhood, neigh_id);
         assert(neigh);
 
         NeighLabels* neigh_labels = malloc(sizeof(NeighLabels));

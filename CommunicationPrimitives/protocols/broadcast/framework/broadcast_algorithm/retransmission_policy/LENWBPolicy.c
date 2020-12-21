@@ -24,7 +24,7 @@ static list* get_bi_neighbors(unsigned char* id, RetransmissionContext* r_contex
 
     hash_table* query_args = NULL;
     if(id) {
-        hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
+        query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
         char* key = malloc(3*sizeof(char));
         strcpy(key, "id");
         unsigned char* value = malloc(sizeof(uuid_t));

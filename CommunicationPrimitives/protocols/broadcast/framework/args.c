@@ -14,6 +14,7 @@
 #include "framework.h"
 
 #include "utility/my_sys.h"
+#include "utility/my_string.h"
 
 #include <assert.h>
 
@@ -32,10 +33,10 @@ broadcast_framework_args* default_broadcast_framework_args() {
     return new_broadcast_framework_args(Flooding(500), 1*60*1000, 3*60, false);
 }
 
-static BroadcastAlgorithm* parse_broadcast_algorithm(char* value);
-static RetransmissionPolicy* parse_r_policy(char* value);
-static RetransmissionDelay* parse_r_delay(char* value);
-static RetransmissionContext* parse_r_context(char* value);
+static BroadcastAlgorithm* parse_broadcast_algorithm(char* value, bool nested);
+static RetransmissionPolicy* parse_r_policy(char* value, bool nested);
+static RetransmissionDelay* parse_r_delay(char* value, bool nested);
+static RetransmissionContext* parse_r_context(char* value, bool nested);
 
 broadcast_framework_args* load_broadcast_framework_args(const char* file_path) {
     list* order = list_init();
@@ -59,15 +60,15 @@ broadcast_framework_args* load_broadcast_framework_args(const char* file_path) {
         if( value != NULL ) {
             if( strcmp(key, "algorithm") == 0 ) {
                 destroyBroadcastAlgorithm(args->algorithm);
-                args->algorithm = parse_broadcast_algorithm(value);
+                args->algorithm = parse_broadcast_algorithm(value, false);
             } else if( strcmp(key, "r_policy") == 0 ) {
-                RetransmissionPolicy* new_r_policy = parse_r_policy(value);
+                RetransmissionPolicy* new_r_policy = parse_r_policy(value, false);
                 BA_setRetransmissionPolicy(args->algorithm, new_r_policy);
             } else if( strcmp(key, "r_delay") == 0 ) {
-                RetransmissionDelay* new_r_delay = parse_r_delay(value);
+                RetransmissionDelay* new_r_delay = parse_r_delay(value, false);
                 BA_setRetransmissionDelay(args->algorithm, new_r_delay);
             } else if( strcmp(key, "r_context") == 0 ) {
-                RetransmissionContext* new_r_context = parse_r_context(value);
+                RetransmissionContext* new_r_context = parse_r_context(value, false);
                 BA_setRetransmissionContext(args->algorithm, new_r_context);
             } else if( strcmp(key, "r_phases") == 0 ) {
                 unsigned int new_r_phases = strtol(value, NULL, 10);
@@ -77,7 +78,7 @@ broadcast_framework_args* load_broadcast_framework_args(const char* file_path) {
             } else if( strcmp(key, "gc_interval_s") == 0 ) {
                 args->gc_interval_s = strtol(value, NULL, 10);
             } else if( strcmp(key, "late_delivery") == 0 ) {
-                args->late_delivery = strcmp(value, "false") == 0 ? false : true;
+                args->late_delivery = parse_bool(value);
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
@@ -97,7 +98,7 @@ broadcast_framework_args* load_broadcast_framework_args(const char* file_path) {
     return args;
 }
 
-static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
+static BroadcastAlgorithm* parse_broadcast_algorithm(char* value, bool nested) {
 
     if(value == NULL) {
         printf("No parameter passed");
@@ -106,7 +107,17 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
 
     char* name = NULL;
     char* ptr = NULL;
-    char* token  = strtok_r(value, " ", &ptr);
+    char* token  = NULL;
+
+    int len = strlen(value);
+    char str[len+1];
+
+    if(!nested) {
+        memcpy(str, value, len+1);
+        token  = strtok_r(str, " ", &ptr);
+    } else {
+        token  = value;
+    }
 
     if(strcmp(token, (name = "Flooding")) == 0) {
 
@@ -138,7 +149,7 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
 			printf("Parameter 1 of %s not passed!\n", name);
 			exit(-1);
 		}
-	} else if(strcmp(token, (name = "Gossip1_hops")) == 0) {
+	} else if(strcmp(token, (name = "Gossip1Horizon")) == 0) {
 
 		token = strtok_r(NULL, " ", &ptr);
 		if(token != NULL) {
@@ -152,7 +163,7 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
 				if(token != NULL) {
 					unsigned int k = strtol(token, NULL, 10);
 
-					return Gossip1_hops(t, p, k);
+					return Gossip1Horizon(t, p, k);
 				} else {
 					printf("Parameter 3 of %s not passed!\n", name);
 					exit(-1);
@@ -316,6 +327,33 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
 			printf("Parameter 1 of %s not passed!\n", name);
 			exit(-1);
 		}
+	} else if(strcmp(token, (name = "CountingParents")) == 0) {
+
+		token = strtok_r(NULL, " ", &ptr);
+		if(token != NULL) {
+			unsigned long t = strtol(token, NULL, 10);
+
+			token = strtok_r(NULL, " ", &ptr);
+			if(token != NULL) {
+				unsigned int c = strtol(token, NULL, 10);
+
+                token = strtok_r(NULL, " ", &ptr);
+    			if(token != NULL) {
+    				bool count_same_parent = parse_bool(token);
+
+    				return CountingParents(t, c, count_same_parent);
+    			} else {
+    				printf("Parameter 3 of %s not passed!\n", name);
+    				exit(-1);
+    			}
+			} else {
+				printf("Parameter 2 of %s not passed!\n", name);
+				exit(-1);
+			}
+		} else {
+			printf("Parameter 1 of %s not passed!\n", name);
+			exit(-1);
+		}
 	} else if(strcmp(token, (name = "HopCountAided")) == 0) {
 
 
@@ -454,15 +492,21 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
 
 		token = strtok_r(NULL, " ", &ptr);
 		if(token != NULL) {
-			int ex = (int) strtol(token, NULL, 10);
+            unsigned long t = strtol(token, NULL, 10);
 
             token = strtok_r(NULL, " ", &ptr);
     		if(token != NULL) {
-    			unsigned long t = strtol(token, NULL, 10);
-
                 unsigned int route_max_len = (unsigned int)strtol(token, NULL, 10);
 
-                return AHBP(ex, t, route_max_len);
+                token = strtok_r(NULL, " ", &ptr);
+        		if(token != NULL) {
+        			bool mobility_extension = parse_bool(token);
+
+                    return AHBP(t, route_max_len, mobility_extension);
+                } else {
+                    printf("Parameter 3 of %s not passed!\n", name);
+                    exit(-1);
+                }
             } else {
                 printf("Parameter 2 of %s not passed!\n", name);
                 exit(-1);
@@ -567,7 +611,7 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char* value) {
 
 }
 
-static RetransmissionPolicy* parse_r_policy(char* value) {
+static RetransmissionPolicy* parse_r_policy(char* value, bool nested) {
 
     if(value == NULL) {
         printf("No parameter passed");
@@ -576,7 +620,17 @@ static RetransmissionPolicy* parse_r_policy(char* value) {
 
     char* name = NULL;
     char* ptr = NULL;
-    char* token  = strtok_r(value, " ", &ptr);
+    char* token = NULL;
+
+    int len = strlen(value);
+    char str[len+1];
+
+    if(!nested) {
+        memcpy(str, value, len+1);
+        token  = strtok_r(str, " ", &ptr);
+    } else {
+        token  = value;
+    }
 
     if(strcmp(token, (name = "True")) == 0 || strcmp(token, (name = "AlwaysTrue")) == 0 || strcmp(token, (name = "TruePolicy")) == 0 ) {
         return TruePolicy();
@@ -597,6 +651,24 @@ static RetransmissionPolicy* parse_r_policy(char* value) {
 			unsigned int c = strtol(token, NULL, 10);
 
             return CountPolicy(c);
+		} else {
+			printf("Parameter 1 of %s not passed!\n", name);
+			exit(-1);
+		}
+	} else if(strcmp(token, (name = "CountParents")) == 0 || strcmp(token, (name = "CountParentsPolicy")) == 0) {
+		token = strtok_r(NULL, " ", &ptr);
+		if(token != NULL) {
+			unsigned int c = strtol(token, NULL, 10);
+
+            token = strtok_r(NULL, " ", &ptr);
+    		if(token != NULL) {
+    			bool count_same_parent = parse_bool(token);
+
+                return CountParentsPolicy(c, count_same_parent);
+    		} else {
+    			printf("Parameter 2 of %s not passed!\n", name);
+    			exit(-1);
+    		}
 		} else {
 			printf("Parameter 1 of %s not passed!\n", name);
 			exit(-1);
@@ -764,7 +836,7 @@ static RetransmissionPolicy* parse_r_policy(char* value) {
 
 }
 
-static RetransmissionDelay* parse_r_delay(char* value) {
+static RetransmissionDelay* parse_r_delay(char* value, bool nested) {
 
     if(value == NULL) {
         printf("No parameter passed");
@@ -773,7 +845,17 @@ static RetransmissionDelay* parse_r_delay(char* value) {
 
     char* name = NULL;
     char* ptr = NULL;
-    char* token  = strtok_r(value, " ", &ptr);
+    char* token = NULL;
+
+    int len = strlen(value);
+    char str[len+1];
+
+    if(!nested) {
+        memcpy(str, value, len+1);
+        token  = strtok_r(str, " ", &ptr);
+    } else {
+        token  = value;
+    }
 
     if(strcmp(token, (name = "Random")) == 0) {
 
@@ -859,7 +941,7 @@ static RetransmissionDelay* parse_r_delay(char* value) {
 	}
 }
 
-static RetransmissionContext* parse_r_context(char* value) {
+static RetransmissionContext* parse_r_context(char* value, bool nested) {
 
     if(value == NULL) {
         printf("No parameter passed");
@@ -868,7 +950,17 @@ static RetransmissionContext* parse_r_context(char* value) {
 
     char* name = NULL;
     char* ptr = NULL;
-    char* token  = strtok_r(value, " ", &ptr);
+    char* token = NULL;
+
+    int len = strlen(value);
+    char str[len+1];
+
+    if(!nested) {
+        memcpy(str, value, len+1);
+        token  = strtok_r(str, " ", &ptr);
+    } else {
+        token  = value;
+    }
 
     if(strcmp(token, (name = "Empty")) == 0 || strcmp(token, (name = "EmptyContext")) == 0) {
         return EmptyContext();

@@ -10,7 +10,8 @@ add_subdirectory(broadcast_algorithm)
 
 file(GLOB SRC_FILES_BROADCAST_FRAMEWORK LIST_DIRECTORIES false ${PROJECT_SOURCE_DIR}/*.c)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D DEBUG_BROADCAST -g -Wall -O0")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D DEBUG_BROADCAST -g -Wall -O0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -O0")
 
 add_library(broadcast ${SRC_FILES_BROADCAST_FRAMEWORK})
 

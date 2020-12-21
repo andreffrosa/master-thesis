@@ -52,18 +52,20 @@ static unsigned int RouteContextHeader(ModuleState* context_state, PendingMessag
     if(!RouteContextQueryHeader(context_state, getContextHeader(first), getBcastHeader(first)->context_length, "route", &route, NULL, myID, NULL))
 		assert(false);
 
+    unsigned int max_len = *((unsigned int*)(context_state->args));
+    //unsigned int real_len = iMin(max_len - 1, route->size);
+
+    while (route->size > max_len - 1) {
+        free(list_remove_head(route));
+    }
+
     unsigned char* x = malloc(sizeof(uuid_t));
     uuid_copy(x, myID);
     list_add_item_to_tail(route, x);
 
-    unsigned int max_len = *((unsigned int*)(context_state->args));
-    unsigned int real_len = iMin(max_len, route->size);
+    assert(route->size <= max_len);
 
-    while (route->size > max_len) {
-        free(list_remove_head(route));
-    }
-
-    unsigned int size = real_len*sizeof(uuid_t);
+    unsigned int size = route->size*sizeof(uuid_t);
 
     unsigned char* buffer = malloc(size);
     unsigned char* ptr = buffer;
@@ -82,6 +84,7 @@ static void RouteContextDestroy(ModuleState* context_state, list* visited) {
 }
 
 RetransmissionContext* RouteContext(unsigned int max_len) {
+    assert(max_len > 0);
 
 	unsigned int* max_len_arg = malloc(sizeof(unsigned int));
 	*max_len_arg = max_len;

@@ -29,23 +29,24 @@ static bool AHBPContextQueryHeader(ModuleState* context_state, void* header, uns
 /*static */list* compute_bgrs(graph* neighborhood, unsigned char* myID, list* covered) {
 
     for(list_item* it = covered->head; it; it = it->next) {
-        list* neighs = graph_get_adjacencies(neighborhood, it->data, SYM_ADJ);
+        if( uuid_compare(myID, it->data) != 0 ) {
 
-        if( neighs ) {
-            for(list_item* it2 = neighs->head; it2; it2 = it2->next) {
-                if( uuid_compare(myID, it2->data) != 0 ) {
-                    void* x = graph_remove_node(neighborhood, it2->data);
-                    if(x) free(x);
+            list* neighs = graph_get_adjacencies(neighborhood, it->data, SYM_ADJ); // OUD_ADJ?
+
+            if( neighs ) {
+                for(list_item* it2 = neighs->head; it2; it2 = it2->next) {
+                    if( uuid_compare(myID, it2->data) != 0 ) {
+                        void* x = graph_remove_node(neighborhood, it2->data);
+                        if(x) free(x);
+                    }
                 }
             }
-        }
 
-        if( uuid_compare(myID, it->data) != 0 ) {
             void* x = graph_remove_node(neighborhood, it->data);
             if(x) free(x);
-        }
 
-        list_delete(neighs);
+            list_delete(neighs);
+        }
     }
 
     hash_table* n1 = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
@@ -61,16 +62,20 @@ static bool AHBPContextQueryHeader(ModuleState* context_state, void* header, uns
         for(list_item* it2 = two_hop_neighs->head; it2; it2 = it2->next) {
             unsigned char* two_hop_neigh_id = (unsigned char*)it2->data;
 
-            bool to_add = uuid_compare(two_hop_neigh_id, myID) != 0 && list_find_item(n2, &equalN2Tuple, two_hop_neigh_id) == NULL;
-            if(to_add) {
-                double* rx_lq = graph_find_label(neighborhood, neigh_id, two_hop_neigh_id);
-                assert(rx_lq);
-                N2_Tuple* n2_tuple = newN2Tuple(two_hop_neigh_id, *rx_lq); // lq from 1 hop to 2 hops
-                list_add_item_to_tail(ns, n2_tuple);
+            //bool is_bi = ;
+            bool is_not_me = uuid_compare(two_hop_neigh_id, myID) != 0;
+            bool is_not_in_n2_yet = list_find_item(n2, &equalN2Tuple, two_hop_neigh_id) == NULL;
 
-                unsigned char* id = malloc(sizeof(uuid_t));
-                uuid_copy(id, two_hop_neigh_id);
-                list_add_item_to_tail(n2, id);
+            if( /*is_bi &&*/ is_not_me) {
+                if( is_not_in_n2_yet ) {
+                    unsigned char* id = malloc(sizeof(uuid_t));
+                    uuid_copy(id, two_hop_neigh_id);
+                    list_add_item_to_tail(n2, id);
+                }
+                double* tx_lq = graph_find_label(neighborhood, neigh_id, two_hop_neigh_id);
+                assert(tx_lq);
+                N2_Tuple* n2_tuple = newN2Tuple(two_hop_neigh_id, *tx_lq); // lq from 1 hop to 2 hops
+                list_add_item_to_tail(ns, n2_tuple);
             }
         }
         list_delete(two_hop_neighs);
@@ -89,13 +94,16 @@ static bool AHBPContextQueryHeader(ModuleState* context_state, void* header, uns
     list_delete(n2);
 
     // Debug
-    printf("Computed Delegated Neighbors (BGRs):\n");
+    /*
+printf("Computed Delegated Neighbors (BGRs %d):\n", bgrs->size);
     for(list_item* it = bgrs->head; it; it = it->next) {
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(((unsigned char*)it->data), id_str);
         printf("%s\n", id_str);
     }
+    fflush(stdout);
+*/
 
     return bgrs;
 }
@@ -123,7 +131,6 @@ static unsigned int append_bgrs(ModuleState* context_state, PendingMessage* p_ms
         list* route = NULL;
         if(!AHBPContextQueryHeader(context_state, getContextHeader(copy), getBcastHeader(copy)->context_length, "route", &route, NULL, myID, visited2))
             assert(false);
-
         list_delete(visited2);
 
         if(route)
@@ -138,19 +145,24 @@ static unsigned int append_bgrs(ModuleState* context_state, PendingMessage* p_ms
 
     list* bgrs = compute_bgrs(neighborhood, myID, covered);
 
-    int bgrs_header_size = bgrs->size * sizeof(uuid_t);
-    unsigned char* bgrs_header = malloc(bgrs_header_size);
-    unsigned char* ptr = bgrs_header;
+    int bgrs_header_size = 0;
+    unsigned char* bgrs_header = NULL;
+    if(bgrs->size > 0) {
+        bgrs_header_size = bgrs->size * sizeof(uuid_t);
+        bgrs_header = malloc(bgrs_header_size);
+        unsigned char* ptr = bgrs_header;
 
-    for(list_item* it = bgrs->head; it; it = it->next) {
-        uuid_copy(ptr, it->data);
-        ptr += sizeof(uuid_t);
+        for(list_item* it = bgrs->head; it; it = it->next) {
+            uuid_copy(ptr, it->data);
+            ptr += sizeof(uuid_t);
+        }
     }
 
     graph_delete(neighborhood);
     list_delete(covered);
     list_delete(bgrs);
 
+    *context_header = bgrs_header;
     return bgrs_header_size;
 }
 
@@ -166,6 +178,8 @@ static unsigned int AHBPContextHeader(ModuleState* context_state, PendingMessage
     unsigned int bgrs_header_size = append_bgrs(context_state, p_msg, &bgrs_header, myID);
 
     assert(route_header_size <= 255 && bgrs_header_size <= 255);
+    assert((route_header_size == 0 || route_header !=NULL) && (route_header == NULL || route_header_size > 0));
+    assert((bgrs_header_size == 0 || bgrs_header !=NULL) && (bgrs_header == NULL || bgrs_header_size > 0));
 
     unsigned short total_size = 2*sizeof(byte) + route_header_size + bgrs_header_size;
 
@@ -181,9 +195,15 @@ static unsigned int AHBPContextHeader(ModuleState* context_state, PendingMessage
     memcpy(ptr, &aux, sizeof(byte));
     ptr += sizeof(byte);
 
-    memcpy(ptr, route_header, route_header_size);
-    ptr += route_header_size;
-    memcpy(ptr, bgrs_header, bgrs_header_size);
+    if( route_header_size > 0 ) {
+        memcpy(ptr, route_header, route_header_size);
+        ptr += route_header_size;
+    }
+
+    if( bgrs_header_size > 0 ) {
+        memcpy(ptr, bgrs_header, bgrs_header_size);
+        ptr += bgrs_header_size;
+    }
 
     free(route_header);
     free(bgrs_header);
@@ -217,14 +237,14 @@ static bool AHBPContextQueryHeader(ModuleState* context_state, void* header, uns
 
     AHBPContextArgs* args = (AHBPContextArgs*)(context_state->args);
 
-    char sizes[2];
+    byte sizes[2];
     unsigned char* route_header = NULL;
     unsigned char* bgrs_header = NULL;
 
     if(header != NULL) {
         memcpy(sizes, header, sizeof(sizes));
 
-        route_header = header + sizeof(sizes);
+        route_header = header + 2*sizeof(byte);
         bgrs_header = route_header + sizes[0];
     } else {
         memset(sizes, 0, sizeof(sizes));
@@ -234,17 +254,32 @@ static bool AHBPContextQueryHeader(ModuleState* context_state, void* header, uns
     }
 
     if( strcmp(query, "bgrs") == 0 || strcmp(query, "delegated_neighbors") == 0 ) {
-        list* l = list_init();
+        list* bgrs = list_init();
 
         int size = sizes[1] / sizeof(uuid_t);
         for(int i = 0; i < size; i++) {
             unsigned char* id = bgrs_header + i*sizeof(uuid_t);
             unsigned char* id_copy = malloc(sizeof(uuid_t));
             uuid_copy(id_copy, id);
-            list_add_item_to_tail(l, id_copy);
+            list_add_item_to_tail(bgrs, id_copy);
         }
 
-		*((list**)result) = l;
+		*((list**)result) = bgrs;
+		return true;
+	} if( strcmp(query, "delegated") == 0 ) {
+        list* bgrs = list_init();
+
+        int size = sizes[1] / sizeof(uuid_t);
+
+        for(int i = 0; i < size; i++) {
+            unsigned char* id = bgrs_header + i*sizeof(uuid_t);
+            unsigned char* id_copy = malloc(sizeof(uuid_t));
+            uuid_copy(id_copy, id);
+            list_add_item_to_tail(bgrs, id_copy);
+        }
+
+        *((bool*)result) = (list_find_item(bgrs, &equalID, myID) != NULL);
+        list_delete(bgrs);
 		return true;
 	} else {
         return RC_queryHeader(args->route_context, route_header, sizes[0], query, result, query_args, myID, visited);

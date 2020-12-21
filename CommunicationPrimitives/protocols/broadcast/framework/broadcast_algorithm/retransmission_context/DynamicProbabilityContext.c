@@ -96,7 +96,7 @@ RetransmissionContext* DynamicProbabilityContext(double p, double p_l, double p_
     args->t = t;
 
     DynamicProbabilityContextState* state = malloc(sizeof(DynamicProbabilityContextState));
-    state->p = p;
+    state->p = p; 
     state->counter = 0;
     uuid_generate_random(state->timer_id);
 

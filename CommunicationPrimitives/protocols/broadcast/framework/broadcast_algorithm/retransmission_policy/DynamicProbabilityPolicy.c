@@ -26,6 +26,9 @@ static bool DynamicProbabilityPolicyEval(ModuleState* policy_state, PendingMessa
     list_delete(visited2);
 
     //printf("P = %f\n", p);
+    char str[20];
+    sprintf(str, "p=%f", p);
+    ygg_log("DYNAMIC_PROBABILITY", "", str);
 
 	double u = randomProb();
 	return u <= p;

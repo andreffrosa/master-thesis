@@ -164,14 +164,16 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
         char* aux2 = hash_table_find_value(query_args, "coverage");
         char* coverage = aux2 ? aux2 : "all";
 
-        if(strcmp(coverage, "first")==0) {
+        if(strcmp(coverage, "first") == 0) {
             *((list**)result) = getCoverage(state->neighborhood, myID, getCopies(p_msg), true);
-        } else if(strcmp(coverage, "all")==0) {
+            return true;
+        } else if(strcmp(coverage, "all") == 0) {
             *((list**)result) = getCoverage(state->neighborhood, myID, getCopies(p_msg), false);
+            return true;
         } else {
                 return false;
         }
-		return true;
+
 	} else if(strcmp(query, "not_covered") == 0) {
         assert(query_args);
         void** aux1 = hash_table_find_value(query_args, "p_msg");
@@ -221,7 +223,7 @@ RetransmissionContext* NeighborsContext() {
 
     NeighborsContextState* state = malloc(sizeof(NeighborsContextState));
 
-    state->neighborhood = graph_init((key_comparator)&uuid_compare, sizeof(uuid_t));
+    state->neighborhood = graph_init_complete((key_comparator)&uuid_compare, NULL, NULL, sizeof(uuid_t), sizeof(double), sizeof(double));
     state->in_traffic = 0.0;
     state->out_traffic = 0.0;
     state->new_neighbors_flux = 0.0;
@@ -503,7 +505,7 @@ static graph* extractNeighborhood(YggEvent* ev) {
 
     void* ptr = NULL;
 
-    graph* neighborhood = graph_init((key_comparator)&uuid_compare, sizeof(uuid_t));
+    graph* neighborhood = graph_init_complete((key_comparator)&uuid_compare, NULL, NULL, sizeof(uuid_t), sizeof(double), sizeof(double));
 
     // Nodes
     byte n_nodes = 0;
@@ -684,6 +686,7 @@ static list* notCovered(graph* neighborhood, unsigned char* myID, double_list* c
 			list_add_item_to_tail(missed, id);
 		}
 	}
+
 	list_delete(total_coverage);
 
     list_delete(adj);

@@ -77,6 +77,8 @@ static bool CriticalNeighPolicyEval(ModuleState* policy_state, PendingMessage* p
         all_neighs_covered |= in_label != CRITICAL_NODE;
 
         found_unknown_node |= in_label == UNKNOWN_NODE;
+
+        printf("is_critical: %s unknwon %s\n", (!all_neighs_covered?"true":"false"), (found_unknown_node?"true":"false"));
     }
 
     if(current_phase == 1) {

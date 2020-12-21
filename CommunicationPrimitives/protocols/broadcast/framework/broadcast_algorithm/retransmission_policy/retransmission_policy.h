@@ -27,6 +27,8 @@ RetransmissionPolicy* TruePolicy();
 RetransmissionPolicy* ProbabilityPolicy(double p);
 RetransmissionPolicy* CountPolicy(unsigned int c);
 
+RetransmissionPolicy* CountParentsPolicy(unsigned int c, bool count_same_parents);
+
 RetransmissionPolicy* NeighborCountingPolicy(unsigned int c);
 RetransmissionPolicy* PbNeighCountingPolicy(unsigned int c1, unsigned int c2);
 
