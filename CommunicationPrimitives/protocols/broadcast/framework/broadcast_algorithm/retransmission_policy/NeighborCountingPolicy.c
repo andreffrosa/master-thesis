@@ -17,20 +17,21 @@
 
 #include <assert.h>
 
-static bool NeighborCountingPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool NeighborCountingPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 	unsigned int c = *((unsigned int*)(policy_state->args));
 	unsigned int n_copies = getCopies(p_msg)->size;
 	unsigned int n = 0;
 
-    list* visited2 = list_init();
-    if(!RC_query(r_context, "in_degree", &n, NULL, myID, visited2))
+    RetransmissionContext* r_context = hash_table_find_value(contexts, "NeighborsContext");
+    assert(r_context);
+
+    if(!RC_query(r_context, "in_degree", &n, NULL, myID, contexts))
         assert(false);
-    list_delete(visited2);
 
 	return n_copies < lMin(n, c);
 }
 
-static void NeighborCountingPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void NeighborCountingPolicyDestroy(ModuleState* policy_state) {
     free(policy_state->args);
 }
 
@@ -39,10 +40,13 @@ RetransmissionPolicy* NeighborCountingPolicy(unsigned int c) {
     unsigned int* c_arg = malloc(sizeof(c));
     *c_arg = c;
 
-    return newRetransmissionPolicy(
+    RetransmissionPolicy* r_policy = newRetransmissionPolicy(
         c_arg,
         NULL,
         &NeighborCountingPolicyEval,
-        &NeighborCountingPolicyDestroy
+        &NeighborCountingPolicyDestroy,
+        new_list(1, new_str("NeighborsContext"))
     );
+    
+    return r_policy;
 }

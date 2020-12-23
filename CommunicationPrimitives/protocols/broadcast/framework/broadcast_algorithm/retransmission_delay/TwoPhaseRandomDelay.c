@@ -15,7 +15,7 @@
 
 #include "utility/my_math.h"
 
-static unsigned long TwoPhaseRandomDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static unsigned long TwoPhaseRandomDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, hash_table* contexts) {
     if(!isCopy) {
         unsigned long t1 = ((unsigned long*)(delay_state->args))[0];
         unsigned long t2 = ((unsigned long*)(delay_state->args))[1];
@@ -28,7 +28,7 @@ static unsigned long TwoPhaseRandomDelayCompute(ModuleState* delay_state, Pendin
     }
 }
 
-static void TwoPhaseRandomDelayDestroy(ModuleState* delay_state, list* visited) {
+static void TwoPhaseRandomDelayDestroy(ModuleState* delay_state) {
     free(delay_state->args);
 }
 
@@ -42,6 +42,7 @@ RetransmissionDelay* TwoPhaseRandomDelay(unsigned long t1, unsigned long t2) {
         t_args,
         NULL,
         &TwoPhaseRandomDelayCompute,
-        &TwoPhaseRandomDelayDestroy
+        &TwoPhaseRandomDelayDestroy,
+        NULL
     );
 }

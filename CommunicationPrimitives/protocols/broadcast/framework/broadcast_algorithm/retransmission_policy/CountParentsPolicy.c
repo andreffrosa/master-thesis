@@ -20,23 +20,18 @@ typedef struct CountParentsArgs_ {
     bool count_same_parents;
 } CountParentsArgs;
 
-static bool CountParentsPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool CountParentsPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
     CountParentsArgs* args = (CountParentsArgs*)policy_state->args;
 
     unsigned int counter = 0;
-
     uuid_t first_parent;
 
     for(double_list_item* dit = getCopies(p_msg)->head; dit; dit = dit->next) {
         MessageCopy* copy = (MessageCopy*)dit->data;
+        hash_table* headers = getHeaders(copy);
 
-        list* parents = NULL;
-
-        list* visited2 = list_init();
-        if(!RC_queryHeader(r_context, getContextHeader(copy), getBcastHeader(copy)->context_length, "parents", &parents, NULL, myID, visited2)) {
-            assert(false);
-        }
-        list_delete(visited2);
+        list* parents = (list*)hash_table_find_value(headers, "parents");
+        assert(parents);
 
         if(parents->head) {
             unsigned char* parent = (unsigned char*)parents->head->data;
@@ -50,17 +45,15 @@ static bool CountParentsPolicyEval(ModuleState* policy_state, PendingMessage* p_
                     counter++;
                 }
             }
-
         }
 
         list_delete(parents);
     }
 
-
 	return counter < args->c;
 }
 
-static void CountParentsPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void CountParentsPolicyDestroy(ModuleState* policy_state) {
     free(policy_state->args);
 }
 
@@ -70,10 +63,13 @@ RetransmissionPolicy* CountParentsPolicy(unsigned int c, bool count_same_parents
     args->c = c;
     args->count_same_parents = count_same_parents;
 
-    return newRetransmissionPolicy(
+    RetransmissionPolicy* r_policy = newRetransmissionPolicy(
         args,
         NULL,
         &CountParentsPolicyEval,
-        &CountParentsPolicyDestroy
+        &CountParentsPolicyDestroy,
+        new_list(1, new_str("ParentsContext"))
     );
+
+    return r_policy;
 }

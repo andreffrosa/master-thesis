@@ -40,6 +40,8 @@ typedef struct MessageCopy_ {
 	BroadcastHeader header;					// Broadcast Header
 	void* context_header;			        // Retransmission Context
 	unsigned int phase;						// Phase in which the copy was received
+
+    hash_table* headers;
 } MessageCopy;
 
 
@@ -73,13 +75,14 @@ bool getPhaseDecision(PhaseStats* ps) {
 
 ////////////////////////////////////////////////////////
 
-MessageCopy* newMessageCopy(struct timespec* reception_time, BroadcastHeader* header, void* context_header, unsigned int phase) {
+MessageCopy* newMessageCopy(struct timespec* reception_time, BroadcastHeader* header, byte* context_header, unsigned int phase, hash_table* headers) {
     MessageCopy* p_msg_copy = (MessageCopy*) malloc(sizeof(MessageCopy));
 
     memcpy(&p_msg_copy->reception_time, reception_time, sizeof(struct timespec));
 	memcpy(&p_msg_copy->header, header, BROADCAST_HEADER_LENGTH);
 	p_msg_copy->context_header = context_header;
 	p_msg_copy->phase = phase;
+    p_msg_copy->headers = headers;
 
     return p_msg_copy;
 }
@@ -102,6 +105,11 @@ void* getContextHeader(MessageCopy* p_msg_copy) {
 unsigned int getCopyPhase(MessageCopy* p_msg_copy) {
     assert(p_msg_copy);
     return p_msg_copy->phase;
+}
+
+hash_table* getHeaders(MessageCopy* p_msg_copy) {
+    assert(p_msg_copy);
+    return p_msg_copy->headers;
 }
 
 ////////////////////////////////////////////////////////////
@@ -136,6 +144,8 @@ void deletePendingMessage(PendingMessage* p_msg) {
 		if(p_msg_copy->context_header != NULL)
 			free(p_msg_copy->context_header);
 
+        hash_table_delete(p_msg_copy->headers);
+
 		free(p_msg_copy);
 	}
 
@@ -153,11 +163,11 @@ unsigned int getCurrentPhase(PendingMessage* p_msg) {
     return p_msg->current_phase;
 }
 
-void addMessageCopy(PendingMessage* p_msg, struct timespec* reception_time, BroadcastHeader* header, void* context_header) {
+void addMessageCopy(PendingMessage* p_msg, struct timespec* reception_time, BroadcastHeader* header, byte* context_header, hash_table* headers) {
     assert(p_msg != NULL);
     assert(p_msg->copies != NULL);
 
-    MessageCopy* p_msg_copy = newMessageCopy(reception_time, header, context_header, p_msg->current_phase);
+    MessageCopy* p_msg_copy = newMessageCopy(reception_time, header, context_header, p_msg->current_phase, headers);
 
     double_list_add_item_to_tail(p_msg->copies, p_msg_copy);
 }
@@ -270,6 +280,6 @@ void setMessageInactive(PendingMessage* p_msg) {
 void setPendingMessageDecision(PendingMessage* p_msg, bool decision) {
     assert(p_msg != NULL);
     assert(p_msg->PhaseStats);
-    
+
     p_msg->PhaseStats[p_msg->current_phase-1].retransmission_decision = decision;
 }

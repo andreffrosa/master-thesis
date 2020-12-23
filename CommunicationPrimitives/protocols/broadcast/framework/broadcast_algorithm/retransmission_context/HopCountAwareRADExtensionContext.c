@@ -15,49 +15,45 @@
 
 #include <assert.h>
 
-static bool HopCountAwareRADExtensionContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
-
-	if(strcmp(query, "delay") == 0 || strcmp(query, "timer") == 0 || strcmp(query, "rad") == 0) {
-		*((unsigned long*)result) = context_header ? *((unsigned long*)context_header) : 0;
-		return true;
-	}
-
-	return false;
-}
-
-static unsigned int HopCountAwareRADExtensionContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
-
+static void HCA_RADExtension_AppendHeaders(ModuleState* context_state, PendingMessage* p_msg, hash_table* serialized_headers, unsigned char* myID, hash_table* contexts, struct timespec* current_time) {
     unsigned long delta_t = *((unsigned long*) (context_state->args));
+
+    unsigned long delay = getCurrentPhaseDuration(p_msg);
 
     double_list* copies = getCopies(p_msg);
     unsigned char n_copies = copies->size;
-
     assert(n_copies > 0);
+    MessageCopy* first = ((MessageCopy*)copies->head->data);
+    hash_table* headers = getHeaders(first);
 
-    //if(n_copies > 0) {
-        unsigned int size = sizeof(unsigned long);
-    	unsigned char* buffer = malloc(size);
+    unsigned long* parent_initial_delay = (unsigned long*)hash_table_find_value(headers, "delay");
 
-        unsigned long delay = getCurrentPhaseDuration(p_msg);
+    unsigned long initial_delay = delay - 2*n_copies*delta_t - (delta_t - (parent_initial_delay?*parent_initial_delay:0));
 
-        unsigned long parent_initial_delay;
-        MessageCopy* first = ((MessageCopy*)copies->head->data);
-
-        if(!HopCountAwareRADExtensionContextQueryHeader(context_state, getContextHeader(first), getBcastHeader(first)->context_length, "delay", &parent_initial_delay, NULL, myID, NULL))
-            assert(false);
-
-        unsigned long initial_delay = delay - 2*n_copies*delta_t - (delta_t - parent_initial_delay);
-        memcpy(buffer, &initial_delay, sizeof(unsigned long));
-
-        *context_header = buffer;
-    	return size;
-    /*} else {
-        *context_header = NULL;
-        return 0;
-    }*/
+    appendHeader(serialized_headers, "delay", &initial_delay, sizeof(unsigned long));
 }
 
-static void HopCountAwareRADExtensionContextDestroy(ModuleState* context_state, list* visited) {
+static void HCA_RADExtension_ParseHeaders(ModuleState* context_state, hash_table* serialized_headers, hash_table* headers, unsigned char* myID) {
+
+    byte* buffer = (byte*)hash_table_find_value(serialized_headers, "delay");
+    if(buffer) {
+        byte* ptr = buffer;
+
+        byte size = 0;
+        memcpy(&size, ptr, sizeof(byte));
+        ptr += sizeof(byte);
+
+        unsigned long* delay = malloc(sizeof(unsigned long));
+        memcpy(delay, ptr, sizeof(unsigned long));
+
+        const char* key_ = "delay";
+        char* key = malloc(strlen(key_)+1);
+        strcpy(key, key_);
+        hash_table_insert(headers, key, delay);
+    }
+}
+
+static void HopCountAwareRADExtensionContextDestroy(ModuleState* context_state) {
     free(context_state->args);
 }
 
@@ -68,14 +64,16 @@ RetransmissionContext* HopCountAwareRADExtensionContext(unsigned long delta_t) {
     *delta_t_arg = delta_t;
 
     return newRetransmissionContext(
+        "HopCountAwareRADExtensionContext",
         delta_t_arg,
         NULL,
         NULL,
         NULL,
-        &HopCountAwareRADExtensionContextHeader,
+        &HCA_RADExtension_AppendHeaders,
+        &HCA_RADExtension_ParseHeaders,
         NULL,
-        &HopCountAwareRADExtensionContextQueryHeader,
         NULL,
-        &HopCountAwareRADExtensionContextDestroy
+        &HopCountAwareRADExtensionContextDestroy,
+        NULL
     );
 }

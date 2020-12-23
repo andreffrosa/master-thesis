@@ -16,16 +16,18 @@
 
 #include "retransmission_policy.h"
 
-typedef bool (*eval_policy)(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited);
+typedef bool (*eval_policy)(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts);
 
-typedef void (*destroy_policy)(ModuleState* context_state, list* visited);
+typedef void (*destroy_policy)(ModuleState* context_state);
 
 typedef struct _RetransmissionPolicy {
     ModuleState state;
 	eval_policy eval;
     destroy_policy destroy;
+
+    list* context_dependencies;
 } RetransmissionPolicy;
 
-RetransmissionPolicy* newRetransmissionPolicy(void* args, void* vars, eval_policy eval, destroy_policy destroy);
+RetransmissionPolicy* newRetransmissionPolicy(void* args, void* vars, eval_policy eval, destroy_policy destroy, list* dependencies);
 
 #endif /* _RETRANSMISSION_POLICY_PRIVATE_H_ */

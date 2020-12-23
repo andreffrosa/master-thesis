@@ -16,6 +16,7 @@
 #include "utility/my_math.h"
 #include "utility/my_time.h"
 #include "utility/my_misc.h"
+#include "utility/my_string.h"
 
 #include "debug.h"
 
@@ -221,11 +222,15 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
     uuid_copy(header.msg_id, msg_id);
     header.dest_proto = req->proto_origin;
     header.ttl = ttl;
+
     // The context is empty by default on requests
     header.context_length = 0;
-    void* context_header = NULL;
+    byte* context_header = NULL;
     //serializeHeader(state, p_msg, &header, &context_header, ttl);
-    addMessageCopy(p_msg, &state->current_time, &header, context_header);
+
+    hash_table* headers = hash_table_init((hashing_function)&string_hash, (comparator_function)&equal_str);
+
+    addMessageCopy(p_msg, &state->current_time, &header, context_header, headers);
 
     // Insert on seen_msgs
     pushPendingMessage(state->seen_msgs, p_msg);
@@ -248,7 +253,7 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
             sprintf(ttl_str, "%d", ttl);
         }
 
-        char str[ym->dataLen+UUID_STR_LEN+1];
+        char str[ym->dataLen+UUID_STR_LEN+100];
         sprintf(str, "[%s] ttl=%s : %s", id_str, ttl_str, content);
 
         ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "BROADCAST REQ", str);
@@ -276,10 +281,12 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 	// Remove Framework's header of the message
 	BroadcastHeader header;
 	YggMessage toDeliver;
-	void* context_header;
+	byte* context_header;
 	deserializeMessage(msg, &header, &context_header, &toDeliver);
 
     assert(header.ttl > 0);
+
+    hash_table* headers = BA_parseHeader(state->args->algorithm, header.context_length, context_header, state->myID);
 
     PendingMessage* p_msg = getPendingMessage(state->seen_msgs, header.msg_id);
 
@@ -289,7 +296,8 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 		// Insert on seen_msgs
         p_msg = newPendingMessage(header.msg_id, header.dest_proto, toDeliver.data, toDeliver.dataLen, BA_getRetransmissionPhases(state->args->algorithm));
         setCurrentPhaseStart(p_msg, &state->current_time);
-        addMessageCopy(p_msg, &state->current_time, &header, context_header);
+
+        addMessageCopy(p_msg, &state->current_time, &header, context_header, headers);
 
         pushPendingMessage(state->seen_msgs, p_msg);
 
@@ -304,7 +312,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 		ComputeRetransmissionDelay(state, p_msg, false);
 
 	} else {  // Duplicate message
-        addMessageCopy(p_msg, &state->current_time, &header, context_header);
+        addMessageCopy(p_msg, &state->current_time, &header, context_header, headers);
 
         BA_processCopy(state->args->algorithm, p_msg, state->myID);
 
@@ -431,7 +439,7 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
 	}
 }
 
-void serializeHeader(broadcast_framework_state* state, PendingMessage* p_msg, BroadcastHeader* header, void** context_header, unsigned short ttl) {
+void serializeHeader(broadcast_framework_state* state, PendingMessage* p_msg, BroadcastHeader* header, byte** context_header, unsigned short ttl) {
     uuid_copy(header->msg_id, getPendingMessageID(p_msg));
 	getmyId(header->sender_id);
 	header->dest_proto = getToDeliver(p_msg)->Proto_id;
@@ -442,7 +450,7 @@ void serializeHeader(broadcast_framework_state* state, PendingMessage* p_msg, Br
     unsigned char* source_id = getBcastHeader(first)->source_id;
     uuid_copy(header->source_id, source_id);
 
-	header->context_length = BA_createHeader(state->args->algorithm, p_msg, context_header, state->myID);
+	header->context_length = BA_createHeader(state->args->algorithm, p_msg, context_header, state->myID, &state->current_time);
 
     header->ttl = ttl;
 }
@@ -459,7 +467,7 @@ void serializeMessage(broadcast_framework_state* state, YggMessage* m, PendingMe
 
 	// Initialize Broadcast Message Header
 	BroadcastHeader header;
-    void* context_header = NULL;
+    byte* context_header = NULL;
     serializeHeader(state, p_msg, &header, &context_header, ttl);
 
     int msg_size = BROADCAST_HEADER_LENGTH + header.context_length + toDeliver->dataLen;
@@ -480,7 +488,7 @@ void serializeMessage(broadcast_framework_state* state, YggMessage* m, PendingMe
 		free(context_header);
 }
 
-void deserializeMessage(YggMessage* m, BroadcastHeader* header, void** context_header, YggMessage* toDeliver) {
+void deserializeMessage(YggMessage* m, BroadcastHeader* header, byte** context_header, YggMessage* toDeliver) {
 
 	void* ptr = NULL;
 	ptr = YggMessage_readPayload(m, ptr, header, BROADCAST_HEADER_LENGTH);

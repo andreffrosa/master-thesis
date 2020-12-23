@@ -19,9 +19,15 @@
 
 typedef struct _RetransmissionPolicy RetransmissionPolicy;
 
-bool RP_eval(RetransmissionPolicy* r_policy, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited);
+bool RP_eval(RetransmissionPolicy* r_policy, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts);
 
-void destroyRetransmissionPolicy(RetransmissionPolicy* policy, list* visited);
+//void RP_addDependency(RetransmissionPolicy* r_policy, char* dependency);
+
+list* RP_getDependencies(RetransmissionPolicy* r_policy);
+
+void destroyRetransmissionPolicy(RetransmissionPolicy* policy);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////7
 
 RetransmissionPolicy* TruePolicy();
 RetransmissionPolicy* ProbabilityPolicy(double p);

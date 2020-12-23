@@ -21,10 +21,14 @@
 #include "retransmission_policy/retransmission_policy_private.h"
 
 typedef struct _BroadcastAlgorithm {
+    RetransmissionPolicy* r_policy;
 	RetransmissionDelay* r_delay;
-	RetransmissionPolicy* r_policy;
-	RetransmissionContext* r_context;
 	unsigned int n_phases;
+
+	//RetransmissionContext* r_context;
+
+    hash_table* contexts;
+    list* contexts_order;
 } BroadcastAlgorithm;
 
 #endif /* _BROADCAST_ALGORITHM_PRIVATE_H_ */

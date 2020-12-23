@@ -22,5 +22,6 @@
 
 #include "utility/byte.h"
 #include "utility/my_misc.h"
+#include "utility/my_string.h"
 
 #endif /* _BROADCAST_ALGORITHM_COMMON_H_ */

@@ -18,13 +18,99 @@
 #include "data_structures/graph.h"
 
 #include "utility/olsr_utils.h"
+#include "utility/my_string.h"
 
-typedef struct _AHBPContextArgs {
-	RetransmissionContext* neighbors_context;
-    RetransmissionContext* route_context;
-} AHBPContextArgs;
+/*static */list* compute_bgrs(graph* neighborhood, unsigned char* myID, list* covered);
 
-static bool AHBPContextQueryHeader(ModuleState* context_state, void* header, unsigned int header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited);
+static void AHBPContextAppendHeaders(ModuleState* context_state, PendingMessage* p_msg, hash_table* serialized_headers, unsigned char* myID, hash_table* contexts, struct timespec* current_time) {
+    list* covered = list_init();
+
+    double_list* copies = getCopies(p_msg);
+    assert(copies->size > 0);
+
+    for(double_list_item* dit = copies->head; dit; dit = dit->next) {
+        MessageCopy* copy = (MessageCopy*)dit->data;
+        hash_table* headers = getHeaders(copy);
+
+        list* route = (list*)hash_table_find_value(headers, "route");
+        if(route) {
+            list_append(covered, route);
+        }
+    }
+
+    RetransmissionContext* neighbors_context = hash_table_find_value(contexts, "NeighborsContext");
+    assert(neighbors_context);
+
+    graph* neighborhood = NULL;
+    if(!RC_query(neighbors_context, "neighborhood", &neighborhood, NULL, myID, contexts))
+        assert(false);
+
+    list* bgrs = compute_bgrs(neighborhood, myID, covered);
+
+    if( bgrs->size > 0 ) {
+        unsigned int size = bgrs->size * sizeof(uuid_t);
+        byte buffer[size];
+        byte* ptr = buffer;
+
+        for(list_item* it = bgrs->head; it; it = it->next) {
+            uuid_copy(ptr, it->data);
+            ptr += sizeof(uuid_t);
+        }
+
+        appendHeader(serialized_headers, "delegated_neighbors", buffer, size);
+    }
+
+    graph_delete(neighborhood);
+    list_delete(covered);
+    list_delete(bgrs);
+}
+
+static void AHBPContextParseHeaders(ModuleState* context_state, hash_table* serialized_headers, hash_table* headers, unsigned char* myID) {
+    list* bgrs = list_init();
+
+    byte* buffer = (byte*)hash_table_find_value(serialized_headers, "delegated_neighbors");
+    if(buffer) {
+        byte* ptr = buffer;
+
+        byte size = 0;
+        memcpy(&size, ptr, sizeof(byte));
+        ptr += sizeof(byte);
+
+        int n = size / sizeof(uuid_t);
+        for(int i = 0; i < n; i++) {
+            unsigned char* id = malloc(sizeof(uuid_t));
+            memcpy(id, ptr, sizeof(uuid_t));
+            ptr += sizeof(uuid_t);
+
+            list_add_item_to_tail(bgrs, id);
+        }
+    }
+
+    //const char* key_ = "bgrs";
+    const char* key_ = "delegated_neighbors";
+    char* key = malloc(strlen(key_)+1);
+    strcpy(key, key_);
+    hash_table_insert(headers, key, bgrs);
+}
+
+RetransmissionContext* AHBPContext(RetransmissionContext* neighbors_context, RetransmissionContext* route_context) {
+
+    RetransmissionContext* ctx = newRetransmissionContext(
+        "AHBPContext",
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        &AHBPContextAppendHeaders,
+        &AHBPContextParseHeaders,
+        NULL,
+        NULL,
+        NULL,
+        new_list(2, new_str("NeighborsContext"), new_str("RouteContext"))
+    );
+
+    return ctx;
+}
 
 /*static */list* compute_bgrs(graph* neighborhood, unsigned char* myID, list* covered) {
 
@@ -106,211 +192,4 @@ printf("Computed Delegated Neighbors (BGRs %d):\n", bgrs->size);
 */
 
     return bgrs;
-}
-
-static void AHBPContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
-    AHBPContextArgs* args = (AHBPContextArgs*)(context_state->args);
-
-    RC_init(args->neighbors_context, protocol_definition, myID, visited);
-
-    RC_init(args->route_context, protocol_definition, myID, visited);
-}
-
-static unsigned int append_bgrs(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID) {
-    AHBPContextArgs* args = (AHBPContextArgs*)(context_state->args);
-
-    list* covered = list_init();
-
-    double_list* copies = getCopies(p_msg);
-    assert(copies->size > 0);
-
-    for(double_list_item* dit = copies->head; dit; dit = dit->next) {
-        MessageCopy* copy = (MessageCopy*)dit->data;
-
-        list* visited2 = list_init();
-        list* route = NULL;
-        if(!AHBPContextQueryHeader(context_state, getContextHeader(copy), getBcastHeader(copy)->context_length, "route", &route, NULL, myID, visited2))
-            assert(false);
-        list_delete(visited2);
-
-        if(route)
-            list_append(covered, route);
-    }
-
-    list* visited2 = list_init();
-    graph* neighborhood = NULL;
-    if(!RC_query(args->neighbors_context, "neighborhood", &neighborhood, NULL, myID, visited2))
-        assert(false);
-    list_delete(visited2);
-
-    list* bgrs = compute_bgrs(neighborhood, myID, covered);
-
-    int bgrs_header_size = 0;
-    unsigned char* bgrs_header = NULL;
-    if(bgrs->size > 0) {
-        bgrs_header_size = bgrs->size * sizeof(uuid_t);
-        bgrs_header = malloc(bgrs_header_size);
-        unsigned char* ptr = bgrs_header;
-
-        for(list_item* it = bgrs->head; it; it = it->next) {
-            uuid_copy(ptr, it->data);
-            ptr += sizeof(uuid_t);
-        }
-    }
-
-    graph_delete(neighborhood);
-    list_delete(covered);
-    list_delete(bgrs);
-
-    *context_header = bgrs_header;
-    return bgrs_header_size;
-}
-
-static unsigned int AHBPContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
-    AHBPContextArgs* args = (AHBPContextArgs*)(context_state->args);
-
-    // Insert route
-    void* route_header = NULL;
-    unsigned int route_header_size = RC_createHeader(args->route_context, p_msg, &route_header, myID, visited);
-
-    // Insert BGRs
-    void* bgrs_header = NULL;
-    unsigned int bgrs_header_size = append_bgrs(context_state, p_msg, &bgrs_header, myID);
-
-    assert(route_header_size <= 255 && bgrs_header_size <= 255);
-    assert((route_header_size == 0 || route_header !=NULL) && (route_header == NULL || route_header_size > 0));
-    assert((bgrs_header_size == 0 || bgrs_header !=NULL) && (bgrs_header == NULL || bgrs_header_size > 0));
-
-    unsigned short total_size = 2*sizeof(byte) + route_header_size + bgrs_header_size;
-
-    byte aux = '\0';
-    unsigned char* buffer = malloc(total_size);
-    unsigned char* ptr = buffer;
-
-    aux = route_header_size;
-    memcpy(ptr, &aux, sizeof(byte));
-    ptr += sizeof(byte);
-
-    aux = bgrs_header_size;
-    memcpy(ptr, &aux, sizeof(byte));
-    ptr += sizeof(byte);
-
-    if( route_header_size > 0 ) {
-        memcpy(ptr, route_header, route_header_size);
-        ptr += route_header_size;
-    }
-
-    if( bgrs_header_size > 0 ) {
-        memcpy(ptr, bgrs_header, bgrs_header_size);
-        ptr += bgrs_header_size;
-    }
-
-    free(route_header);
-    free(bgrs_header);
-
-    *context_header = buffer;
-	return total_size;
-}
-
-static void AHBPContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, list* visited) {
-    AHBPContextArgs* args = (AHBPContextArgs*)(context_state->args);
-
-    RC_processEvent(args->neighbors_context, elem, myID, visited);
-
-    RC_processEvent(args->route_context, elem, myID, visited);
-}
-
-static bool AHBPContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
-    AHBPContextArgs* args = (AHBPContextArgs*)(context_state->args);
-
-    bool found = RC_query(args->route_context, query, result, query_args, myID, visited);
-
-    if(!found) {
-        return RC_query(args->neighbors_context, query, result, query_args, myID, visited);
-    } else {
-        return true;
-    }
-
-}
-
-static bool AHBPContextQueryHeader(ModuleState* context_state, void* header, unsigned int header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
-
-    AHBPContextArgs* args = (AHBPContextArgs*)(context_state->args);
-
-    byte sizes[2];
-    unsigned char* route_header = NULL;
-    unsigned char* bgrs_header = NULL;
-
-    if(header != NULL) {
-        memcpy(sizes, header, sizeof(sizes));
-
-        route_header = header + 2*sizeof(byte);
-        bgrs_header = route_header + sizes[0];
-    } else {
-        memset(sizes, 0, sizeof(sizes));
-
-        route_header = NULL;
-        bgrs_header = NULL;
-    }
-
-    if( strcmp(query, "bgrs") == 0 || strcmp(query, "delegated_neighbors") == 0 ) {
-        list* bgrs = list_init();
-
-        int size = sizes[1] / sizeof(uuid_t);
-        for(int i = 0; i < size; i++) {
-            unsigned char* id = bgrs_header + i*sizeof(uuid_t);
-            unsigned char* id_copy = malloc(sizeof(uuid_t));
-            uuid_copy(id_copy, id);
-            list_add_item_to_tail(bgrs, id_copy);
-        }
-
-		*((list**)result) = bgrs;
-		return true;
-	} if( strcmp(query, "delegated") == 0 ) {
-        list* bgrs = list_init();
-
-        int size = sizes[1] / sizeof(uuid_t);
-
-        for(int i = 0; i < size; i++) {
-            unsigned char* id = bgrs_header + i*sizeof(uuid_t);
-            unsigned char* id_copy = malloc(sizeof(uuid_t));
-            uuid_copy(id_copy, id);
-            list_add_item_to_tail(bgrs, id_copy);
-        }
-
-        *((bool*)result) = (list_find_item(bgrs, &equalID, myID) != NULL);
-        list_delete(bgrs);
-		return true;
-	} else {
-        return RC_queryHeader(args->route_context, route_header, sizes[0], query, result, query_args, myID, visited);
-    }
-
-}
-
-static void AHBPContextDestroy(ModuleState* context_state, list* visited) {
-    AHBPContextArgs* args = context_state->args;
-
-    destroyRetransmissionContext(args->route_context, visited);
-    destroyRetransmissionContext(args->neighbors_context, visited);
-
-    free(args);
-}
-
-RetransmissionContext* AHBPContext(RetransmissionContext* neighbors_context, RetransmissionContext* route_context) {
-
-    AHBPContextArgs* args = malloc(sizeof(AHBPContextArgs));
-    args->neighbors_context = neighbors_context;
-    args->route_context = route_context;
-
-    return newRetransmissionContext(
-        args,
-        NULL,
-        &AHBPContextInit,
-        &AHBPContextEvent,
-        &AHBPContextHeader,
-        &AHBPContextQuery,
-        &AHBPContextQueryHeader,
-        NULL,
-        &AHBPContextDestroy
-    );
 }

@@ -18,30 +18,33 @@
 
 #include <assert.h>
 
-static bool DelegatedNeighborsPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool DelegatedNeighborsPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 
     MessageCopy* first_copy = ((MessageCopy*)getCopies(p_msg)->head->data);
+    hash_table* headers = getHeaders(first_copy);
 
     bool delegated = false;
 
-    list* visited2 = list_init();
-    hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
-    char* key = malloc(6*sizeof(char));
-    strcpy(key, "p_msg");
-    void** value = malloc(sizeof(void*));
-    *value = p_msg;
-    hash_table_insert(query_args, key, value);
-    bool found = RC_queryHeader(r_context, getContextHeader(first_copy), getBcastHeader(first_copy)->context_length, "delegated", &delegated, query_args, myID, visited2);
-    list_delete(visited2);
+    list* delegated_neighbors = (list*)hash_table_find_value(headers, "delegated_neighbors");
+    if(delegated_neighbors) {
+        delegated = list_find_item(delegated_neighbors, &equalID, myID) != NULL;
+    } else {
+        hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
+        char* key = malloc(6*sizeof(char));
+        strcpy(key, "p_msg");
+        void** value = malloc(sizeof(void*));
+        *value = p_msg;
+        hash_table_insert(query_args, key, value);
 
-    if(!found) {
-        list* visited2 = list_init();
-        found = RC_query(r_context, "delegated", &delegated, query_args, myID, visited2);
-        list_delete(visited2);
+        // TODO: Search in all contexts
+        RetransmissionContext* r_context = hash_table_find_value(contexts, "MultiPointRelayContext");
+        assert(r_context);
+
+        bool found = RC_query(r_context, "delegated", &delegated, query_args, myID, contexts);
+        assert(found);
+
+        hash_table_delete(query_args);
     }
-    hash_table_delete(query_args);
-
-    assert(found);
 
 	return delegated;
 }
@@ -51,6 +54,9 @@ RetransmissionPolicy* DelegatedNeighborsPolicy() {
         NULL,
         NULL,
         &DelegatedNeighborsPolicyEval,
+        NULL,
         NULL
     );
+
+    // TODO: how to specify the dependencies of this?
 }

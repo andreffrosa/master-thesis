@@ -17,43 +17,16 @@
 
 #include "utility/my_math.h"
 
-static bool RouteContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
-
-	if(strcmp(query, "route") == 0 || strcmp(query, "path") == 0) {
-        unsigned int amount = context_header_size / sizeof(uuid_t);
-
-		list* l = list_init();
-
-		for(int i = 0; i < amount; i++) {
-			unsigned char* id = malloc(sizeof(uuid_t));
-			unsigned char* ptr = context_header + i*sizeof(uuid_t);
-			uuid_copy(id, ptr);
-			list_add_item_to_tail(l, id);
-		}
-
-        *((list**)result) = l;
-		return true;
-	}
-
-	return false;
-}
-
-static unsigned int RouteContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
-    double_list* copies = getCopies(p_msg);
+static list* getRoute(double_list* copies, unsigned char* myID, unsigned int max_len) {
     assert(copies->size > 0);
-    /*if(copies->size == 0) {
-        *context_header = NULL;
-        return 0;
-    }*/
 
     MessageCopy* first = (MessageCopy*)copies->head->data;
+    hash_table* headers = getHeaders(first);
 
-    list* route = NULL;
-    if(!RouteContextQueryHeader(context_state, getContextHeader(first), getBcastHeader(first)->context_length, "route", &route, NULL, myID, NULL))
-		assert(false);
-
-    unsigned int max_len = *((unsigned int*)(context_state->args));
-    //unsigned int real_len = iMin(max_len - 1, route->size);
+    list* route = (list*)hash_table_find_value(headers, "route");
+    if(route == NULL) {
+        route = list_init();
+    }
 
     while (route->size > max_len - 1) {
         free(list_remove_head(route));
@@ -65,21 +38,56 @@ static unsigned int RouteContextHeader(ModuleState* context_state, PendingMessag
 
     assert(route->size <= max_len);
 
-    unsigned int size = route->size*sizeof(uuid_t);
+    return route;
+}
 
-    unsigned char* buffer = malloc(size);
-    unsigned char* ptr = buffer;
+static void RouteContextAppendHeaders(ModuleState* context_state, PendingMessage* p_msg, hash_table* serialized_headers, unsigned char* myID, hash_table* contexts, struct timespec* current_time) {
+
+    double_list* copies = getCopies(p_msg);
+    unsigned int max_len = *((unsigned int*)(context_state->args));
+
+    list* route = getRoute(copies, myID, max_len);
+    unsigned int size = route->size*sizeof(uuid_t);
+    byte buffer[size];
+    byte* ptr = buffer;
+
     for(list_item* it = route->head; it; it = it->next) {
         unsigned char* id = (unsigned char*)(it->data);
         memcpy(ptr, id, sizeof(uuid_t));
         ptr += sizeof(uuid_t);
     }
 
-    *context_header = buffer;
-    return size;
+    appendHeader(serialized_headers, "route", buffer, size);
 }
 
-static void RouteContextDestroy(ModuleState* context_state, list* visited) {
+static void RouteContextParseHeaders(ModuleState* context_state, hash_table* serialized_headers, hash_table* headers, unsigned char* myID) {
+    list* route = list_init();
+
+    byte* buffer = (byte*)hash_table_find_value(serialized_headers, "route");
+    if(buffer) {
+        byte* ptr = buffer;
+
+        byte size = 0;
+        memcpy(&size, ptr, sizeof(byte));
+        ptr += sizeof(byte);
+
+        int n = size / sizeof(uuid_t);
+        for(int i = 0; i < n; i++) {
+            unsigned char* id = malloc(sizeof(uuid_t));
+            uuid_copy(id, ptr);
+            ptr += sizeof(uuid_t);
+
+            list_add_item_to_tail(route, id);
+        }
+    }
+
+    const char* key_ = "route";
+    char* key = malloc(strlen(key_)+1);
+    strcpy(key, key_);
+    hash_table_insert(headers, key, route);
+}
+
+static void RouteContextDestroy(ModuleState* context_state) {
     free(context_state->args);
 }
 
@@ -90,14 +98,16 @@ RetransmissionContext* RouteContext(unsigned int max_len) {
 	*max_len_arg = max_len;
 
     return newRetransmissionContext(
+        "RouteContext",
         max_len_arg,
         NULL,
         NULL,
         NULL,
-        &RouteContextHeader,
+        &RouteContextAppendHeaders,
+        &RouteContextParseHeaders,
         NULL,
-        &RouteContextQueryHeader,
         NULL,
-        &RouteContextDestroy
+        &RouteContextDestroy,
+        NULL
     );
 }

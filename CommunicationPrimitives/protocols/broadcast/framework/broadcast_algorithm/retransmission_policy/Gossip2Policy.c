@@ -24,32 +24,31 @@ typedef struct _Gossip2PolicyArgs {
 	unsigned int n;
 } Gossip2PolicyArgs;
 
-static bool Gossip2PolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool Gossip2PolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 	Gossip2PolicyArgs* _args = ((Gossip2PolicyArgs*)(policy_state->args));
 	double p1 = _args->p1;
 	unsigned int k = _args->k;
 	double p2 = _args->p2;
 	unsigned int n = _args->n;
-	unsigned char hops = 0;
     unsigned int nn = 0;
 
 	MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
+    hash_table* headers = getHeaders(first);
 
-    list* visited2 = list_init();
-    if(!RC_queryHeader(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "hops", &hops, NULL, myID, visited2))
-        assert(false);
-    list_delete(visited2);
+    byte* hops = (byte*)hash_table_find_value(headers, "hops");
+    assert(hops);
 
-    visited2 = list_init();
-    if(!RC_query(r_context, "n_neighbors", &nn, NULL, myID, visited2))
+    RetransmissionContext* r_context = hash_table_find_value(contexts, "NeighborsContext");
+    assert(r_context);
+
+    if(!RC_query(r_context, "n_neighbors", &nn, NULL, myID, contexts))
         assert(false);
-    list_delete(visited2);
 
 	double u = randomProb();
-	return hops < k || (nn < n && u <= p2) || (nn >= n && u <= p1);
+	return *hops < k || (nn < n && u <= p2) || (nn >= n && u <= p1);
 }
 
-static void Gossip2PolicyDestroy(ModuleState* policy_state, list* visited) {
+static void Gossip2PolicyDestroy(ModuleState* policy_state) {
     free(policy_state->args);
 }
 
@@ -62,10 +61,13 @@ RetransmissionPolicy* Gossip2Policy(double p1, unsigned int k, double p2, unsign
 	args->p2 = p2;
 	args->n = n;
 
-    return newRetransmissionPolicy(
+    RetransmissionPolicy* r_policy = newRetransmissionPolicy(
         args,
         NULL,
         &Gossip2PolicyEval,
-        &Gossip2PolicyDestroy
+        &Gossip2PolicyDestroy,
+        new_list(2, new_str("NeighborsContext"), new_str("HopsContext"))
     );
+
+    return r_policy;
 }

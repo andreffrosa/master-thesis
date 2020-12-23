@@ -13,7 +13,7 @@
 
 #include "retransmission_delay_private.h"
 
-static unsigned long NullDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static unsigned long NullDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, hash_table* contexts) {
 	return 0L;
 }
 
@@ -22,6 +22,7 @@ RetransmissionDelay* NullDelay() {
         NULL,
         NULL,
         &NullDelayCompute,
+        NULL,
         NULL
     );
 }

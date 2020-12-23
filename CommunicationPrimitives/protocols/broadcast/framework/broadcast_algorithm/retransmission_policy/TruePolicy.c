@@ -13,7 +13,7 @@
 
 #include "retransmission_policy_private.h"
 
-static bool TruePolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool TruePolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 	return true;
 }
 
@@ -22,6 +22,7 @@ RetransmissionPolicy* TruePolicy() {
         NULL,
         NULL,
         &TruePolicyEval,
+        NULL,
         NULL
     );
 }

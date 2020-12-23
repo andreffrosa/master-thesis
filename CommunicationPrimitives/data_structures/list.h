@@ -38,4 +38,6 @@ list* list_difference(list* l1, list* l2, comparator_function cmp, unsigned int 
 
 list* list_map(list* l, void* (*f)(void* v, unsigned int argc, void** argv), unsigned int argc, void** argv);
 
+list* new_list(unsigned int n, ...);
+
 #endif /* DATA_STRUCTURES_LIST_H_ */

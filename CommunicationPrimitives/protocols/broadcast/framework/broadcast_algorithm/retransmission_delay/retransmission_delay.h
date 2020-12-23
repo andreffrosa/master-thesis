@@ -20,9 +20,15 @@
 
 typedef struct _RetransmissionDelay RetransmissionDelay;
 
-unsigned long RD_compute(RetransmissionDelay* r_delay, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited);
+unsigned long RD_compute(RetransmissionDelay* r_delay, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, hash_table* contexts);
 
-void destroyRetransmissionDelay(RetransmissionDelay* r_delay, list* visited);
+//void RD_addDependency(RetransmissionDelay* r_delay, char* dependency);
+
+list* RD_getDependencies(RetransmissionDelay* r_delay);
+
+void destroyRetransmissionDelay(RetransmissionDelay* r_delay);
+
+////////////////////////////////////////////////////////////////////////////////
 
 RetransmissionDelay* NullDelay();
 

@@ -69,7 +69,12 @@ broadcast_framework_args* load_broadcast_framework_args(const char* file_path) {
                 BA_setRetransmissionDelay(args->algorithm, new_r_delay);
             } else if( strcmp(key, "r_context") == 0 ) {
                 RetransmissionContext* new_r_context = parse_r_context(value, false);
-                BA_setRetransmissionContext(args->algorithm, new_r_context);
+                //BA_setRetransmissionContext(args->algorithm, new_r_context);
+                BA_flushRetransmissionContexts(args->algorithm);
+                BA_addContext(args->algorithm, new_r_context);
+            } else if( strcmp(key, "add_r_context") == 0 ) {
+                RetransmissionContext* new_r_context = parse_r_context(value, false);
+                BA_addContext(args->algorithm, new_r_context);
             } else if( strcmp(key, "r_phases") == 0 ) {
                 unsigned int new_r_phases = strtol(value, NULL, 10);
                 BA_setRetransmissionPhases(args->algorithm, new_r_phases);
@@ -965,7 +970,13 @@ static RetransmissionContext* parse_r_context(char* value, bool nested) {
     if(strcmp(token, (name = "Empty")) == 0 || strcmp(token, (name = "EmptyContext")) == 0) {
         return EmptyContext();
 	} else if(strcmp(token, (name = "Hops")) == 0 || strcmp(token, (name = "HopsContext")) == 0) {
-		return HopsContext();
+
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+    		return HopsContext(token);
+        } else {
+            return HopsContext("first");
+        }
 	} else if(strcmp(token, (name = "Parents")) == 0 || strcmp(token, (name = "ParentsContext")) == 0) {
         token = strtok_r(NULL, " ", &ptr);
         if(token != NULL) {

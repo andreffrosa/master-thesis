@@ -15,7 +15,7 @@
 
 #include "utility/my_math.h"
 
-static unsigned long RADExtensionDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static unsigned long RADExtensionDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, hash_table* contexts) {
 
     unsigned long delta_t = *((unsigned long*) (delay_state->args));
     if(!isCopy) {
@@ -26,7 +26,7 @@ static unsigned long RADExtensionDelayCompute(ModuleState* delay_state, PendingM
     }
 }
 
-static void RADExtensionDelayDestroy(ModuleState* delay_state, list* visited) {
+static void RADExtensionDelayDestroy(ModuleState* delay_state) {
     free(delay_state->args);
 }
 
@@ -40,6 +40,7 @@ RetransmissionDelay* RADExtensionDelay(unsigned long delta_t) {
         delta_t_arg,
         NULL,
         &RADExtensionDelayCompute,
-        &RADExtensionDelayDestroy
+        &RADExtensionDelayDestroy,
+        NULL
     );
 }
