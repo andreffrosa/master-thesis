@@ -17,6 +17,7 @@
 #include "data_structures/hash_table.h"
 
 #include "utility/my_misc.h"
+#include "utility/my_string.h"
 
 #include "protocols/discovery/framework/framework.h"
 
@@ -26,10 +27,6 @@ typedef struct _MPRContextState {
 	list* broadcast_mprs;
     list* broadcast_mpr_selectors;
 } MPRContextState;
-
-typedef struct _MPRContextArgs {
-	RetransmissionContext* neighbors_context;
-} MPRContextArgs;
 
 
 // select only th bidirectional neighbors
@@ -52,18 +49,18 @@ typedef struct _MPRContextArgs {
     return neighbors;
 }*/
 
+/*
 static void MPRContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
     MPRContextArgs* args = (MPRContextArgs*)(context_state->args);
 
     RC_init(args->neighbors_context, protocol_definition, myID, visited);
 }
+*/
 
-static void MPRContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, list* visited) {
+
+
+static void MPRContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, hash_table* contexts) {
     MPRContextState* state = (MPRContextState*)(context_state->vars);
-    MPRContextArgs* args = (MPRContextArgs*)(context_state->args);
-
-    // Deliver the event to the neighbors_context
-    RC_processEvent(args->neighbors_context, elem, myID, visited);
 
     if( elem->type == YGG_EVENT ) {
         YggEvent* ev = &elem->data.event;
@@ -111,20 +108,30 @@ static void MPRContextEvent(ModuleState* context_state, queue_t_elem* elem, unsi
     }
 }
 
-static bool MPRContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
+static bool MPRContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, hash_table* contexts) {
 
     MPRContextState* state = (MPRContextState*) (context_state->vars);
-    MPRContextArgs* args = (MPRContextArgs*)(context_state->args);
 
 	if( strcmp(query, "mprs") == 0 || strcmp(query, "broadcast_mprs") == 0 || strcmp(query, "delegated_neighbors") == 0 ) {
         *((list**)result) = list_clone(state->broadcast_mprs, sizeof(uuid_t));
 		return true;
-	} else if( strcmp(query, "mpr_selectors") == 0 || strcmp(query, "broadcast_mpr_selectors") == 0 || strcmp(query, "neigh_delegated_neighbors") == 0) {
+	} else if( strcmp(query, "mpr_selectors") == 0 || strcmp(query, "broadcast_mpr_selectors") == 0 ) {
         *((list**)result) = list_clone(state->broadcast_mpr_selectors, sizeof(uuid_t));
 		return true;
-	} else {
-        return RC_query(args->neighbors_context, query, result, query_args, myID, visited);
-    }
+	} else if( strcmp(query, "delegated") == 0 ) {
+        assert(query_args);
+        void** aux1 = hash_table_find_value(query_args, "p_msg");
+        assert(aux1);
+		PendingMessage* p_msg = *aux1;
+        assert(p_msg);
+
+        unsigned char* parent_id = getBcastHeader((((MessageCopy*)getCopies(p_msg)->head->data)))->sender_id;
+
+        *((bool*)result) = (list_find_item(state->broadcast_mpr_selectors, &equalID, parent_id) != NULL);
+		return true;
+	}
+
+    return false;
 }
 
 /*
@@ -170,36 +177,34 @@ static unsigned int MPRContextHeader(ModuleState* context_state, PendingMessage*
 }
 */
 
-static void MultiPointRelayContextDestroy(ModuleState* context_state, list* visited) {
-    MPRContextArgs* args = context_state->args;
-    MPRContextState* state = context_state->vars;
+static void MultiPointRelayContextDestroy(ModuleState* context_state) {
 
-    destroyRetransmissionContext(args->neighbors_context, visited);
-    free(args);
+    MPRContextState* state = context_state->vars;
 
     list_delete(state->broadcast_mprs);
     list_delete(state->broadcast_mpr_selectors);
     free(state);
 }
 
-RetransmissionContext* MultiPointRelayContext(RetransmissionContext* neighbors_context) {
-
-	MPRContextArgs* args = malloc(sizeof(MPRContextArgs));
-    args->neighbors_context = neighbors_context;
+RetransmissionContext* MultiPointRelayContext() {
 
     MPRContextState* state = malloc(sizeof(MPRContextState));
     state->broadcast_mprs = list_init();
     state->broadcast_mpr_selectors = list_init();
 
-    return newRetransmissionContext(
-        args,
+    RetransmissionContext* ctx = newRetransmissionContext(
+        "MultiPointRelayContext",
+        NULL,
         state,
-        &MPRContextInit,
+        NULL, //&MPRContextInit,
         &MPRContextEvent,
+        NULL,
         NULL,
         &MPRContextQuery,
         NULL,
-        NULL,
-        &MultiPointRelayContextDestroy
+        &MultiPointRelayContextDestroy,
+        new_list(1, new_str("NeighborsContext")) // is it needed?
     );
+
+    return ctx;
 }

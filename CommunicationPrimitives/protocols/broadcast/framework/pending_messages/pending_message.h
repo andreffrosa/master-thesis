@@ -14,12 +14,15 @@
 #ifndef _PENDING_MESSAGE_H_
 #define _PENDING_MESSAGE_H_
 
-#include "Yggdrasil/core/ygg_runtime.h"
+#include "Yggdrasil.h"
 
 #include "../broadcast_header.h"
 
 #include "data_structures/list.h"
 #include "data_structures/double_list.h"
+#include "data_structures/hash_table.h"
+
+#include "utility/byte.h"
 
 typedef struct PhaseStats_ PhaseStats;
 
@@ -37,7 +40,7 @@ bool getPhaseDecision(PhaseStats* ps);
 
 ////////////////////////////////////////////////////////
 
-MessageCopy* newMessageCopy(struct timespec* reception_time, BroadcastHeader* header, void* context_header, unsigned int phase);
+MessageCopy* newMessageCopy(struct timespec* reception_time, BroadcastHeader* header, byte* context_header, unsigned int phase, hash_table* headers);
 
 struct timespec* getCopyReceptionTime(MessageCopy* msg_copy);
 
@@ -46,6 +49,8 @@ BroadcastHeader* getBcastHeader(MessageCopy* msg_copy);
 void* getContextHeader(MessageCopy* msg_copy);
 
 unsigned int getCopyPhase(MessageCopy* msg_copy);
+
+hash_table* getHeaders(MessageCopy* msg_copy);
 
 ////////////////////////////////////////////////////////////
 
@@ -59,7 +64,7 @@ unsigned int getCurrentPhase(PendingMessage* p_msg);
 
 void incCurrentPhase(PendingMessage* p_msg);
 
-void addMessageCopy(PendingMessage* p_msg, struct timespec* reception_time, BroadcastHeader* header, void* context_header);
+void addMessageCopy(PendingMessage* p_msg, struct timespec* reception_time, BroadcastHeader* header, byte* context_header, hash_table* headers);
 
 MessageCopy* getCopyFrom(PendingMessage* p_msg, uuid_t id);
 

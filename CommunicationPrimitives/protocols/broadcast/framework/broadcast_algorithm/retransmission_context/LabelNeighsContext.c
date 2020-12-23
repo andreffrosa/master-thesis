@@ -16,6 +16,7 @@
 #include "data_structures/graph.h"
 #include "data_structures/hash_table.h"
 #include "utility/my_misc.h"
+#include "utility/my_string.h"
 
 #include <assert.h>
 
@@ -24,10 +25,6 @@
 typedef struct LabelNeighsContextState_ {
     hash_table* labels;
 } LabelNeighsContextState;
-
-typedef struct LabelNeighsContextArgs_ {
-    RetransmissionContext* neighbors_context;
-} LabelNeighsContextArgs;
 
 typedef struct NeighLabels_ {
     NeighCoverageLabel in_label;
@@ -42,30 +39,30 @@ static double missedCriticalNeighs(PendingMessage* p_msg, graph* neighborhood, h
 
 //static void append_labels(graph* neighborhood);
 
+/*
 static void LabelNeighsContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
     LabelNeighsContextArgs* args = (LabelNeighsContextArgs*)(context_state->args);
 
     RC_init(args->neighbors_context, protocol_definition, myID, visited);
 }
+*/
 
-static void LabelNeighsContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, list* visited) {
+static void LabelNeighsContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, hash_table* contexts) {
 
 	LabelNeighsContextState* state = (LabelNeighsContextState*)(context_state->vars);
-    LabelNeighsContextArgs* args = (LabelNeighsContextArgs*)(context_state->args);
-
-    RC_processEvent(args->neighbors_context, elem, myID, visited);
 
 	if(elem->type == YGG_EVENT) {
         YggEvent* ev = &elem->data.event;
         //if( ev->notification_id == NEIGHBOR_FOUND /*|| ev->notification_id == NEIGHBOR_UPDATE*/ || ev->notification_id == NEIGHBOR_LOST ) {
         if( ev->notification_id == NEIGHBORHOOD ) {
 
+            RetransmissionContext* neighbors_context = hash_table_find_value(contexts, "NeighborsContext");
+            assert(neighbors_context);
+
             // Recompute Labels
-            list* visited = list_init();
             graph* neighborhood = NULL;
-            if(!RC_query(args->neighbors_context, "neighborhood", &neighborhood, NULL, myID, visited))
+            if(!RC_query(neighbors_context, "neighborhood", &neighborhood, NULL, myID, contexts))
                 assert(false);
-            list_delete(visited);
 
             hash_table_delete(state->labels);
             state->labels = compute_labels(neighborhood, myID);
@@ -75,10 +72,9 @@ static void LabelNeighsContextEvent(ModuleState* context_state, queue_t_elem* el
 	}
 }
 
-static bool LabelNeighsContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
+static bool LabelNeighsContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, hash_table* contexts) {
 
 	LabelNeighsContextState* state = (LabelNeighsContextState*)(context_state->vars);
-    LabelNeighsContextArgs* args = (LabelNeighsContextArgs*)(context_state->args);
 
 	if(strcmp(query, "node_in_label") == 0) {
         assert(query_args);
@@ -107,48 +103,46 @@ static bool LabelNeighsContextQuery(ModuleState* context_state, const char* quer
 		PendingMessage* p_msg = *aux1;
         assert(p_msg);
 
-        list* visited2 = list_init();
+        RetransmissionContext* neighbors_context = hash_table_find_value(contexts, "NeighborsContext");
+        assert(neighbors_context);
+
         graph* neighborhood = NULL;
-        if(!RC_query(args->neighbors_context, "neighborhood", &neighborhood, NULL, myID, visited2))
+        if(!RC_query(neighbors_context, "neighborhood", &neighborhood, NULL, myID, contexts))
             assert(false);
-        list_delete(visited2);
 
 		*((double*)result) = missedCriticalNeighs(p_msg, neighborhood, state->labels, myID);
 		return true;
-	} else {
-        return RC_query(args->neighbors_context, query, result, query_args, myID, visited);
-    }
+	}
+
+    return false;
 }
 
-static void LabelNeighsContextDestroy(ModuleState* context_state, list* visited) {
+static void LabelNeighsContextDestroy(ModuleState* context_state) {
     LabelNeighsContextState* state = context_state->vars;
     hash_table_delete(state->labels);
     free(state);
-
-    LabelNeighsContextArgs* args = context_state->args;
-    destroyRetransmissionContext(args->neighbors_context, visited);
-    free(args);
 }
 
 RetransmissionContext* LabelNeighsContext(RetransmissionContext* neighbors_context) {
 
-    LabelNeighsContextArgs* args = malloc(sizeof(LabelNeighsContextArgs));
-    args->neighbors_context = neighbors_context;
-
     LabelNeighsContextState* state = malloc(sizeof(LabelNeighsContextState));
     state->labels = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
-    return newRetransmissionContext(
-        args,
+    RetransmissionContext* ctx = newRetransmissionContext(
+        "LabelNeighsContext",
+        NULL,
         state,
-        &LabelNeighsContextInit,
+        NULL, //&LabelNeighsContextInit,
         &LabelNeighsContextEvent,
+        NULL,
         NULL,
         &LabelNeighsContextQuery,
         NULL,
-        NULL,
-        &LabelNeighsContextDestroy
+        &LabelNeighsContextDestroy,
+        new_list(1, new_str("NeighborsContext"))
     );
+
+    return ctx;
 }
 
 static hash_table* compute_labels(graph* neighborhood, unsigned char* myID) {
@@ -162,7 +156,7 @@ static hash_table* compute_labels(graph* neighborhood, unsigned char* myID) {
     for(list_item* it = neighs->head; it; it = it->next) {
         unsigned char* neigh_id = (unsigned char*)it->data;
 
-        graph_node* neigh = graph_find_node(neighborhood, myID);
+        graph_node* neigh = graph_find_node(neighborhood, neigh_id);
         assert(neigh);
 
         NeighLabels* neigh_labels = malloc(sizeof(NeighLabels));

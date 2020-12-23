@@ -14,5 +14,5 @@
 #include "retransmission_context_private.h"
 
 RetransmissionContext* EmptyContext() {
-	return newRetransmissionContext(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+	return newRetransmissionContext("EmptyContext", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 }

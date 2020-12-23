@@ -65,4 +65,7 @@ typedef struct ModuleState_ {
     void* vars;
 } ModuleState;
 
+bool is_unicast_message(YggMessage* msg);
+
+
 #endif /* MY_MISC_H_ */

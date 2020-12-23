@@ -17,25 +17,35 @@
 
 #include <assert.h>
 
-static bool DynamicProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
-	double p = 0.0;
+static bool DynamicProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 
-    list* visited2 = list_init();
-    if(!RC_query(r_context, "p", &p, NULL, myID, visited2))
+    RetransmissionContext* r_context = hash_table_find_value(contexts, "DynamicProbabilityContext");
+    assert(r_context);
+
+    double p = 0.0;
+    if(!RC_query(r_context, "p", &p, NULL, myID, contexts))
         assert(false);
-    list_delete(visited2);
 
     //printf("P = %f\n", p);
+    /*
+char str[20];
+    sprintf(str, "p=%f", p);
+    ygg_log("DYNAMIC_PROBABILITY", "", str);
+*/
 
 	double u = randomProb();
 	return u <= p;
 }
 
 RetransmissionPolicy* DynamicProbabilityPolicy() {
-	return newRetransmissionPolicy(
+
+    RetransmissionPolicy* r_policy = newRetransmissionPolicy(
         NULL,
         NULL,
         &DynamicProbabilityPolicyEval,
-        NULL
+        NULL,
+        new_list(1, new_str("DynamicProbabilityContext"))
     );
+
+    return r_policy;
 }

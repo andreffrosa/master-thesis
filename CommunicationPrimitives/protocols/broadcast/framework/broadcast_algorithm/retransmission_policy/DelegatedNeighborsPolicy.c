@@ -14,40 +14,39 @@
 #include "retransmission_policy_private.h"
 
 #include "utility/my_misc.h"
+#include "utility/my_string.h"
 
 #include <assert.h>
 
-static bool DelegatedNeighborsPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool DelegatedNeighborsPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 
     MessageCopy* first_copy = ((MessageCopy*)getCopies(p_msg)->head->data);
+    hash_table* headers = getHeaders(first_copy);
 
-    list* delegated_neighbors = NULL;
+    bool delegated = false;
 
-    list* visited2 = list_init();
-    bool found = RC_query(r_context, "delegated_neighbors", &delegated_neighbors, NULL, myID, visited2);
-    list_delete(visited2);
+    list* delegated_neighbors = (list*)hash_table_find_value(headers, "delegated_neighbors");
+    if(delegated_neighbors) {
+        delegated = list_find_item(delegated_neighbors, &equalID, myID) != NULL;
+    } else {
+        hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
+        char* key = malloc(6*sizeof(char));
+        strcpy(key, "p_msg");
+        void** value = malloc(sizeof(void*));
+        *value = p_msg;
+        hash_table_insert(query_args, key, value);
 
-    if(!found) {
-        list* visited2 = list_init();
-        if(!RC_queryHeader(r_context, getContextHeader(first_copy), getBcastHeader(first_copy)->context_length, "delegated_neighbors", &delegated_neighbors, NULL, myID, visited2))
-            assert(false);
-        list_delete(visited2);
+        // TODO: Search in all contexts
+        RetransmissionContext* r_context = hash_table_find_value(contexts, "MultiPointRelayContext");
+        assert(r_context);
+
+        bool found = RC_query(r_context, "delegated", &delegated, query_args, myID, contexts);
+        assert(found);
+
+        hash_table_delete(query_args);
     }
 
-    bool retransmit = list_find_item(delegated_neighbors, &equalID, myID) != NULL;
-
-    // Debug
-    printf("Delegated Neighbors:\n");
-    for(list_item* it = delegated_neighbors->head; it; it = it->next) {
-        char id_str[UUID_STR_LEN+1];
-        id_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(((unsigned char*)it->data), id_str);
-        printf("%s\n", id_str);
-    }
-
-    list_delete(delegated_neighbors);
-
-	return retransmit;
+	return delegated;
 }
 
 RetransmissionPolicy* DelegatedNeighborsPolicy() {
@@ -55,6 +54,9 @@ RetransmissionPolicy* DelegatedNeighborsPolicy() {
         NULL,
         NULL,
         &DelegatedNeighborsPolicyEval,
+        NULL,
         NULL
     );
+
+    // TODO: how to specify the dependencies of this?
 }

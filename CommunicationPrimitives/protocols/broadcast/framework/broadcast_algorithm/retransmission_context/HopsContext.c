@@ -13,57 +13,83 @@
 
 #include "retransmission_context_private.h"
 
+#include "utility/my_math.h"
+#include "utility/my_string.h"
+
 #include <assert.h>
 
-static bool HopsContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
+static byte getHops(const char* type, double_list* copies) {
+    assert(copies && copies->size > 0);
 
-	if(strcmp(query, "hops") == 0) {
-        if(context_header) {
-            *((unsigned char*)result) = *((unsigned char*)context_header);
-        } else {
-            *((unsigned char*)result) = 0; // Broadcast source node
+    byte hops = 0;
+
+    if( strcmp(type, "first") == 0 ) {
+        MessageCopy* first = (MessageCopy*)copies->head->data;
+        hash_table* headers = getHeaders(first);
+
+        byte* hops_ = (byte*)hash_table_find_value(headers, "hops");
+        if(hops_) {
+            hops = *hops_;
         }
+    } else {
+        for(double_list_item* dit = copies->head; dit; dit = dit->next) {
+            MessageCopy* copy = (MessageCopy*)dit->data;
+            hash_table* headers = getHeaders(copy);
 
-		return true;
-	}
+            byte* hops_ = (byte*)hash_table_find_value(headers, "hops");
+            if(hops_) {
+                if( strcmp(type, "max") == 0 ) {
+                    hops = iMax(hops, *hops_);
+                } else if( strcmp(type, "min") == 0 ) {
+                    hops = iMin(hops, *hops_);
+                }
+            }
+        }
+    }
 
-	return false;
+    return hops + 1;
 }
 
-static unsigned int HopsContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
-	unsigned int size = sizeof(unsigned char);
-	*context_header = malloc(size);
+static void HopsContextAppendHeaders(ModuleState* context_state, PendingMessage* p_msg, hash_table* serialized_headers, unsigned char* myID, hash_table* contexts, struct timespec* current_time) {
+    char* type = (char*)context_state->args;
 
-    double_list* copies = getCopies(p_msg);
+    byte hops = getHops(type, getCopies(p_msg));
 
-    assert(copies->size > 0);
-
-	/*if(copies->size == 0) { // // Broadcast source node
-		*((unsigned char*)*context_header) = 0;
-	} else {*/
-		MessageCopy* msg_copy = (MessageCopy*)copies->head->data;
-
-		unsigned char hops = 0;
-        if(!HopsContextQueryHeader(context_state, getContextHeader(msg_copy), getBcastHeader(msg_copy)->context_length, "hops", &hops, NULL, myID, visited))
-			assert(false);
-
-        hops++;
-        memcpy(*context_header, &hops, size);
-	//}
-
-	return size;
+    appendHeader(serialized_headers, "hops", &hops, sizeof(byte));
 }
 
-RetransmissionContext* HopsContext() {
+static void HopsContextParseHeaders(ModuleState* context_state, hash_table* serialized_headers, hash_table* headers, unsigned char* myID) {
+
+    byte* buffer = (byte*)hash_table_find_value(serialized_headers, "hops");
+    if(buffer) {
+        byte* ptr = buffer + sizeof(byte);
+
+        byte* hops = malloc(sizeof(byte));
+        memcpy(hops, ptr, sizeof(byte));
+
+        const char* key_ = "hops";
+        char* key = malloc(strlen(key_)+1);
+        strcpy(key, key_);
+        hash_table_insert(headers, key, hops);
+    }
+}
+
+RetransmissionContext* HopsContext(char* type) {
+
+    assert(strcmp(type, "first") == 0 || strcmp(type, "min") == 0 || strcmp(type, "max") == 0);
+
+    char* type_ = new_str(type);
 
     return newRetransmissionContext(
+        "HopsContext",
+        type_,
         NULL,
         NULL,
         NULL,
+        &HopsContextAppendHeaders,
+        &HopsContextParseHeaders,
         NULL,
-        &HopsContextHeader,
         NULL,
-        &HopsContextQueryHeader,
         NULL,
         NULL
     );

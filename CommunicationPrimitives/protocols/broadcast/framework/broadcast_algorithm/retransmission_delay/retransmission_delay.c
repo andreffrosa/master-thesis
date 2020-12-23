@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-RetransmissionDelay* newRetransmissionDelay(void* args, void* vars, compute_delay compute, destroy_delay destroy) {
+RetransmissionDelay* newRetransmissionDelay(void* args, void* vars, compute_delay compute, destroy_delay destroy, list* dependencies) {
     assert(compute);
 
     RetransmissionDelay* r_delay = malloc(sizeof(RetransmissionDelay));
@@ -25,37 +25,38 @@ RetransmissionDelay* newRetransmissionDelay(void* args, void* vars, compute_dela
 	r_delay->compute = compute;
     r_delay->destroy = destroy;
 
+    r_delay->context_dependencies = dependencies == NULL ? list_init() : dependencies;
+
 	return r_delay;
 }
 
-unsigned long RD_compute(RetransmissionDelay* r_delay, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
-    assert(r_delay && visited);
+unsigned long RD_compute(RetransmissionDelay* r_delay, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, hash_table* contexts) {
+    assert(r_delay && contexts);
 
-    if( list_find_item(visited, &equalAddr, r_delay) == NULL ) {
-        void** this = malloc(sizeof(void*));
-        *this = r_delay;
-        list_add_item_to_tail(visited, this);
-
-        return r_delay->compute(&r_delay->state, p_msg, remaining, isCopy, myID, r_context, visited);
-    } else {
-        return 0L;
-        // TODO: what to do?
-    }
+    return r_delay->compute(&r_delay->state, p_msg, remaining, isCopy, myID, contexts);
 }
 
-void destroyRetransmissionDelay(RetransmissionDelay* r_delay, list* visited) {
-    assert(visited);
+void RD_addDependency(RetransmissionDelay* r_delay, char* dependency) {
+    assert(r_delay && dependency);
+
+    char* d = malloc(strlen(dependency)+1);
+    strcpy(d, dependency);
+    list_add_item_to_tail(r_delay->context_dependencies, d);
+}
+
+list* RD_getDependencies(RetransmissionDelay* r_delay) {
+    assert(r_delay);
+
+    return r_delay->context_dependencies;
+}
+
+void destroyRetransmissionDelay(RetransmissionDelay* r_delay) {
 
     if(r_delay != NULL) {
-        if( list_find_item(visited, &equalAddr, r_delay) == NULL ) {
-            void** this = malloc(sizeof(void*));
-            *this = r_delay;
-            list_add_item_to_tail(visited, this);
-
-            if(r_delay->destroy != NULL) {
-                r_delay->destroy(&r_delay->state, visited);
-            }
-            free(r_delay);
+        if(r_delay->destroy != NULL) {
+            r_delay->destroy(&r_delay->state);
         }
+        list_delete(r_delay->context_dependencies);
+        free(r_delay);
     }
 }

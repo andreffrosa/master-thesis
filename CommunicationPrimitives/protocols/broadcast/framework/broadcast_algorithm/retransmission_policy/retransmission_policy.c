@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-RetransmissionPolicy* newRetransmissionPolicy(void* args, void* vars, eval_policy eval, destroy_policy destroy) {
+RetransmissionPolicy* newRetransmissionPolicy(void* args, void* vars, eval_policy eval, destroy_policy destroy, list* dependencies) {
     assert(eval);
 
     RetransmissionPolicy* r_policy = malloc(sizeof(RetransmissionPolicy));
@@ -26,39 +26,39 @@ RetransmissionPolicy* newRetransmissionPolicy(void* args, void* vars, eval_polic
 	r_policy->eval = eval;
     r_policy->destroy = destroy;
 
+    r_policy->context_dependencies = dependencies == NULL ? list_init() : dependencies;
+
 	return r_policy;
 }
 
-bool RP_eval(RetransmissionPolicy* r_policy, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
-    assert(r_policy && p_msg && myID && visited);
+bool RP_eval(RetransmissionPolicy* r_policy, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
+    assert(r_policy && p_msg && myID && contexts);
 
-    if( list_find_item(visited, &equalAddr, r_policy) == NULL ) {
-        void** this = malloc(sizeof(void*));
-        *this = r_policy;
-        list_add_item_to_tail(visited, this);
-
-        return r_policy->eval(&r_policy->state, p_msg, myID, r_context, visited);
-    } else {
-        return false;
-        // TODO: what to do?
-    }
-
+    return r_policy->eval(&r_policy->state, p_msg, myID, contexts);
 }
 
-void destroyRetransmissionPolicy(RetransmissionPolicy* r_policy, list* visited) {
-    assert(visited);
+void RP_addDependency(RetransmissionPolicy* r_policy, char* dependency) {
+    assert(r_policy && dependency);
+
+    char* d = malloc(strlen(dependency)+1);
+    strcpy(d, dependency);
+    list_add_item_to_tail(r_policy->context_dependencies, d);
+}
+
+list* RP_getDependencies(RetransmissionPolicy* r_policy) {
+    assert(r_policy);
+
+    return r_policy->context_dependencies;
+}
+
+void destroyRetransmissionPolicy(RetransmissionPolicy* r_policy) {
 
     if(r_policy != NULL) {
-        if( list_find_item(visited, &equalAddr, r_policy) == NULL ) {
-            void** this = malloc(sizeof(void*));
-            *this = r_policy;
-            list_add_item_to_tail(visited, this);
-
-            if(r_policy->destroy != NULL) {
-                r_policy->destroy(&r_policy->state, visited);
-
-            }
-            free(r_policy);
+        if(r_policy->destroy != NULL) {
+            r_policy->destroy(&r_policy->state);
         }
+        list_delete(r_policy->context_dependencies);
+        free(r_policy);
     }
+
 }

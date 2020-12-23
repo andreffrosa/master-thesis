@@ -15,25 +15,21 @@
 
 #include <assert.h>
 
-static bool HopCountAidedPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool HopCountAidedPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 
 	int hops = -1;
 
 	for(double_list_item* it = getCopies(p_msg)->head; it; it = it->next) {
 		MessageCopy* copy = (MessageCopy*)it->data;
+        hash_table* headers = getHeaders(copy);
 
-		unsigned char current_hops = 0;
-
-        list* visited2 = list_init();
-        if(!RC_queryHeader(r_context, getContextHeader(copy), getBcastHeader(copy)->context_length, "hops", &current_hops, NULL, myID, visited2)) {
-            assert(false);
-        }
-        list_delete(visited2);
+        byte* current_hops = (byte*)hash_table_find_value(headers, "hops");
+        assert(current_hops);
 
 		if(hops == -1)
-			hops = current_hops;
+			hops = *current_hops;
 		else {
-			if( current_hops > hops )
+			if( *current_hops > hops )
 				return false;
 		}
 	}
@@ -42,10 +38,13 @@ static bool HopCountAidedPolicyEval(ModuleState* policy_state, PendingMessage* p
 }
 
 RetransmissionPolicy* HopCountAidedPolicy() {
-	return newRetransmissionPolicy(
+	RetransmissionPolicy* r_policy = newRetransmissionPolicy(
         NULL,
         NULL,
         &HopCountAidedPolicyEval,
-        NULL
+        NULL,
+        new_list(1, new_str("HopsContext"))
     );
+
+    return r_policy;
 }

@@ -61,7 +61,7 @@ typedef struct NeighborEntry_ {
     hash_table* neighs;
 
     // Extra Attributes
-    void* msg_attributes;
+    void* context_attributes;
 
 } NeighborEntry;
 
@@ -113,14 +113,32 @@ unsigned int NT_getSize(NeighborsTable* nt) {
 }
 
 void NT_addNeighbor(NeighborsTable* nt, NeighborEntry* neigh) {
-    assert(nt);
+    assert(nt && neigh);
     void* old = hash_table_insert(nt->neighbors, neigh->id, neigh);
     assert(old == NULL);
 }
 
 NeighborEntry* NT_getNeighbor(NeighborsTable* nt, unsigned char* neigh_id) {
-    assert(nt);
+    assert(nt && neigh_id);
     return (NeighborEntry*)hash_table_find_value(nt->neighbors, neigh_id);
+}
+
+NeighborEntry* NT_getNeighborByAddr(NeighborsTable* nt, WLANAddr* neigh_addr) {
+    assert(nt && neigh_addr);
+
+    void* iterator = NULL;
+    NeighborEntry* current_neigh = NULL;
+    while ( (current_neigh = NT_nextNeighbor(nt, &iterator)) ) {
+        if( memcmp(NE_getNeighborMAC(current_neigh)->data, neigh_addr->data, WLAN_ADDR_LEN) == 0 ) {
+            break;
+        }
+    }
+
+    if( iterator ) {
+        free(iterator);
+    }
+
+    return current_neigh;
 }
 
 NeighborEntry* NT_removeNeighbor(NeighborsTable* nt, unsigned char* neigh_id) {
@@ -168,7 +186,7 @@ NeighborEntry* newNeighborEntry(WLANAddr* mac_addr, unsigned char* id, unsigned 
     neigh->neighs = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
     // Extra Attributes
-    neigh->msg_attributes = NULL;
+    neigh->context_attributes = NULL;
 
     return neigh;
 }
@@ -177,11 +195,11 @@ static void deleteTwoHopNeighborEntry_custom(hash_table_item* it, void* args) {
     free((TwoHopNeighborEntry*)(it->value));
 }
 
-void destroyNeighborEntry(NeighborEntry* neigh, void** lq_attributes, void** msg_attributes) {
+void destroyNeighborEntry(NeighborEntry* neigh, void** lq_attributes, void** context_attributes) {
 
     if(neigh) {
         *lq_attributes = neigh->lq_attributes;
-        *msg_attributes = neigh->msg_attributes;
+        *context_attributes = neigh->context_attributes;
 
         hash_table_delete_custom(neigh->neighs, &deleteTwoHopNeighborEntry_custom, NULL);
 
@@ -363,15 +381,15 @@ void NE_setOutTraffic(NeighborEntry* neigh, double traffic) {
     neigh->out_traffic = traffic;
 }
 
-void* NE_getMessageAttributes(NeighborEntry* neigh) {
+void* NE_getContextAttributes(NeighborEntry* neigh) {
     assert(neigh);
-    return neigh->msg_attributes;
+    return neigh->context_attributes;
 }
 
-void* NE_setMessageAttributes(NeighborEntry* neigh, void* msg_attributes) {
+void* NE_setContextAttributes(NeighborEntry* neigh, void* context_attributes) {
     assert(neigh);
-    void* old_attributes = neigh->msg_attributes;
-    neigh->msg_attributes = msg_attributes;
+    void* old_attributes = neigh->context_attributes;
+    neigh->context_attributes = context_attributes;
     return old_attributes;
 }
 

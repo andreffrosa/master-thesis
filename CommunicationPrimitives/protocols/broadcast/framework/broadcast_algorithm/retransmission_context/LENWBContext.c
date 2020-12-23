@@ -15,27 +15,17 @@
 
 #include "data_structures/hash_table.h"
 
-#include "protocols/discovery/framework/framework.h"
+#include "utility/my_string.h"
 
-typedef struct LENWBContextArgs_ {
-	RetransmissionContext* neighbors_context;
-} LENWBContextArgs;
+#include "protocols/discovery/framework/framework.h"
 
 typedef struct LENWBContextState_ {
 	hash_table* two_hop_n_neighs;
 } LENWBContextState;
 
-static void LENWBContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
-    LENWBContextArgs* args = (LENWBContextArgs*)context_state->args;
+static void LENWBContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, hash_table* contexts) {
 
-    RC_init(args->neighbors_context, protocol_definition, myID, visited);
-}
-
-static void LENWBContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, list* visited) {
-    LENWBContextArgs* args = (LENWBContextArgs*)context_state->args;
     LENWBContextState* state = (LENWBContextState*)context_state->vars;
-
-    RC_processEvent(args->neighbors_context, elem, myID, visited);
 
     if(elem->type == YGG_EVENT) {
         YggEvent* ev = &elem->data.event;
@@ -70,23 +60,19 @@ static void LENWBContextEvent(ModuleState* context_state, queue_t_elem* elem, un
     }
 }
 
-static bool LENWBContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
-    LENWBContextArgs* args = (LENWBContextArgs*)context_state->args;
+static bool LENWBContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, hash_table* contexts) {
+
     LENWBContextState* state = (LENWBContextState*)context_state->vars;
 
     if(strcmp(query, "LENWB_NEIGHS") == 0) {
         *((hash_table**)result) = hash_table_clone(state->two_hop_n_neighs, sizeof(uuid_t), sizeof(byte));
 		return true;
-    } else {
-        return RC_query(args->neighbors_context, query, result, query_args, myID, visited);
     }
+
+    return false;
 }
 
-static void LENWBContextDestroy(ModuleState* context_state, list* visited) {
-    LENWBContextArgs* args = (LENWBContextArgs*)context_state->args;
-    destroyRetransmissionContext(args->neighbors_context, visited);
-    free(args);
-
+static void LENWBContextDestroy(ModuleState* context_state) {
     LENWBContextState* state = (LENWBContextState*)context_state->vars;
     hash_table_delete(state->two_hop_n_neighs);
     free(state);
@@ -94,21 +80,22 @@ static void LENWBContextDestroy(ModuleState* context_state, list* visited) {
 
 RetransmissionContext* LENWBContext(RetransmissionContext* neighbors_context) {
 
-    LENWBContextArgs* args = malloc(sizeof(LENWBContextArgs));
-    args->neighbors_context = neighbors_context;
-
     LENWBContextState* state = malloc(sizeof(LENWBContextState));
     state->two_hop_n_neighs = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
-    return newRetransmissionContext(
-        args,
+    RetransmissionContext* ctx = newRetransmissionContext(
+        "LENWBContext",
+        NULL,
         state,
-        &LENWBContextInit,
+        NULL, //&LENWBContextInit,
         &LENWBContextEvent,
+        NULL,
         NULL,
         &LENWBContextQuery,
         NULL,
-        NULL,
-        &LENWBContextDestroy
+        &LENWBContextDestroy,
+        new_list(1, new_str("NeighborsContext"))
     );
+
+    return ctx;
 }

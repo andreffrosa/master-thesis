@@ -19,12 +19,11 @@
 #include "utility/my_misc.h"
 #include "utility/byte.h"
 
-#include "messages.h"
-
-#include "delivery.h"
-
 #include "data_structures/double_list.h"
 
+#include "internal_events.h"
+#include "messages.h"
+#include "delivery.h"
 #include "neighbors_table.h"
 #include "discovery_environment.h"
 
@@ -72,9 +71,9 @@ void DF_init(discovery_framework_state* state);
 
 // Timers
 
-void DF_uponHelloTimer(discovery_framework_state* state, bool periodic, bool send_hack);
+void DF_uponHelloTimer(discovery_framework_state* state);
 
-void DF_uponHackTimer(discovery_framework_state* state, bool periodic);
+void DF_uponHackTimer(discovery_framework_state* state);
 
 void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_payload, unsigned short timer_payload_size);
 
@@ -90,11 +89,16 @@ void scheduleHelloTimer(discovery_framework_state* state, bool now);
 
 void scheduleHackTimer(discovery_framework_state* state, bool now);
 
-void scheduleReply(discovery_framework_state* state, HelloMessage* hello);
+void scheduleReply(discovery_framework_state* state, HelloMessage* hello, HelloDeliverSummary* summary);
 
 void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummary* hello_summary, HackDeliverSummary* hack_summary, NeighborTimerSummary* neighbor_timer_summary, bool other);
 
 void DF_uponNeighborChangeTimer(discovery_framework_state* state);
+
+DiscoverySendPack* DF_triggerDiscoveryEvent(discovery_framework_state* state, DiscoveryInternalEventType event_type, void* event_args, YggMessage* msg);
+
+DiscoverySendPack* DF_handleDiscoveryEvent(discovery_framework_state* state, DiscoveryInternalEventType event_type, void* event_args, YggMessage* msg);
+
 
 // Messages
 
@@ -104,7 +108,7 @@ void DF_deserialize(discovery_framework_state* state, byte* data, unsigned short
 
 void DF_processMessage(discovery_framework_state* state, byte* data, unsigned short size, bool piggybacked, WLANAddr* mac_addr);
 
-bool DF_sendMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info);
+void DF_sendMessage(discovery_framework_state* state, DiscoverySendPack* dsp, YggMessage* msg);
 
 void DF_piggybackDiscovery(discovery_framework_state* state, YggMessage* msg);
 
@@ -125,7 +129,7 @@ void DF_createHack(discovery_framework_state* state, HackMessage* hack, Neighbor
 
 void DF_createHackBatch(discovery_framework_state* state, HackMessage** hacks, byte* n_hacks, NeighborsTable* neighbors);
 
-bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMessage* hello, HackMessage* hacks, byte n_hacks, WLANAddr* addr, MessageType msg_type, void* aux_info);
+void DF_createMessage(discovery_framework_state* state, HelloMessage* hello, HackMessage* hacks, byte n_hacks, DiscoveryInternalEventType event_type, void* event_args, YggMessage* msg, WLANAddr* addr);
 
 void DF_notifyDiscoveryEnvironment(discovery_framework_state* state);
 
@@ -137,6 +141,7 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
 
 void DF_notifyNeighborhood(discovery_framework_state* state);
 
+
 //void changeAlgorithm(discovery_framework_state* state, DiscoveryAlgorithm* new_alg);
 
 void DF_printNeighbors(discovery_framework_state* state);
@@ -144,5 +149,6 @@ void DF_printNeighbors(discovery_framework_state* state);
 void DF_printStats(discovery_framework_state* state);
 
 void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh);
+
 
 #endif /* _DISCOVERY_FRAMEWORK_HANDLERS_H_ */

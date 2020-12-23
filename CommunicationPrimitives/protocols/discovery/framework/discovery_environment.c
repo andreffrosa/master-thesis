@@ -14,6 +14,7 @@
 #include "discovery_environment.h"
 
 #include "utility/window.h"
+#include "utility/my_math.h"
 
 #include <assert.h>
 #include <math.h>
@@ -62,9 +63,10 @@ void DE_registerOutTraffic(DiscoveryEnvironment* de, struct timespec* current_ti
     insertIntoWindow(de->out_traffic_window, current_time, 1.0);
 }
 
-bool DE_computeOutTraffic(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon) {
+bool DE_computeOutTraffic(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon, int precision) {
     assert(de);
     double new_out_traffic = computeWindow(de->out_traffic_window, current_time, window_type, "sum", true);
+    new_out_traffic = roundPrecision(new_out_traffic, precision);
 
     double delta = fabs(new_out_traffic - de->old_out_traffic);
 
@@ -80,9 +82,10 @@ void DE_registerNewNeighbor(DiscoveryEnvironment* de, struct timespec* current_t
     insertIntoWindow(de->new_neighbors_flux_window, current_time, 1.0);
 }
 
-bool DE_computeNewNeighborsFlux(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon) {
+bool DE_computeNewNeighborsFlux(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon, int precision) {
     assert(de);
     double new_new_neighbors_flux = computeWindow(de->new_neighbors_flux_window, current_time, window_type, "sum", true);
+    new_new_neighbors_flux = roundPrecision(new_new_neighbors_flux, precision);
 
     double delta = fabs(new_new_neighbors_flux - de->old_new_neighbors_flux);
     if( delta >= epsilon || (delta > 0 && (new_new_neighbors_flux == 0.0)) ) {
@@ -97,9 +100,10 @@ void DE_registerLostNeighbor(DiscoveryEnvironment* de, struct timespec* current_
     insertIntoWindow(de->lost_neighbors_flux_window, current_time, 1.0);
 }
 
-bool DE_computeLostNeighborsFlux(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon) {
+bool DE_computeLostNeighborsFlux(DiscoveryEnvironment* de, struct timespec* current_time, char* window_type, double epsilon, int precision) {
     assert(de);
     double new_lost_neighbors_flux = computeWindow(de->lost_neighbors_flux_window, current_time, window_type, "sum", true);
+    new_lost_neighbors_flux = roundPrecision(new_lost_neighbors_flux, precision);
 
     double delta = fabs(new_lost_neighbors_flux - de->old_lost_neighbors_flux);
     if( delta >= epsilon || (delta > 0 && (new_lost_neighbors_flux == 0.0)) ) {

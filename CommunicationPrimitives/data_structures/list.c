@@ -14,6 +14,8 @@
 
 #include <assert.h>
 
+#include <stdarg.h>
+
 void list_append(list* l1, list* l2) {
 
     assert(l1 != NULL);
@@ -35,10 +37,12 @@ void list_append(list* l1, list* l2) {
 }
 
 void list_delete(list* l) {
-	void* it = NULL;
-	while( (it = list_remove_head(l)) )
-		free(it);
-	free(l);
+    if(l) {
+        void* it = NULL;
+    	while( (it = list_remove_head(l)) )
+    		free(it);
+    	free(l);
+    }
 }
 
 void list_delete_keep(list* l) {
@@ -132,4 +136,21 @@ list* list_map(list* l, void* (*f)(void* v, unsigned int argc, void** argv), uns
     }
 
     return result;
+}
+
+list* new_list(unsigned int n, ...) {
+
+    list* l = list_init();
+
+    va_list args;
+    va_start(args, n);
+
+    for(int i = 0; i < n; i++) {
+        void* value = va_arg(args, void*);
+        list_add_item_to_tail(l, value);
+    }
+
+    va_end(args);
+
+    return l;
 }

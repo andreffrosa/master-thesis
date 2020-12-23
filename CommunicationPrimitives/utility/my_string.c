@@ -129,3 +129,15 @@ char* align_str(char* out_str, char* in_str, unsigned int width, char* type) {
     assert(strlen(out_str) == width);
     return out_str;
 }
+
+bool parse_bool(char* token) {
+    assert(token);
+
+    return strcmp(token, "True") == 0 || strcmp(token, "true") == 0;
+}
+
+char* new_str(const char* str) {
+    char* str2 = malloc(strlen(str)+1);
+    strcpy(str2, str);
+    return str2;
+}

@@ -18,14 +18,14 @@
 
 #include "discovery_pattern/discovery_pattern_private.h"
 #include "discovery_period/discovery_period_private.h"
-#include "discovery_message/discovery_message_private.h"
+#include "discovery_context/discovery_context_private.h"
 #include "link_quality/link_quality_private.h"
 
 typedef struct _DiscoveryAlgorithm {
     DiscoveryPattern* d_pattern;
     DiscoveryPeriod* d_period;
     LinkQuality* lq_metric;
-    DiscoveryMessage* d_message;
+    DiscoveryContext* d_context;
 } DiscoveryAlgorithm;
 
 #endif /* _DISCOVERY_ALGORITHM_PRIVATE_H_ */

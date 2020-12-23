@@ -22,24 +22,22 @@ typedef struct _HorizonProbabilityPolicyArgs {
 	unsigned int k;
 } HorizonProbabilityPolicyArgs;
 
-static bool HorizonProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool HorizonProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 
 	double p = ((HorizonProbabilityPolicyArgs*)(policy_state->args))->p;
 	unsigned int k = ((HorizonProbabilityPolicyArgs*)(policy_state->args))->k;
-	MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
-	unsigned char hops = 0;
 
-    list* visited2 = list_init();
-    if(!RC_queryHeader(r_context, getContextHeader(first), getBcastHeader(first)->context_length, "hops", &hops, NULL, myID, visited2)) {
-        assert(false);
-    }
-    list_delete(visited2);
+	MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
+    hash_table* headers = getHeaders(first);
+
+    byte* hops = (byte*)hash_table_find_value(headers, "hops");
+    assert(hops);
 
 	double u = randomProb();
-	return hops < k || u <= p;
+	return *hops < k || u <= p;
 }
 
-static void HorizonProbabilityPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void HorizonProbabilityPolicyDestroy(ModuleState* policy_state) {
     free(policy_state->args);
 }
 
@@ -49,10 +47,13 @@ RetransmissionPolicy* HorizonProbabilityPolicy(double p, unsigned int k) {
 	args->p = p;
 	args->k = k;
 
-    return newRetransmissionPolicy(
+    RetransmissionPolicy* r_policy = newRetransmissionPolicy(
         args,
         NULL,
         &HorizonProbabilityPolicyEval,
-        &HorizonProbabilityPolicyDestroy
+        &HorizonProbabilityPolicyDestroy,
+        new_list(1, new_str("HopsContext"))
     );
+
+    return r_policy;
 }

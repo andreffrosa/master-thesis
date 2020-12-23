@@ -18,72 +18,83 @@
 #include <assert.h>
 
 
-static unsigned int LatencyContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
+static unsigned long getLatency(double_list* copies, struct timespec* current_time) {
+    assert(copies->size > 0);
 
-    unsigned long* t = malloc(sizeof(unsigned long));
+    MessageCopy* first = (MessageCopy*)copies->head->data;
 
-    assert(getCopies(p_msg)->size > 0);
+    struct timespec* reception_time = getCopyReceptionTime(first);
+    struct timespec elapsed_t = {0};
+    subtract_timespec(&elapsed_t, current_time, reception_time);
 
-    //if (getCopies(p_msg)->size > 0) {
-        struct timespec* reception_time = getCopyReceptionTime(((MessageCopy*)getCopies(p_msg)->head->data));
-        struct timespec current_time = {0}, elapsed = {0};
-        clock_gettime(CLOCK_MONOTONIC, &current_time);
-        subtract_timespec(&elapsed, &current_time, reception_time);
+    unsigned long elapsed = timespec_to_milli(&elapsed_t);
 
-        *t = timespec_to_milli(&elapsed);
-    /*} else {
-        *t = 0L;
-    }*/
+    /* char str[100];
+    sprintf(str, "%lu", elapsed);
+    ygg_log("", "ELAPSED", str); */
 
-	*context_header = t;
-	return sizeof(unsigned long);
+    hash_table* headers = getHeaders(first);
+    unsigned long* latency = (unsigned long*)hash_table_find_value(headers, "latency");
+    if(latency != NULL) {
+        return elapsed + *latency;
+    } else {
+        return elapsed;
+    }
 }
 
-static bool LatencyContextQueryHeader(ModuleState* context_state, void* header, unsigned int header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
+static void LatencyAppendHeaders(ModuleState* context_state, PendingMessage* p_msg, hash_table* serialized_headers, unsigned char* myID, hash_table* contexts, struct timespec* current_time) {
+    unsigned long latency = getLatency(getCopies(p_msg), current_time);
 
-    if(strcmp(query, "latency") == 0) {
-        if(header) {
-            *((unsigned long*)result) = *((unsigned long*)header);
-        } else {
-            *((unsigned long*)result) = 0L;
-        }
-
-		return true;
-	}
-
-	return false;
+    appendHeader(serialized_headers, "latency", &latency, sizeof(unsigned long));
 }
 
-static void LatencyContextCopy(ModuleState* context_state, PendingMessage* p_msg, unsigned char* myID, list* visited) {
+static void LatencyContextParseHeaders(ModuleState* context_state, hash_table* serialized_headers, hash_table* headers, unsigned char* myID) {
+    byte* buffer = (byte*)hash_table_find_value(serialized_headers, "latency");
+    if(buffer) {
+        byte* ptr = buffer + sizeof(byte);
+
+        unsigned long* latency = malloc(sizeof(unsigned long));
+        memcpy(latency, ptr, sizeof(unsigned long));
+
+        const char* key_ = "latency";
+        char* key = malloc(strlen(key_)+1);
+        strcpy(key, key_);
+        hash_table_insert(headers, key, latency);
+    }
+}
+
+static void LatencyContextCopy(ModuleState* context_state, PendingMessage* p_msg, unsigned char* myID) {
 
     if(getCurrentPhase(p_msg) == 1 && getCopies(p_msg)->size == 1) {
         MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
+        hash_table* headers = getHeaders(first);
 
-        unsigned long latency = 0L;
-        if(!LatencyContextQueryHeader(context_state, getContextHeader(first), getBcastHeader(first)->context_length, "latency", &latency, NULL, myID, NULL))
-    		assert(false);
+        unsigned long* latency = (unsigned long*)hash_table_find_value(headers, "latency");
+        assert(latency);
 
         // Debug
         char str[100];
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(getPendingMessageID(p_msg), id_str);
-        sprintf(str, "[%s] latency = %lu", id_str, latency);
-        ygg_log("LATENCY CONTEXT", "LATENCY", str);
+        sprintf(str, "[%s] %lu", id_str, *latency);
+        ygg_log("BROADCAST", "LATENCY", str);
     }
 }
 
 RetransmissionContext* LatencyContext() {
 
     return newRetransmissionContext(
+        "LatencyContext",
         NULL,
         NULL,
         NULL,
         NULL,
-        &LatencyContextHeader,
+        &LatencyAppendHeaders,
+        &LatencyContextParseHeaders,
         NULL,
-        &LatencyContextQueryHeader,
         &LatencyContextCopy,
+        NULL,
         NULL
     );
 }

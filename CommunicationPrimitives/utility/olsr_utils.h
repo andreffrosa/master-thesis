@@ -24,6 +24,7 @@ typedef struct N1_Tuple_ {
     double d1;
     double w;
     list* ns;
+    bool already_mpr;
 } N1_Tuple;
 
 typedef struct N2_Tuple_ {
@@ -33,7 +34,7 @@ typedef struct N2_Tuple_ {
 
 bool equalN2Tuple(void* a, void* b);
 
-N1_Tuple* newN1Tuple(unsigned char* id, double d1, double w, list* ns);
+N1_Tuple* newN1Tuple(unsigned char* id, double d1, double w, list* ns, bool already_mpr);
 
 N2_Tuple* newN2Tuple(unsigned char* id, double d2);
 

@@ -30,7 +30,7 @@ typedef struct _DynamicProbabilityContextState {
     uuid_t timer_id;
 } DynamicProbabilityContextState;
 
-static void DynamicProbabilityContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
+static void DynamicProbabilityContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID) {
     DynamicProbabilityContextArgs* args = (DynamicProbabilityContextArgs*)(context_state->args);
     DynamicProbabilityContextState* state = (DynamicProbabilityContextState*)(context_state->vars);
 
@@ -39,7 +39,7 @@ static void DynamicProbabilityContextInit(ModuleState* context_state, proto_def*
     SetPeriodicTimer(&t, state->timer_id, proto_def_getId(protocol_definition), 3);
 }
 
-static void DynamicProbabilityContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, list* visited) {
+static void DynamicProbabilityContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, hash_table* contexts) {
     DynamicProbabilityContextArgs* args = (DynamicProbabilityContextArgs*)(context_state->args);
     DynamicProbabilityContextState* state = (DynamicProbabilityContextState*)(context_state->vars);
 
@@ -55,7 +55,7 @@ static void DynamicProbabilityContextEvent(ModuleState* context_state, queue_t_e
     }
 }
 
-static bool DynamicProbabilityContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
+static bool DynamicProbabilityContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, hash_table* contexts) {
 
     DynamicProbabilityContextState* state = (DynamicProbabilityContextState*)(context_state->vars);
 
@@ -67,7 +67,7 @@ static bool DynamicProbabilityContextQuery(ModuleState* context_state, const cha
 	return false;
 }
 
-static void DynamicProbabilityContextCopy(ModuleState* context_state, PendingMessage* p_msg, unsigned char* myID, list* visited) {
+static void DynamicProbabilityContextCopy(ModuleState* context_state, PendingMessage* p_msg, unsigned char* myID) {
     DynamicProbabilityContextArgs* args = (DynamicProbabilityContextArgs*)(context_state->args);
     DynamicProbabilityContextState* state = (DynamicProbabilityContextState*)(context_state->vars);
 
@@ -79,7 +79,7 @@ static void DynamicProbabilityContextCopy(ModuleState* context_state, PendingMes
     state->counter++;
 }
 
-static void DynamicProbabilityContextDestroy(ModuleState* context_state, list* visited) {
+static void DynamicProbabilityContextDestroy(ModuleState* context_state) {
     free(context_state->args);
     free(context_state->vars);
 }
@@ -101,14 +101,16 @@ RetransmissionContext* DynamicProbabilityContext(double p, double p_l, double p_
     uuid_generate_random(state->timer_id);
 
     return newRetransmissionContext(
+        "DynamicProbabilityContext",
         args,
         state,
         &DynamicProbabilityContextInit,
         &DynamicProbabilityContextEvent,
         NULL,
-        &DynamicProbabilityContextQuery,
         NULL,
+        &DynamicProbabilityContextQuery,
         &DynamicProbabilityContextCopy,
-        &DynamicProbabilityContextDestroy
+        &DynamicProbabilityContextDestroy,
+        NULL
     );
 }

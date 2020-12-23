@@ -15,7 +15,7 @@
 
 #include "utility/my_math.h"
 
-static unsigned long RandomDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static unsigned long RandomDelayCompute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, hash_table* contexts) {
     if(!isCopy) {
         	unsigned long t_max = *((unsigned long*) (delay_state->args));
         	double u = randomProb();
@@ -25,7 +25,7 @@ static unsigned long RandomDelayCompute(ModuleState* delay_state, PendingMessage
     }
 }
 
-static void RandomDelayDestroy(ModuleState* delay_state, list* visited) {
+static void RandomDelayDestroy(ModuleState* delay_state) {
     free(delay_state->args);
 }
 
@@ -38,6 +38,7 @@ RetransmissionDelay* RandomDelay(unsigned long t_max) {
         t_max_arg,
         NULL,
         &RandomDelayCompute,
-        &RandomDelayDestroy
+        &RandomDelayDestroy,
+        NULL
     );
 }

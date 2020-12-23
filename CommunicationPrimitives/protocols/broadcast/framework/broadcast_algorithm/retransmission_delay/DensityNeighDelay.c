@@ -34,16 +34,17 @@ static unsigned long getCurrentPhaseDelay(unsigned long t_max, unsigned int n, d
     return delay;
 }
 
-static unsigned long DN_compute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static unsigned long DN_compute(ModuleState* delay_state, PendingMessage* p_msg, unsigned long remaining, bool isCopy, unsigned char* myID, hash_table* contexts) {
 
     if(!isCopy) {
         unsigned long t_max = *((unsigned long*) (delay_state->args));
 
+        RetransmissionContext* r_context = hash_table_find_value(contexts, "NeighborsContext");
+        assert(r_context);
+
         double aux[3];
-        list* visited2 = list_init();
-        if(!RC_query(r_context, "neighbors_distribution", aux, NULL, myID, visited2))
+        if(!RC_query(r_context, "neighbors_distribution", aux, NULL, myID, contexts))
             assert(false);
-        list_delete(visited2);
 
         unsigned int current_phase = getCurrentPhase(p_msg);
 
@@ -54,7 +55,7 @@ static unsigned long DN_compute(ModuleState* delay_state, PendingMessage* p_msg,
     }
 }
 
-static void DN_destroy(ModuleState* delay_state, list* visited) {
+static void DN_destroy(ModuleState* delay_state) {
     free(delay_state->args);
 }
 
@@ -63,10 +64,13 @@ RetransmissionDelay* DensityNeighDelay(unsigned long t_max) {
     unsigned long* t_max_arg = malloc(sizeof(t_max));
     *t_max_arg = t_max;
 
-    return newRetransmissionDelay(
+    RetransmissionDelay* r_delay = newRetransmissionDelay(
         t_max_arg,
         NULL,
         &DN_compute,
-        &DN_destroy
+        &DN_destroy,
+        new_list(1, new_str("NeighborsContext"))
     );
+
+    return r_delay;
 }

@@ -17,69 +17,76 @@
 
 #include "utility/my_math.h"
 
-static bool ParentsContextQueryHeader(ModuleState* context_state, void* context_header, unsigned int context_header_size, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
-	unsigned int amount = context_header_size / sizeof(uuid_t);
 
-	if(strcmp(query, "parents") == 0) {
-		list* l = list_init();
-
-		for(int i = 0; i < amount; i++) {
-			unsigned char* id = malloc(sizeof(uuid_t));
-			unsigned char* ptr = context_header + i*sizeof(uuid_t);
-			uuid_copy(id, ptr);
-			list_add_item_to_tail(l, id);
-		}
-
-        *((list**)result) = l;
-		return true;
-	}
-
-	return false;
-}
-
-static unsigned int ParentsContextHeader(ModuleState* context_state, PendingMessage* p_msg, void** context_header, unsigned char* myID, list* visited) {
+static void ParentsContextAppendHeaders(ModuleState* context_state, PendingMessage* p_msg, hash_table* serialized_headers, unsigned char* myID, hash_table* contexts, struct timespec* current_time) {
     double_list* copies = getCopies(p_msg);
     assert(copies->size > 0);
-    /*if(copies->size == 0) {
-        *context_header = NULL;
-        return 0;
-    }*/
 
     unsigned int max_amount = *((unsigned int*)(context_state->args));
     unsigned int real_amount = iMin(max_amount, copies->size);
     unsigned int size = real_amount*sizeof(uuid_t);
 
-	unsigned char* buffer = malloc(size);
+    byte buffer[size];
+    byte* ptr = buffer;
 
-	double_list_item* it = copies->head;
-	for(int i = 0; i < real_amount; i++, it = it->next) {
-		MessageCopy* msg_copy = (MessageCopy*)it->data;
-		unsigned char* ptr = (buffer + i*sizeof(uuid_t));
-		uuid_copy(ptr, getBcastHeader(msg_copy)->sender_id);
-	}
+    double_list_item* dit = copies->head;
+	for(int i = 0; i < real_amount; i++, dit = dit->next) {
+        MessageCopy* copy = (MessageCopy*)dit->data;
 
-    *context_header = buffer;
-	return size;
+    	uuid_copy(ptr, getBcastHeader(copy)->sender_id);
+        ptr += sizeof(uuid_t);
+    }
+
+    appendHeader(serialized_headers, "parents", buffer, size);
 }
 
-static void ParentsContextDestroy(ModuleState* context_state, list* visited) {
+static void ParentsContextParseHeaders(ModuleState* context_state, hash_table* serialized_headers, hash_table* headers, unsigned char* myID) {
+    list* parents = list_init();
+
+    byte* buffer = (byte*)hash_table_find_value(serialized_headers, "parents");
+    if(buffer) {
+        byte* ptr = buffer;
+
+        byte size = 0;
+        memcpy(&size, ptr, sizeof(byte));
+        ptr += sizeof(byte);
+
+        int n = size / sizeof(uuid_t);
+        for(int i = 0; i < n; i++) {
+            unsigned char* id = malloc(sizeof(uuid_t));
+            uuid_copy(id, ptr);
+            ptr += sizeof(uuid_t);
+            list_add_item_to_tail(parents, id);
+        }
+    }
+
+    const char* key_ = "parents";
+    char* key = malloc(strlen(key_)+1);
+    strcpy(key, key_);
+    hash_table_insert(headers, key, parents);
+}
+
+static void ParentsContextDestroy(ModuleState* context_state) {
     free(context_state->args);
 }
 
 RetransmissionContext* ParentsContext(unsigned int max_amount) {
+    assert( 0 < max_amount && max_amount <= 255);
 
-    unsigned int* max_amount_args = malloc(sizeof(unsigned int));
-    *max_amount_args = max_amount;
+    unsigned int* max_amount_arg = malloc(sizeof(unsigned int));
+    *max_amount_arg = max_amount;
 
     return newRetransmissionContext(
-        max_amount_args,
+        "ParentsContext",
+        max_amount_arg,
         NULL,
         NULL,
         NULL,
-        &ParentsContextHeader,
+        &ParentsContextAppendHeaders,
+        &ParentsContextParseHeaders,
         NULL,
-        &ParentsContextQueryHeader,
         NULL,
-        &ParentsContextDestroy
+        &ParentsContextDestroy,
+        NULL
     );
 }

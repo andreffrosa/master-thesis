@@ -37,7 +37,8 @@ static double compute_quality(ModuleState* state, void* lq_attrs, double previou
 
     if( init ) {
         // Insert into window
-        int samples = 50;
+        /*
+        int samples = 25;
         unsigned int x = samples*args->initial_quality;
         for(int i = 0; i < x; i++) {
             insertIntoWindow(window, current_time, 1.0);
@@ -45,10 +46,37 @@ static double compute_quality(ModuleState* state, void* lq_attrs, double previou
         for(int i = x; i < samples; i++) {
             insertIntoWindow(window, current_time, 0.0);
         }
+        */
+
+        /*
+        struct timespec moment = {0};
+        milli_to_timespec(&moment, getWindowBucketDurationS(window)*1000);
+
+        if(moment.tv_nsec)
+        moment.tv_nsec--;
+        else {
+            moment.tv_sec--;
+            moment.tv_nsec = 999999999;
+        }
+
+        subtract_timespec(&moment, current_time, &moment);
+        insertIntoWindow(window, &moment, args->initial_quality);
+        */
+
+        unsigned int n_buckets = getWindowNBuckets(window);
+        for(int i = n_buckets; i > 0; i--) {
+            struct timespec moment = {0};
+            milli_to_timespec(&moment, i*getWindowBucketDurationS(window)*1000 - 1);
+
+            //printf("i=%d moment={%lu %lu}\n", i, moment.tv_sec, moment.tv_nsec);
+
+            subtract_timespec(&moment, current_time, &moment);
+            insertIntoWindow(window, &moment, args->initial_quality);
+        }
 
         // Debug
-        // double initial_quality = computeWindow(window, current_time, args->window_type, "avg", false);
-        // printf("Computed Initial Quality: %f\n", initial_quality);
+        //double initial_quality = computeWindow(window, current_time, args->window_type, "avg", false);
+        //printf("Computed Initial Quality: %f\n", initial_quality);
 
         return args->initial_quality;
     } else {
@@ -62,7 +90,7 @@ static double compute_quality(ModuleState* state, void* lq_attrs, double previou
         // Compute current link quality
         double quality = computeWindow(window, current_time, args->window_type, "avg", false);
 
-        // printf("Computed Quality: %f\n", quality);
+        //printf("Computed Quality: %f\n", quality);
 
         //printf("\n\n\t\tCompute LQ: lost=%d received=%d old_lq=%f new_lq=%f\n\n", lost, received, previous_link_quality, quality);
 

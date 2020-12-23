@@ -9,7 +9,8 @@ add_subdirectory(discovery_algorithm)
 
 file(GLOB SRC_FILES_DISCOVERY_FRAMEWORK LIST_DIRECTORIES false ${PROJECT_SOURCE_DIR}/*.c)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D DEBUG_DISCOVERY -g -Wall -O0")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D DEBUG_DISCOVERY -g -Wall -O0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -O0")
 
 add_library(discovery_framework ${SRC_FILES_DISCOVERY_FRAMEWORK})
 

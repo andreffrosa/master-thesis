@@ -15,14 +15,14 @@
 
 #include "utility/my_math.h"
 
-static bool ProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool ProbabilityPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 	double p = *((double*)(policy_state->args));
 	double u = randomProb();
 
 	return u <= p;
 }
 
-static void ProbabilityPolicyDestroy(ModuleState* policy_state, list* visited) {
+static void ProbabilityPolicyDestroy(ModuleState* policy_state) {
     free(policy_state->args);
 }
 
@@ -35,6 +35,7 @@ RetransmissionPolicy* ProbabilityPolicy(double p) {
         p_arg,
         NULL,
         &ProbabilityPolicyEval,
-        &ProbabilityPolicyDestroy
+        &ProbabilityPolicyDestroy,
+        NULL
     );
 }

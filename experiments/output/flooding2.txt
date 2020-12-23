@@ -1,3 +1,0 @@
-
-sudo gdb --args ../bin/broadcast_test -I wlan0 -H raspi-01 '--file' '../experiments/configs/latency.conf'
-

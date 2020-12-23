@@ -27,23 +27,23 @@ typedef enum {
     HYBRID_HELLO
 } HelloSchedulerType;
 
-HelloScheduler* newHelloScheduler(HelloSchedulerType hello_type, PiggybackType piggyback_type, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+HelloScheduler* newHelloScheduler(HelloSchedulerType hello_type, PiggybackFilter* piggyback_filter, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
 void destroyHelloScheduler(HelloScheduler* hello_sh);
 
 HelloScheduler* NoHELLO();
 
-HelloScheduler* PiggybackHELLO(PiggybackType piggyback_hellos);
+HelloScheduler* PiggybackHELLO(PiggybackFilter* piggyback_filter);
 
-HelloScheduler* PeriodicHELLO(bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+HelloScheduler* PeriodicHELLO(PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
-HelloScheduler* HybridHELLO(PiggybackType piggyback_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+HelloScheduler* HybridHELLO(PiggybackFilter* piggyback_filter, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
-void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackType piggyback_type, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_lost_neighbor, bool react_to_update_neighbor, bool react_to_new_2hop_neighbor, bool react_to_lost_2hop_neighbor, bool react_to_update_2hop_neighbor);
+void HELLO_update(HelloScheduler* hello_sh, HelloSchedulerType hello_type, PiggybackFilter* piggyback_filter, PeriodicType periodic_type, bool react_to_new_neighbor, bool react_to_update_neighbor, bool react_to_lost_neighbor, bool react_to_context_updates);
 
 PeriodicType HELLO_periodicType(HelloScheduler* hello_sh);
 
-PiggybackType HELLO_piggybackType(HelloScheduler* hello_sh);
+PiggybackType HELLO_evalPiggybackFilter(HelloScheduler* hello_sh, YggMessage* msg, void* extra_args);
 
 bool HELLO_newNeighbor(HelloScheduler* hello_sh);
 
@@ -51,11 +51,7 @@ bool HELLO_lostNeighbor(HelloScheduler* hello_sh);
 
 bool HELLO_updateNeighbor(HelloScheduler* hello_sh);
 
-bool HELLO_new2HopNeighbor(HelloScheduler* hello_sh);
-
-bool HELLO_lost2HopNeighbor(HelloScheduler* hello_sh);
-
-bool HELLO_update2HopNeighbor(HelloScheduler* hello_sh);
+bool HELLO_updateContext(HelloScheduler* hello_sh);
 
 HelloSchedulerType HELLO_getType(HelloScheduler* hello_sh);
 

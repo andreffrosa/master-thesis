@@ -49,7 +49,7 @@ static list* getCoverage(graph* neighborhood, unsigned char* myID, double_list* 
 static list* notCovered(graph* neighborhood, unsigned char* myID, double_list* copies);
 static bool allCovered(graph* neighborhood, unsigned char* myID, double_list* copies);
 
-static void NeighborsContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, list* visited) {
+static void NeighborsContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID) {
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
@@ -64,7 +64,7 @@ static void NeighborsContextInit(ModuleState* context_state, proto_def* protocol
     graph_insert_node(state->neighborhood, my_id, NULL);
 }
 
-static void NeighborsContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, list* visited) {
+static void NeighborsContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, hash_table* contexts) {
     NeighborsContextState* state = (NeighborsContextState*) (context_state->vars);
 
     if(elem->type == YGG_EVENT) {
@@ -81,7 +81,7 @@ static void NeighborsContextEvent(ModuleState* context_state, queue_t_elem* elem
 	}
 }
 
-static bool NeighborsContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, list* visited) {
+static bool NeighborsContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, hash_table* contexts) {
 	NeighborsContextState* state = (NeighborsContextState*) (context_state->vars);
 
 	if(strcmp(query, "graph") == 0 || strcmp(query, "neighborhood") == 0) {
@@ -164,14 +164,16 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
         char* aux2 = hash_table_find_value(query_args, "coverage");
         char* coverage = aux2 ? aux2 : "all";
 
-        if(strcmp(coverage, "first")==0) {
+        if(strcmp(coverage, "first") == 0) {
             *((list**)result) = getCoverage(state->neighborhood, myID, getCopies(p_msg), true);
-        } else if(strcmp(coverage, "all")==0) {
+            return true;
+        } else if(strcmp(coverage, "all") == 0) {
             *((list**)result) = getCoverage(state->neighborhood, myID, getCopies(p_msg), false);
+            return true;
         } else {
                 return false;
         }
-		return true;
+
 	} else if(strcmp(query, "not_covered") == 0) {
         assert(query_args);
         void** aux1 = hash_table_find_value(query_args, "p_msg");
@@ -210,7 +212,7 @@ static bool NeighborsContextQuery(ModuleState* context_state, const char* query,
 	}
 }
 
-static void NeighborsContextDestroy(ModuleState* context_state, list* visited) {
+static void NeighborsContextDestroy(ModuleState* context_state) {
 
     NeighborsContextState* state = (NeighborsContextState*) (context_state->vars);
     graph_delete(state->neighborhood);
@@ -221,7 +223,7 @@ RetransmissionContext* NeighborsContext() {
 
     NeighborsContextState* state = malloc(sizeof(NeighborsContextState));
 
-    state->neighborhood = graph_init((key_comparator)&uuid_compare, sizeof(uuid_t));
+    state->neighborhood = graph_init_complete((key_comparator)&uuid_compare, NULL, NULL, sizeof(uuid_t), sizeof(double), sizeof(double));
     state->in_traffic = 0.0;
     state->out_traffic = 0.0;
     state->new_neighbors_flux = 0.0;
@@ -229,15 +231,17 @@ RetransmissionContext* NeighborsContext() {
     state->neighbors_density = 0.0;
 
 	return newRetransmissionContext(
+        "NeighborsContext",
         NULL,
         state,
         &NeighborsContextInit,
         &NeighborsContextEvent,
         NULL,
+        NULL,
         &NeighborsContextQuery,
         NULL,
-        NULL,
-        &NeighborsContextDestroy
+        &NeighborsContextDestroy,
+        NULL
     );
 }
 
@@ -503,7 +507,7 @@ static graph* extractNeighborhood(YggEvent* ev) {
 
     void* ptr = NULL;
 
-    graph* neighborhood = graph_init((key_comparator)&uuid_compare, sizeof(uuid_t));
+    graph* neighborhood = graph_init_complete((key_comparator)&uuid_compare, NULL, NULL, sizeof(uuid_t), sizeof(double), sizeof(double));
 
     // Nodes
     byte n_nodes = 0;
@@ -684,6 +688,7 @@ static list* notCovered(graph* neighborhood, unsigned char* myID, double_list* c
 			list_add_item_to_tail(missed, id);
 		}
 	}
+
 	list_delete(total_coverage);
 
     list_delete(adj);

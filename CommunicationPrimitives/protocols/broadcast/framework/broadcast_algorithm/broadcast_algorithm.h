@@ -24,13 +24,17 @@
 
 typedef struct _BroadcastAlgorithm BroadcastAlgorithm;
 
-BroadcastAlgorithm* newBroadcastAlgorithm(RetransmissionContext* r_context, RetransmissionDelay* r_delay, RetransmissionPolicy* r_policy, unsigned int n_phases);
+BroadcastAlgorithm* newBroadcastAlgorithm(list* contexts, RetransmissionDelay* r_delay, RetransmissionPolicy* r_policy, unsigned int n_phases);
 
 void destroyBroadcastAlgorithm(BroadcastAlgorithm* alg);
 
-RetransmissionContext* BA_getRetransmissionContext(BroadcastAlgorithm* alg);
+RetransmissionContext* BA_getRetransmissionContext(BroadcastAlgorithm* alg, const char* context_id);
 
-void BA_setRetransmissionContext(BroadcastAlgorithm* alg, RetransmissionContext* new_context);
+//void BA_setRetransmissionContext(BroadcastAlgorithm* alg, RetransmissionContext* new_context);
+
+void BA_addContext(BroadcastAlgorithm* alg, RetransmissionContext* r_context);
+
+void BA_flushRetransmissionContexts(BroadcastAlgorithm* algorithm);
 
 RetransmissionDelay* BA_getRetransmissionDelay(BroadcastAlgorithm* alg);
 
@@ -52,7 +56,9 @@ void BA_initRetransmissionContext(BroadcastAlgorithm* algorithm, proto_def* prot
 
 void BA_processEvent(BroadcastAlgorithm* algorithm, queue_t_elem* event, unsigned char* myID);
 
-unsigned int BA_createHeader(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, void** context_header, unsigned char* myID);
+unsigned short BA_createHeader(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, byte** context_header, unsigned char* myID, struct timespec* current_time);
+
+hash_table* BA_parseHeader(BroadcastAlgorithm* algorithm, unsigned short header_size, byte* context_header, unsigned char* myID);
 
 void BA_processCopy(BroadcastAlgorithm* algorithm, PendingMessage* p_msg, unsigned char* myID);
 

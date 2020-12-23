@@ -19,12 +19,12 @@
 
 #include <assert.h>
 
-static list* get_bi_neighbors(unsigned char* id, RetransmissionContext* r_context, unsigned char* myID) {
+static list* get_bi_neighbors(unsigned char* id, hash_table* contexts, unsigned char* myID) {
     list* neighbors = NULL;
 
     hash_table* query_args = NULL;
     if(id) {
-        hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
+        query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
         char* key = malloc(3*sizeof(char));
         strcpy(key, "id");
         unsigned char* value = malloc(sizeof(uuid_t));
@@ -32,26 +32,28 @@ static list* get_bi_neighbors(unsigned char* id, RetransmissionContext* r_contex
         hash_table_insert(query_args, key, value);
     }
 
-    list* visited = list_init();
-    if(!RC_query(r_context, "bi_neighbors", &neighbors, query_args, myID, visited))
+    RetransmissionContext* r_context = hash_table_find_value(contexts, "NeighborsContext");
+    assert(r_context);
+
+    if(!RC_query(r_context, "bi_neighbors", &neighbors, query_args, myID, contexts))
         assert(false);
-    list_delete(visited);
 
     return neighbors;
 }
 
-static hash_table* get_two_hop_n_neighs(RetransmissionContext* r_context, unsigned char* myID) {
+static hash_table* get_two_hop_n_neighs(hash_table* contexts, unsigned char* myID) {
     hash_table* two_hop_n_neighs = NULL;
 
-    list* visited = list_init();
-    if(!RC_query(r_context, "LENWB_NEIGHS", &two_hop_n_neighs, NULL, myID, visited))
+    RetransmissionContext* r_context = hash_table_find_value(contexts, "LENWBContext");
+    assert(r_context);
+
+    if(!RC_query(r_context, "LENWB_NEIGHS", &two_hop_n_neighs, NULL, myID, contexts))
         assert(false);
-    list_delete(visited);
 
     return two_hop_n_neighs;
 }
 
-static list* get_covered(PendingMessage* p_msg, RetransmissionContext* r_context, unsigned char* myID) {
+static list* get_covered(PendingMessage* p_msg, hash_table* contexts, unsigned char* myID) {
     list* covered = NULL;
 
     hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
@@ -61,15 +63,16 @@ static list* get_covered(PendingMessage* p_msg, RetransmissionContext* r_context
     *value = p_msg;
     hash_table_insert(query_args, key, value);
 
-    list* visited = list_init();
-    if(!RC_query(r_context, "coverage", &covered, query_args, myID, visited))
+    RetransmissionContext* r_context = hash_table_find_value(contexts, "NeighborsContext");
+    assert(r_context);
+
+    if(!RC_query(r_context, "coverage", &covered, query_args, myID, contexts))
         assert(false);
-    list_delete(visited);
 
     return covered;
 }
 
-static unsigned int get_degree(unsigned char* id, RetransmissionContext* r_context, unsigned char* myID, list* bi_neighbors, hash_table* two_hop_n_neighs) {
+static unsigned int get_degree(unsigned char* id, hash_table* contexts, unsigned char* myID, list* bi_neighbors, hash_table* two_hop_n_neighs) {
     if( uuid_compare(id, myID) == 0 ) {
         return bi_neighbors->size;
     } else {
@@ -83,14 +86,14 @@ static unsigned int get_degree(unsigned char* id, RetransmissionContext* r_conte
             uuid_copy(value, id);
             hash_table_insert(query_args, key, value);
 
-            list* visited = list_init();
-            if(!RC_query(r_context, "degree", &n_neighbors, query_args, myID, visited))
+            RetransmissionContext* r_context = hash_table_find_value(contexts, "NeighborsContext");
+            assert(r_context);
+
+            if(!RC_query(r_context, "degree", &n_neighbors, query_args, myID, contexts))
                 assert(false);
-            list_delete(visited);
 
             return n_neighbors;
         } else {
-
             byte* n_neighbors = hash_table_find_value(two_hop_n_neighs, id);
             if(n_neighbors) {
                 return *n_neighbors;
@@ -101,10 +104,10 @@ static unsigned int get_degree(unsigned char* id, RetransmissionContext* r_conte
     }
 }
 
-static bool priority_condition(unsigned char* w, unsigned char* v, RetransmissionContext* r_context, unsigned char* myID, list* bi_neighbors, hash_table* two_hop_n_neighs) {
+static bool priority_condition(unsigned char* w, unsigned char* v, hash_table* contexts, unsigned char* myID, list* bi_neighbors, hash_table* two_hop_n_neighs) {
 
-    unsigned int deg_w = get_degree(w, r_context, myID, bi_neighbors, two_hop_n_neighs);
-    unsigned int deg_v = get_degree(v, r_context, myID, bi_neighbors, two_hop_n_neighs);
+    unsigned int deg_w = get_degree(w, contexts, myID, bi_neighbors, two_hop_n_neighs);
+    unsigned int deg_v = get_degree(v, contexts, myID, bi_neighbors, two_hop_n_neighs);
 
     return deg_w > deg_v || (deg_w == deg_v && uuid_compare(w, v) < 0);
 }
@@ -126,11 +129,11 @@ static unsigned char* min_id(list* l) {
     return NULL;
 }
 
-static bool LENWBPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, RetransmissionContext* r_context, list* visited) {
+static bool LENWBPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 
-    list* bi_neighbors = get_bi_neighbors(NULL, r_context, myID);
-    hash_table* two_hop_n_neighs = get_two_hop_n_neighs(r_context, myID);
-    list* covered = get_covered(p_msg, r_context, myID);
+    list* bi_neighbors = get_bi_neighbors(NULL, contexts, myID);
+    hash_table* two_hop_n_neighs = get_two_hop_n_neighs(contexts, myID);
+    list* covered = get_covered(p_msg, contexts, myID);
 
     unsigned char* v = malloc(sizeof(uuid_t));
     uuid_copy(v, myID);
@@ -152,7 +155,7 @@ static bool LENWBPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, un
             unsigned char* x = malloc(sizeof(uuid_t));
             uuid_copy(x, it->data);
 
-            if(priority_condition(x, v, r_context, myID, bi_neighbors, two_hop_n_neighs)) {
+            if(priority_condition(x, v, contexts, myID, bi_neighbors, two_hop_n_neighs)) {
                 if(list_find_item(bi_neighbors, &equalID, x) != NULL) { // if(c belongs N(v))
                     list_add_item_to_tail(Q, x);
                 } else {
@@ -167,14 +170,14 @@ static bool LENWBPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, un
                 unsigned char* q = min_id(Q);
                 list_add_item_to_tail(U, q);
 
-                list* n_q = get_bi_neighbors(q, r_context, myID);
+                list* n_q = get_bi_neighbors(q, contexts, myID);
                 list_append(covered, n_q);
 
                 for(list_item* it = n_q->head; it; it = it->next) {
                     unsigned char* x = malloc(sizeof(uuid_t));
                     uuid_copy(x, it->data);
 
-                    if(priority_condition(x, v, r_context, myID, bi_neighbors, two_hop_n_neighs) && list_find_item(U, &equalID, x) == NULL) {
+                    if(priority_condition(x, v, contexts, myID, bi_neighbors, two_hop_n_neighs) && list_find_item(U, &equalID, x) == NULL) {
                         if(list_find_item(bi_neighbors, &equalID, x) != NULL) { // if(c belongs N(v))
                             list_add_item_to_tail(Q, x);
                         } else {
@@ -188,14 +191,14 @@ static bool LENWBPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, un
                 unsigned char* p = min_id(P);
                 list_add_item_to_tail(U, p);
 
-                list* n_p = get_bi_neighbors(p, r_context, myID);
+                list* n_p = get_bi_neighbors(p, contexts, myID);
                 list_append(covered, n_p);
 
                 for(list_item* it = n_p->head; it; it = it->next) {
                     unsigned char* x = malloc(sizeof(uuid_t));
                     uuid_copy(x, it->data);
 
-                    if(priority_condition(x, v, r_context, myID, bi_neighbors, two_hop_n_neighs)
+                    if(priority_condition(x, v, contexts, myID, bi_neighbors, two_hop_n_neighs)
                        && list_find_item(U, &equalID, x) == NULL
                        && list_find_item(bi_neighbors, &equalID, x) != NULL) {
                                 list_add_item_to_tail(Q, x);
@@ -224,10 +227,13 @@ static bool LENWBPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, un
 }
 
 RetransmissionPolicy* LENWBPolicy() {
-	return newRetransmissionPolicy(
+	RetransmissionPolicy* r_policy = newRetransmissionPolicy(
         NULL,
         NULL,
         &LENWBPolicyEval,
-        NULL
+        NULL,
+        new_list(1, new_str("LENWBContext"))
     );
+
+    return r_policy;
 }

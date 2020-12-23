@@ -32,4 +32,8 @@ char* str_to_lower(char* str);
 
 char* align_str(char* out_str, char* in_str, unsigned int width, char* type);
 
+bool parse_bool(char* token);
+
+char* new_str(const char* str);
+
 #endif /* MY_STRING_H_ */
