@@ -32,4 +32,6 @@ LinkQuality* WMALinkQuality(double initial_quality,  unsigned int n_buckets, uns
 
 LinkQuality* EMALinkQuality(double initial_quality, double scalling,  unsigned int n_buckets, unsigned int bucket_duration_s);
 
+LinkQuality* SlidingWindowLinkQuality(double initial_quality, unsigned int window_size);
+
 #endif /* _DISCOVERY_FRAMEWORK_LINK_QUALITY_H_ */

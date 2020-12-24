@@ -126,7 +126,7 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
         if( value != NULL ) {
             if( strcmp(key, "algorithm") == 0 ) {
                 // TODO
-            } else if( strcmp(key, "d_message") == 0 ) {
+            } else if( strcmp(key, "d_context") == 0 ) {
                 DiscoveryContext* new_d_context = parse_d_context(value, false);
                 DA_setDiscoveryContext(args->algorithm, new_d_context);
             } else if( strcmp(key, "d_period") == 0 ) {
@@ -299,6 +299,24 @@ static LinkQuality* parse_lq(char* value, bool nested) {
                     printf("Parameter 3 of %s not passed!\n", name);
                     exit(-1);
                 }
+            } else {
+                printf("Parameter 2 of %s not passed!\n", name);
+                exit(-1);
+            }
+        } else {
+            printf("Parameter 1 of %s not passed!\n", name);
+            exit(-1);
+        }
+    } else if( strcmp(token, (name = "SW")) == 0 || strcmp(token, (name = "SWLinkQuality")) == 0 ) {
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+            double initial_quality = strtod(token, NULL);
+
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                unsigned int window_size = strtol(token, NULL, 10);
+
+                lq_metric = SlidingWindowLinkQuality(initial_quality, window_size);
             } else {
                 printf("Parameter 2 of %s not passed!\n", name);
                 exit(-1);
