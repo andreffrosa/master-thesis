@@ -307,6 +307,24 @@ static LinkQuality* parse_lq(char* value, bool nested) {
             printf("Parameter 1 of %s not passed!\n", name);
             exit(-1);
         }
+    } else if( strcmp(token, (name = "SW")) == 0 || strcmp(token, (name = "SWLinkQuality")) == 0 ) {
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+            double initial_quality = strtod(token, NULL);
+
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                unsigned int window_size = strtol(token, NULL, 10);
+
+                lq_metric = SlidingWindowLinkQuality(initial_quality, window_size);
+            } else {
+                printf("Parameter 2 of %s not passed!\n", name);
+                exit(-1);
+            }
+        } else {
+            printf("Parameter 1 of %s not passed!\n", name);
+            exit(-1);
+        }
     } else {
         printf("Unrecognized LinkQuality! \n");
         exit(-1);
