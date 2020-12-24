@@ -126,7 +126,7 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
         if( value != NULL ) {
             if( strcmp(key, "algorithm") == 0 ) {
                 // TODO
-            } else if( strcmp(key, "d_message") == 0 ) {
+            } else if( strcmp(key, "d_context") == 0 ) {
                 DiscoveryContext* new_d_context = parse_d_context(value, false);
                 DA_setDiscoveryContext(args->algorithm, new_d_context);
             } else if( strcmp(key, "d_period") == 0 ) {
