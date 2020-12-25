@@ -127,7 +127,7 @@ static bool MPRContextQuery(ModuleState* context_state, const char* query, void*
 
         bool delegated = false;
 
-        for(list_item* it = getCopies(p_msg); it; it = it->next) {
+        for(double_list_item* it = getCopies(p_msg)->head; it; it = it->next) {
             MessageCopy* copy = ((MessageCopy*)it->data);
             unsigned char* parent_id = getBcastHeader(copy)->sender_id;
 

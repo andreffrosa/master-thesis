@@ -22,7 +22,7 @@ static bool DelegatedNeighborsPolicyEval(ModuleState* policy_state, PendingMessa
 
     bool delegated = false;
 
-    for(list_item* it = getCopies(p_msg); it; it = it->next) {
+    for(double_list_item* it = getCopies(p_msg)->head; it; it = it->next) {
         MessageCopy* copy = ((MessageCopy*)it->data);
         hash_table* headers = getHeaders(copy);
 
@@ -52,7 +52,7 @@ static bool DelegatedNeighborsPolicyEval(ModuleState* policy_state, PendingMessa
 
         hash_table_delete(query_args);
     }
-    
+
 	return delegated;
 }
 
