@@ -125,9 +125,18 @@ static bool MPRContextQuery(ModuleState* context_state, const char* query, void*
 		PendingMessage* p_msg = *aux1;
         assert(p_msg);
 
-        unsigned char* parent_id = getBcastHeader((((MessageCopy*)getCopies(p_msg)->head->data)))->sender_id;
+        bool delegated = false;
 
-        *((bool*)result) = (list_find_item(state->broadcast_mpr_selectors, &equalID, parent_id) != NULL);
+        for(double_list_item* it = getCopies(p_msg)->head; it; it = it->next) {
+            MessageCopy* copy = ((MessageCopy*)it->data);
+            unsigned char* parent_id = getBcastHeader(copy)->sender_id;
+
+            delegated = (list_find_item(state->broadcast_mpr_selectors, &equalID, parent_id) != NULL);
+            if(delegated)
+                break;
+        }
+
+        *((bool*)result) = delegated;
 		return true;
 	}
 

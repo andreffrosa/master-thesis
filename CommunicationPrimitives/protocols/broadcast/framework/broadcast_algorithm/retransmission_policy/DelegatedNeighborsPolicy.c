@@ -20,15 +20,22 @@
 
 static bool DelegatedNeighborsPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 
-    MessageCopy* first_copy = ((MessageCopy*)getCopies(p_msg)->head->data);
-    hash_table* headers = getHeaders(first_copy);
-
     bool delegated = false;
 
-    list* delegated_neighbors = (list*)hash_table_find_value(headers, "delegated_neighbors");
-    if(delegated_neighbors) {
-        delegated = list_find_item(delegated_neighbors, &equalID, myID) != NULL;
-    } else {
+    for(double_list_item* it = getCopies(p_msg)->head; it; it = it->next) {
+        MessageCopy* copy = ((MessageCopy*)it->data);
+        hash_table* headers = getHeaders(copy);
+
+        list* delegated_neighbors = (list*)hash_table_find_value(headers, "delegated_neighbors");
+        if(delegated_neighbors) {
+            delegated = list_find_item(delegated_neighbors, &equalID, myID) != NULL;
+        }
+
+        if(delegated)
+            break;
+    }
+
+    if(!delegated) {
         hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
         char* key = malloc(6*sizeof(char));
         strcpy(key, "p_msg");
