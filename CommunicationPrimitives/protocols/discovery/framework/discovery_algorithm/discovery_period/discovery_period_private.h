@@ -23,7 +23,7 @@ typedef struct _DiscoveryPeriod {
     byte hack_period_s;
     byte old_hello_period_s;
     byte old_hack_period_s;
-    struct timespec transition_time; 
+    struct timespec transition_time;
     next_period_function compute_next_period;
 } DiscoveryPeriod;
 
