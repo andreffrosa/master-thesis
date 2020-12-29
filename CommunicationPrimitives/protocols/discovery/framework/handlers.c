@@ -1931,7 +1931,7 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
     YggEvent_addPayload(ev, NE_getNeighborID(neigh), sizeof(uuid_t));
 
     // Append MAC addr
-    YggEvent_addPayload(ev, NE_getNeighborMAC(neigh), WLAN_ADDR_LEN);
+    YggEvent_addPayload(ev, NE_getNeighborMAC(neigh)->data, WLAN_ADDR_LEN);
 
     // Append LQs
     double rx_lq = NE_getRxLinkQuality(neigh);
@@ -1999,7 +1999,7 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
     YggEvent_addPayload(ev, NE_getNeighborID(neigh), sizeof(uuid_t));
 
     // Append MAC addr
-    YggEvent_addPayload(ev, NE_getNeighborMAC(neigh), WLAN_ADDR_LEN);
+    YggEvent_addPayload(ev, NE_getNeighborMAC(neigh)->data, WLAN_ADDR_LEN);
 
     // Append LQs
     double rx_lq = NE_getRxLinkQuality(neigh);
