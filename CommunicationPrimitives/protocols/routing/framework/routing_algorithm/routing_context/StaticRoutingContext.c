@@ -1,0 +1,207 @@
+/*********************************************************
+ * This code was written in the context of the Lightkone
+ * European project.
+ * Code is of the authorship of NOVA (NOVA LINCS @ DI FCT
+ * NOVA University of Lisbon)
+ * Author:
+ * André Rosa (af.rosa@campus.fct.unl.pt
+ * Under the guidance of:
+ * Pedro Ákos Costa (pah.costa@campus.fct.unl.pt)
+ * João Leitão (jc.leitao@fct.unl.pt)
+ * (C) 2020
+ *********************************************************/
+
+#include "routing_context_private.h"
+
+#include <assert.h>
+
+#define ID_TEMPLATE "66600666-1001-1001-1001-000000000001"
+
+const char* mac_addrs[] = {
+    "b8:27:eb:3a:96:e",
+    "b8:27:eb:9a:68:47",
+    "b8:27:eb:38:94:8d",
+    "b8:27:eb:7e:f4:68",
+    "b8:27:eb:90:75:4f",
+    "b8:27:eb:f:d:28",
+    "b8:27:eb:cd:8a:c1",
+    "b8:27:eb:85:b1:84",
+    "b8:27:eb:6f:1e:4",
+    "b8:27:eb:6:f6:c3",
+    "b8:27:eb:63:63:c7",
+    "b8:27:eb:c5:fb:2e",
+    "b8:27:eb:78:77:7",
+    "b8:27:eb:1a:eb:77",
+    "b8:27:eb:97:3b:51",
+    "b8:27:eb:c8:3e:ad",
+    "b8:27:eb:b5:2e:4d",
+    "b8:27:eb:76:9a:8",
+    "b8:27:eb:55:a5:1d",
+    "b8:27:eb:6a:1e:c4",
+    "b8:27:eb:31:45:24",
+    "b8:27:eb:de:1b:a4",
+    "b8:27:eb:f5:55:35",
+    "b8:27:eb:39:79:d3"
+};
+
+static void parseNode(unsigned char* id, WLANAddr* addr, unsigned int node_id) {
+    char id_str[UUID_STR_LEN+1];
+    strcpy(id_str, ID_TEMPLATE);
+
+    char aux[10];
+    sprintf(aux, "%u", node_id);
+    int len = strlen(aux);
+
+    char* ptr = id_str + strlen(id_str) - len;
+    memcpy(ptr, aux, len);
+
+    //printf("\t\t\nID: %s MAC: %s\n\n", id_str, mac_addrs[node_id-1]);
+    //fflush(stdout);
+
+    int a = uuid_parse(id_str, id);
+    assert(a >= 0);
+
+    str2wlan((char*)addr->data, (char*)mac_addrs[node_id-1]);
+}
+
+static void addEntry(unsigned int destination, unsigned int next_hop, struct timespec* found_time, RoutingTable* routing_table, uuid_t node_ids[], WLANAddr node_addrs[]) {
+
+    unsigned char* destination_id = node_ids[destination-1];
+    unsigned char* next_hop_id = node_ids[next_hop-1];
+    WLANAddr* next_hop_addr = &node_addrs[next_hop-1];
+
+    RoutingTableEntry* new_entry = newRoutingTableEntry(destination_id, next_hop_id, next_hop_addr, 1, 1, found_time, NULL, 0);
+
+    RoutingTableEntry* old_entry = RT_addEntry(routing_table, new_entry);
+    assert(old_entry == NULL);
+}
+
+static void StaticRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
+
+    unsigned int amount = 9;
+    uuid_t node_ids[amount];
+    WLANAddr node_addrs[amount];
+
+    for(int i = 0; i < amount; i++) {
+        parseNode(node_ids[i], &node_addrs[i], i+1);
+    }
+
+    int myId = myID[15];
+    switch(myId) {
+        case 1: {
+            addEntry(2, 2, current_time, routing_table, node_ids, node_addrs);
+            addEntry(3, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(4, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(5, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(6, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(7, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(8, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(9, 3, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        case 2: {
+            addEntry(1, 1, current_time, routing_table, node_ids, node_addrs);
+            addEntry(3, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(4, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(5, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(6, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(7, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(8, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(9, 3, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        case 3: {
+            addEntry(1, 1, current_time, routing_table, node_ids, node_addrs);
+            addEntry(2, 2, current_time, routing_table, node_ids, node_addrs);
+            addEntry(4, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(5, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(6, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(7, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(8, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(9, 4, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        case 4: {
+            addEntry(1, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(2, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(3, 3, current_time, routing_table, node_ids, node_addrs);
+            addEntry(5, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(6, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(7, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(8, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(9, 5, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        case 5: {
+            addEntry(1, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(2, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(3, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(4, 4, current_time, routing_table, node_ids, node_addrs);
+            addEntry(6, 6, current_time, routing_table, node_ids, node_addrs);
+            addEntry(7, 6, current_time, routing_table, node_ids, node_addrs);
+            addEntry(8, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(9, 8, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        case 6: {
+            addEntry(1, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(2, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(3, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(4, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(5, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(7, 7, current_time, routing_table, node_ids, node_addrs);
+            addEntry(8, 7, current_time, routing_table, node_ids, node_addrs);
+            addEntry(9, 7, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        case 7: {
+            addEntry(1, 6, current_time, routing_table, node_ids, node_addrs);
+            addEntry(2, 6, current_time, routing_table, node_ids, node_addrs);
+            addEntry(3, 6, current_time, routing_table, node_ids, node_addrs);
+            addEntry(4, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(5, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(6, 6, current_time, routing_table, node_ids, node_addrs);
+            addEntry(8, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(9, 8, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        case 8: {
+            addEntry(1, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(2, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(3, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(4, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(5, 5, current_time, routing_table, node_ids, node_addrs);
+            addEntry(6, 7, current_time, routing_table, node_ids, node_addrs);
+            addEntry(7, 7, current_time, routing_table, node_ids, node_addrs);
+            addEntry(9, 9, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        case 9: {
+            addEntry(1, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(2, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(3, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(4, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(5, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(6, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(7, 8, current_time, routing_table, node_ids, node_addrs);
+            addEntry(8, 8, current_time, routing_table, node_ids, node_addrs);
+        }
+        break;
+        default: assert(false);
+    }
+
+    char* str = NULL;
+    RT_toString(routing_table, &str, current_time);
+    printf("%s\n", str);
+    free(str);
+}
+
+RoutingContext* StaticRoutingContext() {
+
+    return newRoutingContext(
+        NULL,
+        NULL,
+        &StaticRoutingContextInit,
+        NULL
+    );
+}

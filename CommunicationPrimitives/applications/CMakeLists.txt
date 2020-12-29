@@ -30,3 +30,17 @@ target_link_libraries(broadcast_test broadcast broadcast_algorithm discovery_alg
 
 #add_executable(destroy_test ${PROJECT_SOURCE_DIR}/broadcast/destroy_test.c ${PROJECT_SOURCE_DIR}/broadcast/process_args.c)
 #target_link_libraries(destroy_test broadcast broadcast_algorithm discovery utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
+
+# ROUTING
+
+link_directories(${PROJECT_SOURCE_DIR}/routing/)
+add_executable(ping_test ${PROJECT_SOURCE_DIR}/routing/ping_test.c ${PROJECT_SOURCE_DIR}/app_common.c)
+target_link_libraries(ping_test routing routing_algorithm broadcast broadcast_algorithm discovery_framework discovery_algorithm utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
+#link_directories(${PROJECT_SOURCE_DIR}/routing/)
+#add_executable(routing_test ${PROJECT_SOURCE_DIR}/routing/routing_test.c)
+#target_link_libraries(routing_test routing routing_algorithm discovery utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
+#add_executable(routing_table_test ${PROJECT_SOURCE_DIR}/routing/routing_table_test.c)
+#target_link_libraries(routing_table_test routing routing_algorithm discovery utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)

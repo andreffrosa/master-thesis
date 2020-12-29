@@ -7,4 +7,4 @@ project(protocols)
 
 add_subdirectory(discovery/framework)
 add_subdirectory(broadcast/framework)
-#add_subdirectory(routing/framework)
+add_subdirectory(routing/framework)
