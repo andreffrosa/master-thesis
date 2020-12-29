@@ -13,6 +13,7 @@
 
 #include "framework.h"
 #include "handlers.h"
+#include "forwarding_plane.h"
 
 #include "utility/my_time.h"
 #include "utility/my_math.h"

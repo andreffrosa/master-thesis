@@ -44,24 +44,12 @@ typedef struct routing_framework_state_ {
 // Protocol Handlers
 
 void RF_init(routing_framework_state* state);
-void RF_DeliverMessage(routing_framework_state* state, RoutingHeader* header, YggMessage* toDeliver);
-void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req);
-void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg);
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* msg);
 void RF_uponPeriodicTimer(routing_framework_state* state);
+
 void RF_runGarbageCollector(routing_framework_state* state);
 void RF_uponStatsRequest(routing_framework_state* state, YggRequest* req);
 
-void RF_processMessage(routing_framework_state* state, RoutingHeader* header, YggMessage* toDeliver);
-void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, unsigned short ttl, YggMessage* toDeliver);
-
-void RF_SendMessage(routing_framework_state* state, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, unsigned short ttl, YggMessage* toDeliver);
-
-void RF_serializeMessage(routing_framework_state* state, YggMessage* m, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, unsigned short ttl, YggMessage* toDeliver);
-
-void RF_deserializeMessage(YggMessage* m, RoutingHeader* header, YggMessage* toDeliver);
-
-bool RF_findNextHop(routing_framework_state* state, unsigned char* destination_id, unsigned char* next_hop_id, unsigned char* next_hop_addr);
 
 void RF_disseminateAnnounce(routing_framework_state* state);
 
