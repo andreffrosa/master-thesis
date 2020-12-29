@@ -16,8 +16,8 @@
 
 #include "Yggdrasil.h"
 
-typedef struct _RoutingTable RoutingTable;
-typedef struct _RoutingTableEntry RoutingTableEntry;
+typedef struct RoutingTable_ RoutingTable;
+typedef struct RoutingTableEntry_ RoutingTableEntry;
 
 RoutingTable* newRoutingTable();
 

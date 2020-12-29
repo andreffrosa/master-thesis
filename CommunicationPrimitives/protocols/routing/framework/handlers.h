@@ -21,6 +21,9 @@
 #include "routing_algorithm/routing_algorithms.h"
 
 #include "routing_table.h"
+#include "routing_neighbors.h"
+
+#include "protocols/discovery/framework/framework.h"  
 
 #include "framework.h"
 
@@ -33,6 +36,8 @@ typedef struct routing_framework_state_ {
     unsigned short my_seq;                      //
 
     RoutingTable* routing_table;     // Routing Table
+    RoutingNeighbors* neighbors;
+
 	SeenMessages* seen_msgs;  	    // List of seen messages so far
 	uuid_t gc_id;			 		// Garbage Collector timer id
     uuid_t announce_timer_id;       // Periodic Announce timer id
@@ -44,6 +49,11 @@ typedef struct routing_framework_state_ {
 // Protocol Handlers
 
 void RF_init(routing_framework_state* state);
+
+void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev);
+
+
+
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* msg);
 void RF_uponPeriodicTimer(routing_framework_state* state);
 

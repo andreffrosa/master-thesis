@@ -18,10 +18,12 @@
 
 #include "routing_context/routing_context_private.h"
 #include "forwarding_strategy/forwarding_strategy_private.h"
+#include "cost_metric/cost_metric_private.h"
 
 typedef struct RoutingAlgorithm_ {
     RoutingContext* r_context;
     ForwardingStrategy* f_strategy;
+    CostMetric* cost_metric;
 
 	// TODO
     //DisseminationModule* dm;

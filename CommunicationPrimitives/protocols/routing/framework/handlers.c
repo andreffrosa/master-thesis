@@ -28,8 +28,9 @@ void RF_init(routing_framework_state* state) {
     memcpy(state->myAddr.data, getMyWLANAddr()->data, WLAN_ADDR_LEN);
     state->my_seq = 0;
 
-
     state->routing_table = newRoutingTable();
+
+    state->neighbors = newRoutingNeighbors();
 
     state->seen_msgs = newSeenMessages();
 
@@ -51,6 +52,77 @@ void RF_init(routing_framework_state* state) {
         milli_to_timespec(&t, announce_interval_s*1000);
         SetPeriodicTimer(&t, state->announce_timer_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_PERIODIC_ANNOUNCE);
     }*/
+
+}
+
+void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
+
+    void* ptr = NULL;
+
+
+    switch(ev->notification_id) {
+        case NEW_NEIGHBOR: {
+            uuid_t id;
+            ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+
+            WLANAddr addr;
+            ptr = YggEvent_readPayload(ev, ptr, addr.data, WLAN_ADDR_LEN);
+
+            double rx_lq = 0.0, tx_lq = 0.0;
+            ptr = YggEvent_readPayload(ev, ptr, &rx_lq, sizeof(double));
+            ptr = YggEvent_readPayload(ev, ptr, &tx_lq, sizeof(double));
+
+            double traffic = 0.0;
+            ptr = YggEvent_readPayload(ev, ptr, &traffic, sizeof(double));
+
+            byte is_bi = false;
+            ptr = YggEvent_readPayload(ev, ptr, &is_bi, sizeof(byte));
+
+            // Compute Cost
+            double cost = RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, NULL); // TODO: pass found time?
+
+            assert(RN_getNeighbor(state->neighbors, id) == NULL);
+
+            RoutingNeighborsEntry* neigh = newRoutingNeighborsEntry(id, &addr, cost, is_bi);
+            RN_addNeighbor(state->neighbors, neigh);
+        }
+        case UPDATE_NEIGHBOR: {
+            uuid_t id;
+            ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+
+            WLANAddr addr;
+            ptr = YggEvent_readPayload(ev, ptr, addr.data, WLAN_ADDR_LEN);
+
+            double rx_lq = 0.0, tx_lq = 0.0;
+            ptr = YggEvent_readPayload(ev, ptr, &rx_lq, sizeof(double));
+            ptr = YggEvent_readPayload(ev, ptr, &tx_lq, sizeof(double));
+
+            double traffic = 0.0;
+            ptr = YggEvent_readPayload(ev, ptr, &traffic, sizeof(double));
+
+            byte is_bi = false;
+            ptr = YggEvent_readPayload(ev, ptr, &is_bi, sizeof(byte));
+
+            // Compute Cost
+            double cost = RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, NULL); // TODO: pass found time?
+
+            RoutingNeighborsEntry* neigh = RN_getNeighbor(state->neighbors, id);
+            assert(neigh);
+
+            RNE_setCost(neigh, cost);
+            RNE_setBi(neigh, is_bi);
+        }
+        case LOST_NEIGHBOR: {
+            uuid_t id;
+            ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+
+            RoutingNeighborsEntry* neigh = RN_removeNeighbor(state->neighbors, id);
+            assert(neigh);
+
+            free(neigh);
+        }
+        break;
+    }
 
 }
 

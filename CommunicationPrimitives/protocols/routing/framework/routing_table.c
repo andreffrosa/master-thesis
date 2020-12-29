@@ -22,11 +22,11 @@
 
 #include <assert.h>
 
-typedef struct _RoutingTable {
+typedef struct RoutingTable_ {
     hash_table* ht;
 } RoutingTable;
 
-typedef struct _RoutingTableEntry {
+typedef struct RoutingTableEntry_ {
     uuid_t destination_id;
     uuid_t next_hop_id;
     WLANAddr next_hop_addr;

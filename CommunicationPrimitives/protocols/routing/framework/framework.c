@@ -36,6 +36,13 @@ proto_def* routing_framework_init(void* arg) {
 	proto_def* framework = create_protocol_definition(ROUTING_FRAMEWORK_PROTO_ID, ROUTING_FRAMEWORK_PROTO_NAME, f_state, NULL);
 	proto_def_add_protocol_main_loop(framework, &routing_framework_main_loop);
 
+    proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
+    proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
+    proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
+    proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
+    proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
+    proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
+
     // Update current time
     clock_gettime(CLOCK_MONOTONIC, &f_state->current_time);
 
@@ -164,7 +171,10 @@ static bool processRequest(routing_framework_state* f_state, YggRequest* request
 static bool processEvent(routing_framework_state* f_state, YggEvent* event) {
 
     if( event->proto_dest == ROUTING_FRAMEWORK_PROTO_ID ) {
-        // Currently the framework does not process any event
+
+        if(event->proto_origin == DISCOVERY_FRAMEWORK_PROTO_ID) {
+            RF_uponDiscoveryEvent(f_state, event);
+        }
 
         return false;
     }

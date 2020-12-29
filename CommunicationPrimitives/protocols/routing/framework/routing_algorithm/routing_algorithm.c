@@ -16,11 +16,14 @@
 
 #include "routing_algorithm_private.h"
 
-RoutingAlgorithm* newRoutingAlgorithm(RoutingContext* r_context, ForwardingStrategy* f_strategy) {
+RoutingAlgorithm* newRoutingAlgorithm(RoutingContext* r_context, ForwardingStrategy* f_strategy, CostMetric* cost_metric) {
+    assert(r_context && f_strategy && cost_metric);
+
 	RoutingAlgorithm* alg = (RoutingAlgorithm*)malloc(sizeof(RoutingAlgorithm));
 
     alg->r_context = r_context;
     alg->f_strategy = f_strategy;
+    alg->cost_metric = cost_metric;
 
 	return alg;
 }
@@ -42,4 +45,10 @@ void RA_init(RoutingAlgorithm* alg, proto_def* protocol_definition, unsigned cha
     assert(alg);
 
     RCtx_init(alg->r_context, protocol_definition, myID, r_table, current_time);
+}
+
+double RA_computeCost(RoutingAlgorithm* alg, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time) {
+    assert(alg);
+
+    return CM_compute(alg->cost_metric, is_bi, rx_lq, tx_lq, found_time);
 }

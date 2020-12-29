@@ -35,7 +35,8 @@ routing_framework_args* default_routing_framework_args() {
 
     RoutingAlgorithm* algorithm = newRoutingAlgorithm(
         StaticRoutingContext(),
-        ConventionalRouting()
+        ConventionalRouting(),
+        HopsMetric()
     );
 
     return new_routing_framework_args(
