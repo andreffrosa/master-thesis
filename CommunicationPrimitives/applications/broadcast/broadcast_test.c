@@ -265,6 +265,10 @@ static void rcvMessage(YggMessage* msg, BroadcastAppArgs* app_args) {
 
     void* ptr = NULL;
 
+    unsigned short src_proto = 0;
+    ptr = YggMessage_readPayload(msg, ptr, &src_proto, sizeof(src_proto));
+    assert(src_proto == BROADCAST_FRAMEWORK_PROTO_ID);
+
     unsigned short payload_size = 0;
     ptr = YggMessage_readPayload(msg, ptr, &payload_size, sizeof(payload_size));
 
