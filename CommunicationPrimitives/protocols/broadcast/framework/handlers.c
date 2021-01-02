@@ -121,6 +121,11 @@ void DeliverMessage(broadcast_framework_state* state, PendingMessage* p_msg) {
     YggMessage toDeliver;
     YggMessage_initBcast(&toDeliver, originalToDeliver->Proto_id);
 
+    // Insert src proto
+    unsigned short src_proto = BROADCAST_FRAMEWORK_PROTO_ID;
+    add_result = YggMessage_addPayload(&toDeliver, (char*)&src_proto, sizeof(src_proto));
+    assert(add_result != FAILED);
+
     // Insert payload size
     unsigned short payload_size = originalToDeliver->dataLen;
     add_result = YggMessage_addPayload(&toDeliver, (char*)&payload_size, sizeof(payload_size));
