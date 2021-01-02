@@ -11,19 +11,14 @@
  * (C) 2020
  *********************************************************/
 
-#ifndef _BROADCAST_ALGORITHM_COMMON_H_
-#define _BROADCAST_ALGORITHM_COMMON_H_
+#ifndef _ROUTING_INTERNAL_EVENTS_H_
+#define _ROUTING_INTERNAL_EVENTS_H_
 
-#include "Yggdrasil.h"
+typedef enum {
+    RTE_ANNOUNCE_TIMER,
+    RTE_NEIGHBORS_CHANGE,
+    RTE_CONTROL_MESSAGE
+} RoutingEventType;
 
-#include "utility/byte.h"
-#include "utility/my_misc.h"
 
-#include "../routing_table.h"
-#include "../routing_neighbors.h"
-
-#include "../routing_header.h"
-
-#include "../internal_events.h"
-
-#endif /* _BROADCAST_ALGORITHM_COMMON_H_ */
+#endif /*_ROUTING_INTERNAL_EVENTS_H_*/

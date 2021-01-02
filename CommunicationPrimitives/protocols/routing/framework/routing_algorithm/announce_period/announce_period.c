@@ -11,19 +11,27 @@
  * (C) 2020
  *********************************************************/
 
-#ifndef _BROADCAST_ALGORITHM_COMMON_H_
-#define _BROADCAST_ALGORITHM_COMMON_H_
+#include "announce_period_private.h"
 
-#include "Yggdrasil.h"
+#include <assert.h>
 
-#include "utility/byte.h"
-#include "utility/my_misc.h"
+void destroyAnnouncePeriod(AnnouncePeriod* ap) {
+    if(ap) {
+        free(ap);
+    }
+}
 
-#include "../routing_table.h"
-#include "../routing_neighbors.h"
+unsigned int AP_get(AnnouncePeriod* ap) {
+    assert(ap);
 
-#include "../routing_header.h"
+    return ap->period;
+}
 
-#include "../internal_events.h"
 
-#endif /* _BROADCAST_ALGORITHM_COMMON_H_ */
+AnnouncePeriod* StaticAnnouncePeriod(unsigned int p) {
+    AnnouncePeriod* ap = malloc(sizeof(unsigned int));
+
+    ap->period = p;
+
+    return ap;
+}

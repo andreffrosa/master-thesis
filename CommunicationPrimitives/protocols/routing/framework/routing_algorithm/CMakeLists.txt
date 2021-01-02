@@ -8,11 +8,14 @@ project(routing_algorithm)
 link_directories(${PROJECT_SOURCE_DIR}/forwarding_strategy/)
 link_directories(${PROJECT_SOURCE_DIR}/routing_context/)
 link_directories(${PROJECT_SOURCE_DIR}/cost_metric/)
-
+link_directories(${PROJECT_SOURCE_DIR}/announce_period/)
+link_directories(${PROJECT_SOURCE_DIR}/dissemination_strategy/)
 
 file(GLOB_RECURSE SRC_FILES_ROUTING_ALGORITHM  ${PROJECT_SOURCE_DIR}/forwarding_strategy/*.c)
 file(GLOB_RECURSE SRC_FILES_ROUTING_ALGORITHM  ${PROJECT_SOURCE_DIR}/routing_context/*.c)
 file(GLOB_RECURSE SRC_FILES_ROUTING_ALGORITHM  ${PROJECT_SOURCE_DIR}/cost_metric/*.c)
+file(GLOB_RECURSE SRC_FILES_ROUTING_ALGORITHM  ${PROJECT_SOURCE_DIR}/announce_period/*.c)
+file(GLOB_RECURSE SRC_FILES_ROUTING_ALGORITHM  ${PROJECT_SOURCE_DIR}/dissemination_strategy/*.c)
 file(GLOB_RECURSE SRC_FILES_ROUTING_ALGORITHM  ${PROJECT_SOURCE_DIR}/*.c)
 
 

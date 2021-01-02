@@ -16,23 +16,65 @@
 
 #include "routing_algorithm_private.h"
 
-RoutingAlgorithm* newRoutingAlgorithm(RoutingContext* r_context, ForwardingStrategy* f_strategy, CostMetric* cost_metric) {
-    assert(r_context && f_strategy && cost_metric);
+RoutingAlgorithm* newRoutingAlgorithm(RoutingContext* r_context, ForwardingStrategy* f_strategy, CostMetric* cost_metric, AnnouncePeriod* a_period, DisseminationStrategy* d_strategy) {
+    assert(r_context && f_strategy && cost_metric && a_period && d_strategy);
 
 	RoutingAlgorithm* alg = (RoutingAlgorithm*)malloc(sizeof(RoutingAlgorithm));
 
     alg->r_context = r_context;
     alg->f_strategy = f_strategy;
     alg->cost_metric = cost_metric;
+    alg->a_period = a_period;
+    alg->d_strategy = d_strategy;
 
 	return alg;
 }
 
 void destroyRoutingAlgorithm(RoutingAlgorithm* alg) {
     if(alg != NULL) {
-        // TODO
+        destroyRoutingContext(alg->r_context);
+        destroyForwardingStrategy(alg->f_strategy);
+        destroyCostMetric(alg->cost_metric);
+        destroyAnnouncePeriod(alg->a_period);
+        destroyDisseminationStrategy(alg->d_strategy);
+
         free(alg);
     }
+}
+
+void RA_setRoutingContext(RoutingAlgorithm* alg, RoutingContext* new_r_context) {
+    assert(alg);
+
+    destroyRoutingContext(alg->r_context);
+    alg->r_context = new_r_context;
+}
+
+void RA_setForwardingStrategy(RoutingAlgorithm* alg, ForwardingStrategy* new_f_strategy) {
+    assert(alg);
+
+    destroyForwardingStrategy(alg->f_strategy);
+    alg->f_strategy = new_f_strategy;
+}
+
+void RA_setCostMetric(RoutingAlgorithm* alg, CostMetric* new_cost_metric) {
+    assert(alg);
+
+    destroyCostMetric(alg->cost_metric);
+    alg->cost_metric = new_cost_metric;
+}
+
+void RA_setAnnouncePeriod(RoutingAlgorithm* alg, AnnouncePeriod* new_a_period) {
+    assert(alg);
+
+    destroyAnnouncePeriod(alg->a_period);
+    alg->a_period = new_a_period;
+}
+
+void RA_setDisseminationStrategy(RoutingAlgorithm* alg, DisseminationStrategy* new_d_strategy) {
+    assert(alg);
+
+    destroyDisseminationStrategy(alg->d_strategy);
+    alg->d_strategy = new_d_strategy;
 }
 
 bool RA_getNextHop(RoutingAlgorithm* alg, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr) {
@@ -51,4 +93,28 @@ double RA_computeCost(RoutingAlgorithm* alg, bool is_bi, double rx_lq, double tx
     assert(alg);
 
     return CM_compute(alg->cost_metric, is_bi, rx_lq, tx_lq, found_time);
+}
+
+unsigned int RA_getAnnouncePeriod(RoutingAlgorithm* alg) {
+    assert(alg);
+
+    return AP_get(alg->a_period);
+}
+
+void RA_disseminateControlMessage(RoutingAlgorithm* alg, YggMessage* msg) {
+    assert(alg);
+
+    DS_disseminate(alg->d_strategy, msg);
+}
+
+bool RA_triggerEvent(RoutingAlgorithm* alg, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, YggMessage* msg) {
+    assert(alg);
+
+    return RCtx_triggerEvent(alg->r_context, seq, event_type, args, routing_table, neighbors, myID, msg);
+}
+
+void RA_rcvControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, YggMessage* msg) {
+    assert(alg);
+
+    RCtx_rcvMsg(alg->r_context, routing_table, neighbors, msg);
 }

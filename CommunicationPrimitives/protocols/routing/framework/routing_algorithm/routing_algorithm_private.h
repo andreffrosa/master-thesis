@@ -19,16 +19,15 @@
 #include "routing_context/routing_context_private.h"
 #include "forwarding_strategy/forwarding_strategy_private.h"
 #include "cost_metric/cost_metric_private.h"
+#include "announce_period/announce_period_private.h"
+#include "dissemination_strategy/dissemination_strategy_private.h"
 
 typedef struct RoutingAlgorithm_ {
     RoutingContext* r_context;
     ForwardingStrategy* f_strategy;
     CostMetric* cost_metric;
-
-	// TODO
-    //DisseminationModule* dm;
-
-    //unsigned long announce_interval_s; // -> param do alg ou da parte proactiva?
+    AnnouncePeriod* a_period;
+    DisseminationStrategy* d_strategy;
 } RoutingAlgorithm;
 
 #endif /* _ROUTING_ALGORITHM_PRIVATE_H_ */

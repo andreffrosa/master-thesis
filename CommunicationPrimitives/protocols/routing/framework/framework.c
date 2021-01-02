@@ -79,8 +79,7 @@ void* routing_framework_main_loop(main_loop_args* args) {
     			processed = processRequest(f_state, &elem.data.request);
     			break;
     		case YGG_EVENT:
-    			processEvent(f_state, &elem.data.event);
-                processed = false; // Events should always be processed by both the framework and the context
+    			processed = processEvent(f_state, &elem.data.event);
     			break;
     		default: {
     			char s[100];
@@ -103,9 +102,9 @@ void* routing_framework_main_loop(main_loop_args* args) {
 
 static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
 
-    /*if(timer->timer_type == TIMER_PERIODIC_ANNOUNCE) {
+    if(timer->timer_type == TIMER_PERIODIC_ANNOUNCE) {
         if( uuid_compare(timer->id, f_state->announce_timer_id) == 0 ) {
-            RF_uponPeriodicTimer(f_state);
+            RF_uponAnnounceTimer(f_state);
             return true;
         }
     } else {
@@ -114,7 +113,7 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
             RF_runGarbageCollector(f_state);
             return true;
         }
-    }*/
+    }
 
     return false;
 }
@@ -174,6 +173,8 @@ static bool processEvent(routing_framework_state* f_state, YggEvent* event) {
 
         if(event->proto_origin == DISCOVERY_FRAMEWORK_PROTO_ID) {
             RF_uponDiscoveryEvent(f_state, event);
+
+            return true;
         }
 
         return false;

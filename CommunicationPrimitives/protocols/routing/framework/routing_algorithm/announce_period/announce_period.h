@@ -11,19 +11,17 @@
  * (C) 2020
  *********************************************************/
 
-#ifndef _BROADCAST_ALGORITHM_COMMON_H_
-#define _BROADCAST_ALGORITHM_COMMON_H_
+#ifndef _ANNOUNCE_PERIOD_H_
+#define _ANNOUNCE_PERIOD_H_
 
-#include "Yggdrasil.h"
+#include "../common.h"
 
-#include "utility/byte.h"
-#include "utility/my_misc.h"
+typedef struct AnnouncePeriod_ AnnouncePeriod;
 
-#include "../routing_table.h"
-#include "../routing_neighbors.h"
+void destroyAnnouncePeriod(AnnouncePeriod* ap);
 
-#include "../routing_header.h"
+unsigned int AP_get(AnnouncePeriod* ap);
 
-#include "../internal_events.h"
+AnnouncePeriod* StaticAnnouncePeriod(unsigned int p);
 
-#endif /* _BROADCAST_ALGORITHM_COMMON_H_ */
+#endif /*_ANNOUNCE_PERIOD_H_*/

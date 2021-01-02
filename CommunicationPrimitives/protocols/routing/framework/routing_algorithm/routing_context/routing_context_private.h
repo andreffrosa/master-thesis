@@ -18,6 +18,10 @@
 
 typedef void (*rc_init)(ModuleState* m_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* r_table, struct timespec* current_time);
 
+typedef bool (*rc_triggerEvent)(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, YggMessage* msg);
+
+typedef void (*rc_rcvMsg)(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, YggMessage* msg);
+
 typedef void (*rc_destroy)(ModuleState* m_state);
 
 typedef struct _RoutingContext {
@@ -25,9 +29,13 @@ typedef struct _RoutingContext {
 
 	rc_init init;
 
+    rc_triggerEvent trigger_event;
+
+    rc_rcvMsg rcv_msg;
+
     rc_destroy destroy;
 } RoutingContext;
 
-RoutingContext* newRoutingContext(void* args, void* vars, rc_init init, rc_destroy destroy);
+RoutingContext* newRoutingContext(void* args, void* vars, rc_init init, rc_triggerEvent trigger_event, rc_rcvMsg rcv_msg, rc_destroy destroy);
 
 #endif /* _ROUTING_CONTEXT_PRIVATE_H_ */

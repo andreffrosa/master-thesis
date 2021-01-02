@@ -11,19 +11,24 @@
  * (C) 2020
  *********************************************************/
 
-#ifndef _BROADCAST_ALGORITHM_COMMON_H_
-#define _BROADCAST_ALGORITHM_COMMON_H_
+#include "dissemination_strategy_private.h"
 
-#include "Yggdrasil.h"
+#include "protocols/broadcast/framework/framework.h"
 
-#include "utility/byte.h"
-#include "utility/my_misc.h"
+#include <assert.h>
 
-#include "../routing_table.h"
-#include "../routing_neighbors.h"
+static void disseminate(ModuleState* m_state, YggMessage* msg) {
 
-#include "../routing_header.h"
+    unsigned int radius = -1; // Infinite
 
-#include "../internal_events.h"
+    BroadcastMessage(msg->Proto_id, radius, (byte*)msg->data, msg->dataLen);
+}
 
-#endif /* _BROADCAST_ALGORITHM_COMMON_H_ */
+DisseminationStrategy* BroadcastDissemination() {
+    return newDisseminationStrategy(
+        NULL,
+        NULL,
+        &disseminate,
+        NULL
+    );
+}

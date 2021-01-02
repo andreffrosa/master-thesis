@@ -72,6 +72,7 @@ void SetPeriodicTimer(struct timespec* t, unsigned char* id, unsigned short prot
     }
 	YggTimer_setType(&timer, type);
     if(timespec_is_zero(t)) t->tv_nsec = 1;
+
 	YggTimer_set(&timer, t->tv_sec, t->tv_nsec, t->tv_sec, t->tv_nsec);
 	setupTimer(&timer);
 }

@@ -15,6 +15,9 @@
 
 #include "utility/my_time.h"
 #include "utility/my_misc.h"
+#include "utility/my_math.h"
+#include "utility/seq.h"
+
 
 #include "debug.h"
 
@@ -42,17 +45,41 @@ void RF_init(routing_framework_state* state) {
 
 	memset(&state->stats, 0, sizeof(routing_stats));
 
-
-	//clock_gettime(CLOCK_MONOTONIC, &state->current_time); // Update current time
-
     genUUID(state->announce_timer_id);
-    /*unsigned long announce_interval_s = getAnnounceInterval(state->args->algorithm);
-    if(announce_interval_s > 0) {
-        struct timespec t = {0};
-        milli_to_timespec(&t, announce_interval_s*1000);
-        SetPeriodicTimer(&t, state->announce_timer_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_PERIODIC_ANNOUNCE);
-    }*/
+    copy_timespec(&state->last_announce_time, &zero_timespec);
+    state->announce_timer_active = false;
+    scheduleAnnounceTimer(state, true);
+}
 
+void scheduleAnnounceTimer(routing_framework_state* state, bool now) {
+
+    unsigned int period_s = RA_getAnnouncePeriod(state->args->algorithm);
+
+    if( period_s > 0 ) {
+        if( !state->announce_timer_active ) {
+            state->announce_timer_active = true;
+
+            unsigned long jitter = (unsigned long)(randomProb()*state->args->max_jitter_ms);
+
+            unsigned long t = now ? jitter : period_s*1000 - state->args->period_margin_ms - jitter;
+
+            struct timespec t_ = {0};
+            milli_to_timespec(&t_, t);
+            SetTimer(&t_, state->announce_timer_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_PERIODIC_ANNOUNCE);
+        }
+    }
+}
+
+void RF_uponAnnounceTimer(routing_framework_state* state) {
+
+    printf("\n\tANNOUNCE TIMER\n\n");
+
+    state->announce_timer_active = false;
+    // copy_timespec(&state->last_announce_time, &state->current_time);
+
+    RF_triggerEvent(state, RTE_ANNOUNCE_TIMER, NULL);
+
+    scheduleAnnounceTimer(state, false);
 }
 
 void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
@@ -86,6 +113,7 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
             RoutingNeighborsEntry* neigh = newRoutingNeighborsEntry(id, &addr, cost, is_bi);
             RN_addNeighbor(state->neighbors, neigh);
         }
+        break;
         case UPDATE_NEIGHBOR: {
             uuid_t id;
             ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
@@ -112,6 +140,7 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
             RNE_setCost(neigh, cost);
             RNE_setBi(neigh, is_bi);
         }
+        break;
         case LOST_NEIGHBOR: {
             uuid_t id;
             ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
@@ -124,6 +153,37 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
         break;
     }
 
+    RF_triggerEvent(state, RTE_NEIGHBORS_CHANGE, ev);
+
+}
+
+void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args) {
+
+    // Compute new SEQ
+    unsigned short new_seq = inc_seq(state->my_seq, state->args->ignore_zero_seq);
+
+    // Trigger context
+    YggMessage msg = {0};
+    YggMessage_initBcast(&msg, ROUTING_FRAMEWORK_PROTO_ID);
+    bool send = RA_triggerEvent(state->args->algorithm, new_seq, event_type, event_args, state->routing_table, state->neighbors, state->myID, &msg);
+
+    if(send) {
+        state->my_seq = new_seq;
+
+        copy_timespec(&state->last_announce_time, &state->current_time);
+
+        pushMessageType(&msg, MSG_CONTROL_MESSAGE);
+
+        RA_disseminateControlMessage(state->args->algorithm, &msg);
+
+        printf("\n\tYO\n\n");
+    }
+
+}
+
+void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message) {
+
+    RA_rcvControlMsg(state->args->algorithm, state->routing_table, state->neighbors, message);
 }
 
 void RF_runGarbageCollector(routing_framework_state* state) {
@@ -160,14 +220,6 @@ void RF_disseminateAnnounce(routing_framework_state* state) {
     BroadcastMessage(ROUTING_FRAMEWORK_PROTO_ID, (unsigned char*)aux.data, aux.dataLen, ttl);
 }
 */
-
-
-
-void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message) {
-    // TODO
-
-    //processRoutingAnnounce(state->args->algorithm, state->myID, (unsigned char*)message->data, message->dataLen);
-}
 
 void RF_uponStatsRequest(routing_framework_state* state, YggRequest* req) {
     unsigned short dest = req->proto_origin;

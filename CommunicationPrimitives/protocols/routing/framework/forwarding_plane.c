@@ -105,7 +105,7 @@ void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
 
         char str[300];
         sprintf(str, "[%s] to %s : %s", msg_id_str, id_str, msg);
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ROUTE REQ", str);
+        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SEND REQ", str);
     }
     #endif
 
