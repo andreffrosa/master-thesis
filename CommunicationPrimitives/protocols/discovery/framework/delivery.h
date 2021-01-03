@@ -23,6 +23,10 @@ typedef struct HelloDeliverSummary_ {
     bool new_neighbor;
     bool updated_neighbor;
     bool lost_neighbor;
+
+    bool became_accepted;
+    bool lost_accepted;
+
     bool rebooted;
     bool period_changed;
     bool updated_quality;
@@ -60,6 +64,9 @@ typedef struct HackDeliverSummary_ {
 
 typedef struct NeighborTimerSummary_ {
     NeighborEntry* neigh;
+
+    bool became_accepted;
+    bool lost_accepted;
 
     bool updated_neighbor;
     bool lost_neighbor;

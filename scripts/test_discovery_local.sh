@@ -26,6 +26,14 @@ TESTS=(
 "discovery/EchoDiscovery3"
 "discovery/OLSRDiscovery"
 "discovery/LENWBDiscovery"
+#"discovery/PeriodicJointDiscovery+Age"
+#"discovery/PeriodicJointDiscovery+Hysteresis"
+#"discovery/HybridDisjointDiscovery+Age"
+#"discovery/HybridDisjointDiscovery+Hysteresis"
+#"discovery/PassiveDiscovery1+Age"
+#"discovery/PassiveDiscovery1+Hysteresis"
+#"discovery/EchoDiscovery1+Age"
+#"discovery/EchoDiscovery1+Hysteresis"
 )
 
 i=1
