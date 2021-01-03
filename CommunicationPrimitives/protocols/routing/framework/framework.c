@@ -19,6 +19,8 @@
 #include "utility/my_math.h"
 #include "utility/my_misc.h"
 
+#include "protocols/broadcast/framework/framework.h"
+
 #include <assert.h>
 
 void* routing_framework_main_loop(main_loop_args* args);
@@ -120,14 +122,45 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
 
 static bool processMessage(routing_framework_state* f_state, YggMessage* message) {
 
-    RoutingMessageType type = (RoutingMessageType)popMessageType(message);
+    unsigned short src_proto = 0;
+    byte aux = 0;
+    RoutingMessageType type = 0;
 
-    if(type == MSG_ROUTING_MESSAGE) {
-        RF_uponNewMessage(f_state, message);
-        return true;
-    } else if(type == MSG_CONTROL_MESSAGE) {
-        RF_uponNewControlMessage(f_state, message);
-        return true;
+    void* ptr = NULL;
+    ptr = YggMessage_readPayload(message, ptr, &src_proto, sizeof(unsigned short));
+
+    printf("SRC PROTO: %hu\n", src_proto);
+
+    YggMessage msg;
+    YggMessage_init(&msg, message->srcAddr.data, message->Proto_id);
+
+    if( src_proto == BROADCAST_FRAMEWORK_PROTO_ID ) {
+        unsigned short payload_size = 0;
+        ptr = YggMessage_readPayload(message, ptr, &payload_size, sizeof(unsigned short));
+
+        // ptr = YggMessage_readPayload(message, ptr, &src_proto, sizeof(unsigned short));
+
+        ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
+        type = aux;
+
+        if(type == MSG_CONTROL_MESSAGE) {
+            YggMessage_addPayload(&msg, ptr, payload_size - sizeof(byte));
+
+            // TODO: copy and deliver metadata
+
+            RF_uponNewControlMessage(f_state, &msg);
+            return true;
+        }
+    } else if( src_proto == ROUTING_FRAMEWORK_PROTO_ID ) {
+        ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
+        type = aux;
+
+        if(type == MSG_ROUTING_MESSAGE) {
+            YggMessage_addPayload(&msg, ptr, message->dataLen - sizeof(unsigned short) - sizeof(byte));
+
+            RF_uponNewMessage(f_state, &msg);
+            return true;
+        }
     }
 
     return false;

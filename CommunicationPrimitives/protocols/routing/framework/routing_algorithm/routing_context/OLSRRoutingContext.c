@@ -20,7 +20,20 @@
 typedef struct OLSRState_ {
     list* mprs;
     list* mpr_selectors;
+    //hash_table* router_set;
+    hash_table* topology_set;
 } OLSRState;
+
+typedef struct LinkEntry_ {
+    uuid_t to;
+    double tx_cost;
+} LinkEntry;
+
+typedef struct RouterSetEntry_ {
+    unsigned short seq;
+    struct timespec exp_time;
+    list* links;
+} RouterSetEntry;
 
 static void OLSRRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
 
@@ -113,11 +126,10 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
     return false;
 }
 
-static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, YggMessage* msg) {
-    void* ptr = NULL;
+static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, YggMessage* msg) {
+    OLSRState* state = (OLSRState*)m_state->vars;
 
-    unsigned short payload_size = 0;
-    ptr = YggMessage_readPayload(msg, ptr, &payload_size, sizeof(payload_size)); // Bcast framework
+    void* ptr = NULL;
 
     uuid_t src;
     ptr = YggMessage_readPayload(msg, ptr, src, sizeof(uuid_t));
@@ -125,11 +137,51 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
     unsigned short seq = 0;
     ptr = YggMessage_readPayload(msg, ptr, &seq, sizeof(unsigned short));
 
+    byte period = 0;
+    ptr = YggMessage_readPayload(msg, ptr, &period, sizeof(byte));
+
+    byte amount = 0;
+    ptr = YggMessage_readPayload(msg, ptr, &amount, sizeof(byte));
+
     char id_str[UUID_STR_LEN+1];
     id_str[UUID_STR_LEN] = '\0';
     uuid_unparse(src, id_str);
     printf("Received TC message from %s with seq %hu\n", id_str, seq);
     fflush(stdout);
+
+    if( uuid_compare(src, myID) == 0 ) {
+        return; // discard
+    }
+
+    RouterSetEntry* entry = hash_table_find_value(state->topology_set, src);
+
+    if( entry && entry->seq > seq) {
+        return; // discard msg
+    }
+
+    if(entry == NULL) {
+        entry = malloc(sizeof(RouterSetEntry));
+
+        entry->links = list_init();
+
+        hash_table_insert(state->topology_set, src, entry);
+    }
+
+    // TODO: fazer o exp
+
+    if( seq > entry->seq) {
+        entry->seq = seq;
+
+        list_delete(entry->links);
+        entry->links = list_init();
+
+        for(int i = 0; i < amount; i++) {
+            LinkEntry* link = malloc(sizeof(LinkEntry));
+            ptr = YggMessage_readPayload(msg, ptr, link->to, sizeof(uuid_t));
+            ptr = YggMessage_readPayload(msg, ptr, &link->tx_cost, sizeof(double));
+            list_add_item_to_tail(entry->links, link);
+        }
+    }
 
     // TODO
 }
@@ -142,6 +194,8 @@ RoutingContext* OLSRRoutingContext() {
     OLSRState* state = malloc(sizeof(OLSRState));
     state->mprs = list_init();
     state->mpr_selectors = list_init();
+    //state->router_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
+    state->topology_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
     return newRoutingContext(
         NULL,

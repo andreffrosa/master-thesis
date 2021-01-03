@@ -38,8 +38,13 @@ void RF_DeliverMessage(routing_framework_state* state, RoutingHeader* header, Yg
 
     int add_result = 0;
 
-    YggMessage m;
-    YggMessage_initBcast(&m, toDeliver->Proto_id);
+    YggMessage m = {0};
+    YggMessage_init(&m, toDeliver->srcAddr.data, toDeliver->Proto_id);
+
+    // Insert src_proto
+    unsigned short src_proto = ROUTING_FRAMEWORK_PROTO_ID;
+    add_result = YggMessage_addPayload(&m, (char*)&src_proto, sizeof(src_proto));
+    assert(add_result != FAILED);
 
     // Insert payload size
     unsigned short payload_size = toDeliver->dataLen;
@@ -230,8 +235,6 @@ void RF_SendMessage(routing_framework_state* state, RoutingHeader* old_header, u
 
     RF_serializeMessage(state, &m, old_header, next_hop_id, next_hop_addr, ttl, toDeliver);
 
-    pushMessageType(&m, MSG_ROUTING_MESSAGE);
-
 	dispatch(&m);
 	state->stats.messages_transmitted++;
 }
@@ -248,14 +251,28 @@ void RF_serializeMessage(routing_framework_state* state, YggMessage* m, RoutingH
 	RoutingHeader header;
     initRoutingHeader(&header, old_header->source_id, state->myID, next_hop_id, old_header->destination_id, old_header->msg_id, ttl, old_header->dest_proto);
 
-    int msg_size = sizeof(RoutingHeader) + toDeliver->dataLen;
+    int msg_size = sizeof(RoutingHeader) + toDeliver->dataLen + sizeof(unsigned short) + sizeof(byte);
     assert( msg_size <= YGG_MESSAGE_PAYLOAD );
 
+    // Insert src_proto
+    unsigned short src_proto = ROUTING_FRAMEWORK_PROTO_ID;
+    int add_result = YggMessage_addPayload(m, (char*)&src_proto, sizeof(src_proto));
+    assert(add_result != FAILED);
+
+    //pushMessageType(m, MSG_ROUTING_MESSAGE);
+
+    // Insert Message Type
+    byte msg_type = MSG_ROUTING_MESSAGE;
+    add_result = YggMessage_addPayload(m, (char*) &msg_type, sizeof(byte));
+    assert(add_result != FAILED);
+
 	// Insert Header
-	YggMessage_addPayload(m, (char*) &header, sizeof(RoutingHeader));
+	add_result = YggMessage_addPayload(m, (char*) &header, sizeof(RoutingHeader));
+    assert(add_result != FAILED);
 
 	// Insert Payload
-	YggMessage_addPayload(m, (char*) toDeliver->data, toDeliver->dataLen);
+	add_result = YggMessage_addPayload(m, (char*) toDeliver->data, toDeliver->dataLen);
+    assert(add_result != FAILED);
 }
 
 void RF_deserializeMessage(YggMessage* m, RoutingHeader* header, YggMessage* toDeliver) {

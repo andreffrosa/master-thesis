@@ -72,8 +72,6 @@ void scheduleAnnounceTimer(routing_framework_state* state, bool now) {
 
 void RF_uponAnnounceTimer(routing_framework_state* state) {
 
-    printf("\n\tANNOUNCE TIMER\n\n");
-
     state->announce_timer_active = false;
     // copy_timespec(&state->last_announce_time, &state->current_time);
 
@@ -165,6 +163,17 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
     // Trigger context
     YggMessage msg = {0};
     YggMessage_initBcast(&msg, ROUTING_FRAMEWORK_PROTO_ID);
+
+    // Insert src_proto
+    /*unsigned short src_proto = ROUTING_FRAMEWORK_PROTO_ID;
+    int add_result = YggMessage_addPayload(&msg, (char*)&src_proto, sizeof(src_proto));
+    assert(add_result != FAILED);*/
+
+    // Insert Message Type
+    byte msg_type = MSG_CONTROL_MESSAGE;
+    int add_result = YggMessage_addPayload(&msg, (char*) &msg_type, sizeof(byte));
+    assert(add_result != FAILED);
+
     bool send = RA_triggerEvent(state->args->algorithm, new_seq, event_type, event_args, state->routing_table, state->neighbors, state->myID, &msg);
 
     if(send) {
@@ -172,11 +181,9 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
 
         copy_timespec(&state->last_announce_time, &state->current_time);
 
-        pushMessageType(&msg, MSG_CONTROL_MESSAGE);
+        //pushMessageType(&msg, MSG_CONTROL_MESSAGE);
 
         RA_disseminateControlMessage(state->args->algorithm, &msg);
-
-        printf("\n\tYO\n\n");
     }
 
 }
