@@ -22,6 +22,7 @@ typedef struct HelloDeliverSummary_ {
 
     bool new_neighbor;
     bool updated_neighbor;
+    bool lost_neighbor;
     bool rebooted;
     bool period_changed;
     bool updated_quality;

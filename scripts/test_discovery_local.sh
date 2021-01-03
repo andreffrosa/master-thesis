@@ -11,21 +11,21 @@ PIS=$1
 DURATION=$2
 
 TESTS=(
-#"discovery/NoDiscovery"
-#"discovery/PassiveDiscovery1"
-#"discovery/PassiveDiscovery2"
+"discovery/NoDiscovery"
+"discovery/PassiveDiscovery1"
+"discovery/PassiveDiscovery2"
 "discovery/PeriodicHelloDiscovery"
-#"discovery/HybridHelloDiscovery"
-#"discovery/PeriodicJointDiscovery"
-#"discovery/PeriodicDisjointDiscovery"
-#"discovery/HybridDisjointDiscovery"
-#"discovery/HybridHelloPeriodicHackDiscovery"
-#"discovery/PeriodicHelloHybridHackDiscovery"
-#"discovery/EchoDiscovery1"
-#"discovery/EchoDiscovery2"
-#"discovery/EchoDiscovery3"
-#"discovery/OLSRDiscovery"
-#"discovery/LENWBDiscovery"
+"discovery/HybridHelloDiscovery"
+"discovery/PeriodicJointDiscovery"
+"discovery/PeriodicDisjointDiscovery"
+"discovery/HybridDisjointDiscovery"
+"discovery/HybridHelloPeriodicHackDiscovery"
+"discovery/PeriodicHelloHybridHackDiscovery"
+"discovery/EchoDiscovery1"
+"discovery/EchoDiscovery2"
+"discovery/EchoDiscovery3"
+"discovery/OLSRDiscovery"
+"discovery/LENWBDiscovery"
 )
 
 i=1

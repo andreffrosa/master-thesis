@@ -20,11 +20,13 @@
 #include "discovery_period/discovery_period_private.h"
 #include "discovery_context/discovery_context_private.h"
 #include "link_quality/link_quality_private.h"
+#include "link_admission/link_admission_private.h"
 
 typedef struct _DiscoveryAlgorithm {
     DiscoveryPattern* d_pattern;
     DiscoveryPeriod* d_period;
     LinkQuality* lq_metric;
+    LinkAdmission* la_policy;
     DiscoveryContext* d_context;
 } DiscoveryAlgorithm;
 
