@@ -18,14 +18,15 @@
 
 #include "utility/my_misc.h"
 
-DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, DiscoveryPeriod* d_period, LinkQuality* lq_metric, DiscoveryContext* d_context) {
-    assert(d_pattern && d_period && lq_metric && d_context);
+DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, DiscoveryPeriod* d_period, LinkQuality* lq_metric, LinkAdmission* la_policy, DiscoveryContext* d_context) {
+    assert(d_pattern && d_period && lq_metric && la_policy && d_context);
 
     DiscoveryAlgorithm* alg = (DiscoveryAlgorithm*)malloc(sizeof(DiscoveryAlgorithm));
 
     alg->d_pattern = d_pattern;
     alg->d_period = d_period;
     alg->lq_metric = lq_metric;
+    alg->la_policy = la_policy;
     alg->d_context = d_context;
 
 	return alg;
@@ -36,6 +37,7 @@ void destroyDiscoveryAlgorithm(DiscoveryAlgorithm* alg) {
         destroyDiscoveryPattern(alg->d_pattern);
         destroyDiscoveryPeriod(alg->d_period);
         destroyLinkQualityMetric(alg->lq_metric);
+        destroyLinkAdmissionPolicy(alg->la_policy);
         destroyDiscoveryContext(alg->d_context);
         free(alg);
     }
@@ -69,6 +71,16 @@ void DA_setLinkQuality(DiscoveryAlgorithm* alg, LinkQuality* new_lq_metric) {
     }
 
     alg->lq_metric = new_lq_metric;
+}
+
+void DA_setLinkAdmission(DiscoveryAlgorithm* alg, LinkAdmission* new_la_policy) {
+    assert(alg && new_la_policy);
+
+    if( alg->la_policy ) {
+        destroyLinkAdmissionPolicy(alg->la_policy);
+    }
+
+    alg->la_policy = new_la_policy;
 }
 
 void DA_setDiscoveryContext(DiscoveryAlgorithm* alg, DiscoveryContext* new_d_context) {
@@ -233,6 +245,12 @@ void DA_destroyLinkQualityAttributes(DiscoveryAlgorithm* alg, void* lq_attrs) {
     assert(alg != NULL);
 
     LQ_destroyAttrs(alg->lq_metric, lq_attrs);
+}
+
+bool DA_evalLinkAdmission(DiscoveryAlgorithm* alg, NeighborEntry* neigh, struct timespec* current_time) {
+    assert(alg != NULL);
+
+    return LA_eval(alg->la_policy, neigh, current_time);
 }
 
 void DA_createMessage(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
