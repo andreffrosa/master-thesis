@@ -30,15 +30,18 @@ typedef struct RoutingTableEntry_ {
     uuid_t destination_id;
     uuid_t next_hop_id;
     WLANAddr next_hop_addr;
+
     double cost;
 
-    unsigned short seq;
+    //unsigned short seq;
+
+    unsigned long messages_forwarded;
 
     struct timespec found_time;
     struct timespec last_used_time;
 
-    void* attrs;
-    unsigned int attrs_size;
+    //void* attrs;
+    //unsigned int attrs_size;
 } RoutingTableEntry;
 
 RoutingTable* newRoutingTable() {
@@ -50,17 +53,16 @@ RoutingTable* newRoutingTable() {
 }
 
 static void hash_table_delete_custom_fun(hash_table_item* it, void* args) {
-    void* attrs = NULL;
-    unsigned int attrs_size = 0;
-    void (*destroy_attrs)(void*, void*) = args;
+    //void* attrs = NULL;
+    //unsigned int attrs_size = 0;
+    //void (*destroy_attrs)(void*, void*) = args;
 
-    destroyRoutingTableEntry((RoutingTableEntry*)(it->value), &attrs, &attrs_size);
+    destroyRoutingTableEntry((RoutingTableEntry*)(it->value)/*, &attrs, &attrs_size*/);
 
-    if( attrs ) {
-        if(destroy_attrs)
-            destroy_attrs(attrs, NULL);
-    }
-
+    //if( attrs ) {
+    //    if(destroy_attrs)
+    //        destroy_attrs(attrs, NULL);
+    //}
 }
 
 void destroyRoutingTable(RoutingTable* table, void (*destroy_attrs)(void*, void*)) {
@@ -94,30 +96,32 @@ RoutingTableEntry* RT_removeEntry(RoutingTable* table, unsigned char* destinatio
     }
 }
 
-RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned short seq, struct timespec* found_time, void* attrs, unsigned int attrs_size) {
+RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, struct timespec* found_time) {
     RoutingTableEntry* entry = malloc(sizeof(RoutingTableEntry));
 
     uuid_copy(entry->destination_id, destination_id);
     uuid_copy(entry->next_hop_id, next_hop_id);
     memcpy(entry->next_hop_addr.data, next_hop_addr->data, WLAN_ADDR_LEN);
     entry->cost = cost;
-    entry->seq = seq;
+    //entry->seq = seq;
 
     copy_timespec(&entry->found_time, found_time);
     copy_timespec(&entry->last_used_time, &zero_timespec);
 
-    entry->attrs = attrs;
-    entry->attrs_size = attrs_size;
+    entry->messages_forwarded = 0;
+
+    //entry->attrs = attrs;
+    //entry->attrs_size = attrs_size;
 
     return entry;
 }
 
-void destroyRoutingTableEntry(RoutingTableEntry* entry, void** attrs, unsigned int* attrs_size) {
+void destroyRoutingTableEntry(RoutingTableEntry* entry /*, void** attrs, unsigned int* attrs_size*/) {
     if(entry) {
-        if(entry->attrs != NULL) {
+        /*if(entry->attrs != NULL) {
             *attrs = entry->attrs;
             *attrs_size = entry->attrs_size;
-        }
+        }*/
         free(entry);
     }
 }
@@ -137,14 +141,40 @@ WLANAddr* RTE_getNextHopAddr(RoutingTableEntry* entry) {
     return &entry->next_hop_addr;
 }
 
+void RTE_setNexHop(RoutingTableEntry* entry, unsigned char* id, WLANAddr* addr) {
+    assert(entry);
+    uuid_copy(entry->next_hop_id, id);
+    memcpy(entry->next_hop_addr.data, addr->data, WLAN_ADDR_LEN);
+}
+
 double RTE_getCost(RoutingTableEntry* entry) {
     assert(entry);
     return entry->cost;
 }
 
-unsigned short RTE_getSEQ(RoutingTableEntry* entry) {
+void RTE_setCost(RoutingTableEntry* entry, double new_cost) {
+    assert(entry);
+    entry->cost = new_cost;
+}
+
+/*unsigned short RTE_getSEQ(RoutingTableEntry* entry) {
     assert(entry);
     return entry->seq;
+}*/
+
+unsigned long RTE_getMessagesForwarded(RoutingTableEntry* entry) {
+    assert(entry);
+    return entry->messages_forwarded;
+}
+
+void RTE_incMessagesForwarded(RoutingTableEntry* entry) {
+    assert(entry);
+    entry->messages_forwarded++;
+}
+
+void RTE_resetMessagesForwarded(RoutingTableEntry* entry) {
+    assert(entry);
+    entry->messages_forwarded = 0;
 }
 
 struct timespec* RTE_getFoundTime(RoutingTableEntry* entry) {
@@ -152,11 +182,22 @@ struct timespec* RTE_getFoundTime(RoutingTableEntry* entry) {
     return &entry->found_time;
 }
 
+void RTE_setFoundTime(RoutingTableEntry* entry, struct timespec* t) {
+    assert(entry);
+    copy_timespec(&entry->found_time, t);
+}
+
 struct timespec* RTE_getLastUsedTime(RoutingTableEntry* entry) {
     assert(entry);
     return &entry->last_used_time;
 }
 
+void RTE_setLastUsedTime(RoutingTableEntry* entry, struct timespec* t) {
+    assert(entry);
+    copy_timespec(&entry->last_used_time, t);
+}
+
+/*
 void* RTE_getAttrs(RoutingTableEntry* entry) {
     assert(entry);
     return entry->attrs;
@@ -166,6 +207,7 @@ unsigned int RTE_getAttrsSize(RoutingTableEntry* entry) {
     assert(entry);
     return entry->attrs_size;
 }
+*/
 
 RoutingTableEntry* RT_nextRoute(RoutingTable* table, void** iterator) {
     hash_table_item* item = hash_table_iterator_next(table->ht, iterator);
@@ -175,8 +217,6 @@ RoutingTableEntry* RT_nextRoute(RoutingTable* table, void** iterator) {
         return NULL;
     }
 }
-
-
 
 /*
 char* RTE_toString(RoutingTableEntry* entry, struct timespec* current_time) {
@@ -214,7 +254,7 @@ char* RTE_toString(RoutingTableEntry* entry, struct timespec* current_time) {
 char* RT_toString(RoutingTable* table, char** str, struct timespec* current_time) {
     assert(table && current_time);
 
-    char* header = " # |            DESTINATION ID            |             NEXT HOP ID              |        MAC        |  COST  |  SEQ  |  FOUND  |  USED  |  \n";
+    char* header = " # |            DESTINATION ID            |             NEXT HOP ID              |    NEXT HOP MAC   |  COST  |  FOUND  |  USED  |  FORWARDED  |  \n";
 
     unsigned int line_size = strlen(header) + 1;
 
@@ -245,9 +285,11 @@ char* RT_toString(RoutingTable* table, char** str, struct timespec* current_time
         wlan2asc(RTE_getNextHopAddr(current_route), next_hop_addr_str);
         align_str(next_hop_addr_str, next_hop_addr_str, 17, "CL");
 
+        /*
         char seq_str[6];
         sprintf(seq_str, "%hu", RTE_getSEQ(current_route));
         align_str(seq_str, seq_str, 5, "R");
+        */
 
         char cost_str[6];
         sprintf(cost_str, "%0.3f", RTE_getCost(current_route));
@@ -269,9 +311,12 @@ char* RT_toString(RoutingTable* table, char** str, struct timespec* current_time
         timespec_to_string(&aux_t, used_time_str, 6, 1);
         align_str(used_time_str, used_time_str, 6, "CR");
 
+        char forwarded_str[12];
+        sprintf(forwarded_str, "%lu", RTE_getMessagesForwarded(current_route));
+        align_str(used_time_str, used_time_str, 11, "R");
 
         sprintf(ptr, "%2.d   %s   %s   %s   %s   %s   %s   %s  \n",
-        counter+1, dest_id_str, next_hop_id_str, next_hop_addr_str, cost_str, seq_str, found_time_str, used_time_str);
+        counter+1, dest_id_str, next_hop_id_str, next_hop_addr_str, cost_str, found_time_str, used_time_str, forwarded_str);
         ptr += strlen(ptr);
 
         counter++;

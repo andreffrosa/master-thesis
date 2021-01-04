@@ -17,7 +17,7 @@
 #include "Yggdrasil.h"
 
 typedef struct RoutingNeighbors_ RoutingNeighbors;
-typedef struct RoutingNeighborsEntry RoutingNeighborsEntry;
+typedef struct RoutingNeighborsEntry_ RoutingNeighborsEntry;
 
 RoutingNeighbors* newRoutingNeighbors();
 

@@ -29,11 +29,11 @@ RoutingTableEntry* RT_findEntry(RoutingTable* table, unsigned char* destination_
 
 RoutingTableEntry* RT_removeEntry(RoutingTable* table, unsigned char* destination_id);
 
-RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned short seq, struct timespec* found_time, void* attrs, unsigned int attrs_size);
+RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, struct timespec* found_time);
 
 RoutingTableEntry* RT_nextRoute(RoutingTable* table, void** iterator);
 
-void destroyRoutingTableEntry(RoutingTableEntry* entry, void** attrs, unsigned int* attrs_size);
+void destroyRoutingTableEntry(RoutingTableEntry* entry);
 
 unsigned char* RTE_getDestinationID(RoutingTableEntry* entry);
 
@@ -41,18 +41,33 @@ unsigned char* RTE_getNextHopID(RoutingTableEntry* entry);
 
 WLANAddr* RTE_getNextHopAddr(RoutingTableEntry* entry);
 
+void RTE_setNexHop(RoutingTableEntry* entry, unsigned char* id, WLANAddr* addr);
+
 double RTE_getCost(RoutingTableEntry* entry);
 
-unsigned short RTE_getSEQ(RoutingTableEntry* entry);
+void RTE_setCost(RoutingTableEntry* entry, double new_cost);
+
+//unsigned short RTE_getSEQ(RoutingTableEntry* entry);
+
+unsigned long RTE_getMessagesForwarded(RoutingTableEntry* entry);
+
+void RTE_incMessagesForwarded(RoutingTableEntry* entry);
+
+void RTE_resetMessagesForwarded(RoutingTableEntry* entry);
 
 struct timespec* RTE_getFoundTime(RoutingTableEntry* entry);
 
+void RTE_setFoundTime(RoutingTableEntry* entry, struct timespec* t);
+
 struct timespec* RTE_getLastUsedTime(RoutingTableEntry* entry);
 
+void RTE_setLastUsedTime(RoutingTableEntry* entry, struct timespec* t);
+
+/*
 void* RTE_getAttrs(RoutingTableEntry* entry);
 
 unsigned int RTE_getAttrsSize(RoutingTableEntry* entry);
-/*
+
 char* RTE_toString(RoutingTableEntry* entry, struct timespec* current_time);
 */
 

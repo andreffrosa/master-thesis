@@ -28,7 +28,7 @@ typedef struct RoutingNeighbors_ {
     hash_table* ht;
 } RoutingNeighbors;
 
-typedef struct RoutingNeighborsEntry {
+typedef struct RoutingNeighborsEntry_ {
     uuid_t id;
     WLANAddr addr;
     double cost;

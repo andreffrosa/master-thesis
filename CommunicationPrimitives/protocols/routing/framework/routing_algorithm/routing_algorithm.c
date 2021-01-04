@@ -107,14 +107,14 @@ void RA_disseminateControlMessage(RoutingAlgorithm* alg, YggMessage* msg) {
     DS_disseminate(alg->d_strategy, msg);
 }
 
-bool RA_triggerEvent(RoutingAlgorithm* alg, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, YggMessage* msg) {
+bool RA_triggerEvent(RoutingAlgorithm* alg, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     assert(alg);
 
-    return RCtx_triggerEvent(alg->r_context, seq, event_type, args, routing_table, neighbors, myID, msg);
+    return RCtx_triggerEvent(alg->r_context, seq, event_type, args, routing_table, neighbors, myID, current_time, msg);
 }
 
-void RA_rcvControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, YggMessage* msg) {
+void RA_rcvControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     assert(alg);
 
-    RCtx_rcvMsg(alg->r_context, routing_table, neighbors, msg);
+    RCtx_rcvMsg(alg->r_context, routing_table, neighbors, myID, current_time, msg);
 }

@@ -63,6 +63,8 @@ void scheduleAnnounceTimer(routing_framework_state* state, bool now) {
 
             unsigned long t = now ? jitter : period_s*1000 - state->args->period_margin_ms - jitter;
 
+            printf("NEXT TIMER: %lu ms\n", t);
+
             struct timespec t_ = {0};
             milli_to_timespec(&t_, t);
             SetTimer(&t_, state->announce_timer_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_PERIODIC_ANNOUNCE);
@@ -77,13 +79,14 @@ void RF_uponAnnounceTimer(routing_framework_state* state) {
 
     RF_triggerEvent(state, RTE_ANNOUNCE_TIMER, NULL);
 
+    printf("UPON TIMER\n");
+
     scheduleAnnounceTimer(state, false);
 }
 
 void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
 
     void* ptr = NULL;
-
 
     switch(ev->notification_id) {
         case NEW_NEIGHBOR: {
@@ -152,7 +155,6 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
     }
 
     RF_triggerEvent(state, RTE_NEIGHBORS_CHANGE, ev);
-
 }
 
 void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args) {
@@ -174,7 +176,7 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
     int add_result = YggMessage_addPayload(&msg, (char*) &msg_type, sizeof(byte));
     assert(add_result != FAILED);
 
-    bool send = RA_triggerEvent(state->args->algorithm, new_seq, event_type, event_args, state->routing_table, state->neighbors, state->myID, &msg);
+    bool send = RA_triggerEvent(state->args->algorithm, new_seq, event_type, event_args, state->routing_table, state->neighbors, state->myID, &state->current_time, &msg);
 
     if(send) {
         state->my_seq = new_seq;
@@ -190,7 +192,7 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
 
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message) {
 
-    RA_rcvControlMsg(state->args->algorithm, state->routing_table, state->neighbors, message);
+    RA_rcvControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->myID, &state->current_time, message);
 }
 
 void RF_runGarbageCollector(routing_framework_state* state) {

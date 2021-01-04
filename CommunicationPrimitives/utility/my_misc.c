@@ -23,7 +23,7 @@
 
 #include <assert.h>
 
-Tuple* newTuple(void** entries, unsigned int size) {
+/*Tuple* newTuple(void** entries, unsigned int size) {
     Tuple* tuple = malloc(sizeof(Tuple));
     tuple->size = size;
     tuple->entries = malloc(size*sizeof(void*));
@@ -32,6 +32,7 @@ Tuple* newTuple(void** entries, unsigned int size) {
     }
     return tuple;
 }
+*/
 
 bool equalID(void* a, void* b) {
 	return uuid_compare((unsigned char*)a, (unsigned char*)b) == 0;
@@ -374,4 +375,16 @@ bool is_unicast_message(YggMessage* msg) {
     free(bcast_addr);
 
     return is_unicast_addr;
+}
+
+unsigned char* new_id(unsigned char* id) {
+    unsigned char* x = malloc(sizeof(uuid_t));
+    uuid_copy(x, id);
+    return x;
+}
+
+double* new_double(double d) {
+    double* x = malloc(sizeof(double));
+    *x = d;
+    return x;
 }

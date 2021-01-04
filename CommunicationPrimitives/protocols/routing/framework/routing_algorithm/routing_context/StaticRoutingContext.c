@@ -70,7 +70,7 @@ static void addEntry(unsigned int destination, unsigned int next_hop, struct tim
     unsigned char* next_hop_id = node_ids[next_hop-1];
     WLANAddr* next_hop_addr = &node_addrs[next_hop-1];
 
-    RoutingTableEntry* new_entry = newRoutingTableEntry(destination_id, next_hop_id, next_hop_addr, 1, 1, found_time, NULL, 0);
+    RoutingTableEntry* new_entry = newRoutingTableEntry(destination_id, next_hop_id, next_hop_addr, 1, found_time);
 
     RoutingTableEntry* old_entry = RT_addEntry(routing_table, new_entry);
     assert(old_entry == NULL);

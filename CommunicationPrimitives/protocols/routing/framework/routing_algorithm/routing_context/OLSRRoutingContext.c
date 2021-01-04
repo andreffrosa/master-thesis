@@ -15,6 +15,8 @@
 
 #include "protocols/discovery/framework/framework.h"
 
+#include "utility/olsr_utils.h"
+
 #include <assert.h>
 
 typedef struct OLSRState_ {
@@ -22,6 +24,7 @@ typedef struct OLSRState_ {
     list* mpr_selectors;
     //hash_table* router_set;
     hash_table* topology_set;
+    bool dirty;
 } OLSRState;
 
 typedef struct LinkEntry_ {
@@ -35,17 +38,20 @@ typedef struct RouterSetEntry_ {
     list* links;
 } RouterSetEntry;
 
-static void OLSRRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
+static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time);
 
-}
+/*static void OLSRRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
 
-static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, YggMessage* msg) {
+}*/
 
+static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     if(event_type == RTE_NEIGHBORS_CHANGE) {
         YggEvent* ev = args;
         assert(ev);
+
+        printf("XE\n");
 
         if(ev->notification_id == GENERIC_DISCOVERY_EVENT) {
 
@@ -90,14 +96,26 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
                 } else if( strcmp(type, "MPR SELECTORS") == 0 ) {
                     list_delete(state->mpr_selectors);
                     state->mpr_selectors = l;
+
+                    state->dirty = true;
                 }
             }
     	}
+
+        // Recompute routing table
+        RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
 
         return false;
     }
 
     else if(event_type == RTE_ANNOUNCE_TIMER) {
+
+        printf("XO\n");
+
+        if(state->dirty) {
+            // TODO: inc seq
+            state->dirty = false;
+        }
 
         YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
 
@@ -126,7 +144,7 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
     return false;
 }
 
-static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, YggMessage* msg) {
+static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     void* ptr = NULL;
@@ -181,9 +199,11 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
             ptr = YggMessage_readPayload(msg, ptr, &link->tx_cost, sizeof(double));
             list_add_item_to_tail(entry->links, link);
         }
+
+        // Recompute routing table
+        RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
     }
 
-    // TODO
 }
 
 //typedef void (*rc_destroy)(ModuleState* m_state);
@@ -196,13 +216,104 @@ RoutingContext* OLSRRoutingContext() {
     state->mpr_selectors = list_init();
     //state->router_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
     state->topology_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
+    state->dirty = true;
 
     return newRoutingContext(
         NULL,
         state,
-        &OLSRRoutingContextInit,
+        NULL, //&OLSRRoutingContextInit,
         &OLSRRoutingContextTriggerEvent,
         &OLSRRoutingContextRcvMsg,
         NULL
     );
+}
+
+static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
+    graph* g = graph_init_complete((key_comparator)&uuid_compare, NULL, NULL, sizeof(uuid_t), 0, sizeof(double));
+
+    graph_insert_node(g, new_id(myID), NULL);
+
+    void* iterator = NULL;
+    RoutingNeighborsEntry* neigh = NULL;
+    while( (neigh = RN_nextNeigh(neighbors, &iterator)) ) {
+        unsigned char* neigh_id = RNE_getID(neigh);
+        assert(graph_find_node(g, neigh_id) == NULL);
+        graph_insert_node(g, new_id(neigh_id), NULL);
+
+        graph_insert_edge(g, myID, neigh_id, new_double(RNE_getCost(neigh)));
+        graph_insert_edge(g, neigh_id, myID, new_double(RNE_getCost(neigh)));
+    }
+
+    iterator = NULL;
+    hash_table_item* hit = NULL;
+    while( (hit = hash_table_iterator_next(topology_set, &iterator)) ) {
+        RouterSetEntry* entry = (RouterSetEntry*)hit->value;
+        unsigned char* entry_id = (unsigned char*)hit->key;
+
+        for(list_item* it = entry->links->head; it; it= it->next) {
+            LinkEntry* link = (LinkEntry*)it->data;
+
+            if(graph_find_node(g, entry_id) == NULL) {
+                graph_insert_node(g, new_id(entry_id), NULL);
+            }
+
+            if(graph_find_node(g, link->to) == NULL) {
+                graph_insert_node(g, new_id(link->to), NULL);
+            }
+
+            assert(graph_find_edge(g, entry_id, link->to) == NULL);
+            graph_insert_edge(g, entry_id, link->to, new_double(link->tx_cost));
+        }
+    }
+
+    hash_table* routes = Dijkstra(g, myID);
+
+    iterator = NULL;
+    RoutingTableEntry* current_entry = NULL;
+    while( (current_entry = RT_nextRoute(routing_table, &iterator)) ) {
+
+        DijkstraTuple* dt = hash_table_remove(routes, RTE_getDestinationID(current_entry));
+        if( dt ) {
+            // Update Route
+            unsigned char* next_hop = RTE_getNextHopID(current_entry);
+            if(uuid_compare(next_hop, dt->next_hop_id) == 0) {
+                // Just set cost
+                RTE_setCost(current_entry, dt->cost);
+            } else {
+                // Set cost, next_hop and found_time and reset last used
+                RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, dt->next_hop_id);
+                assert(neigh);
+                WLANAddr* addr = RNE_getAddr(neigh);
+                RTE_setNexHop(current_entry, dt->next_hop_id, addr);
+
+                RTE_setCost(current_entry, dt->cost);
+                RTE_resetMessagesForwarded(current_entry);
+                RTE_setFoundTime(current_entry, current_time);
+                RTE_setLastUsedTime(current_entry, current_time);
+            }
+
+            free(dt);
+        } else {
+            RoutingTableEntry* aux = RT_removeEntry(routing_table, RTE_getDestinationID(current_entry));
+            assert(aux == current_entry);
+            free(aux);
+        }
+    }
+
+    iterator = NULL;
+    hit = NULL;
+    while( (hit = hash_table_iterator_next(routes, &iterator)) ) {
+        DijkstraTuple* dt = (DijkstraTuple*)hit->value;
+
+        RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, dt->next_hop_id);
+        assert(neigh);
+        WLANAddr* addr = RNE_getAddr(neigh);
+
+        RoutingTableEntry* route_entry = newRoutingTableEntry(dt->dest_id, dt->next_hop_id, addr, dt->cost, current_time);
+        RT_addEntry(routing_table, route_entry);
+    }
+
+    hash_table_delete(routes);
+
+    graph_delete(g);
 }
