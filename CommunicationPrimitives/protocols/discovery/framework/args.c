@@ -62,10 +62,11 @@ discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algor
 discovery_framework_args* default_discovery_framework_args() {
 
     DiscoveryAlgorithm* algorithm = newDiscoveryAlgorithm(
-        PeriodicJointDiscovery(RESET_PERIODIC, true, true, true, true),    // Discovery Pattern
-        StaticDiscoveryPeriod(5, 5),                        // Discovery Period
-        EMALinkQuality(0.5, 0.7, 5, 5),                    // LinkQuality
-        EmptyDiscoveryContext()                              // Discovery Message
+        PeriodicJointDiscovery(RESET_PERIODIC, true, true, true, true),     // Discovery Pattern
+        StaticDiscoveryPeriod(5, 5),                                        // Discovery Period
+        EMALinkQuality(0.5, 0.7, 5, 5),                                     // LinkQuality
+        NoAdmission(),                                                      // LinkAdmission
+        EmptyDiscoveryContext()                                             // Discovery Message
     );
 
     return new_discovery_framework_args(
@@ -98,6 +99,7 @@ discovery_framework_args* default_discovery_framework_args() {
 }
 
 static LinkQuality* parse_lq(char* value, bool nested);
+static LinkAdmission* parse_la(char* value, bool nested);
 static DiscoveryPeriod* parse_d_period(char* value, bool nested);
 static DiscoveryContext* parse_d_context(char* value, bool nested);
 static DiscoveryPattern* parse_d_pattern(char* value, bool nested);
@@ -138,6 +140,9 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
             } else if( strcmp(key, "lq_metric") == 0 ) {
                 LinkQuality* new_lq_metric = parse_lq(value, false);
                 DA_setLinkQuality(args->algorithm, new_lq_metric);
+            } else if( strcmp(key, "la_policy") == 0 ) {
+                LinkAdmission* new_la_policy = parse_la(value, false);
+                DA_setLinkAdmission(args->algorithm, new_la_policy);
             } else if( strcmp(key, "hello_misses") == 0  ) {
                 args->hello_misses = strtol(value, NULL, 10);
             } else if( strcmp(key, "hack_misses") == 0  ) {
@@ -213,8 +218,6 @@ static LinkQuality* parse_lq(char* value, bool nested) {
         exit(-1);
     }
 
-    LinkQuality* lq_metric = NULL;
-
     char* name = NULL;
     char* ptr = NULL;
     char* token = NULL;
@@ -241,7 +244,7 @@ static LinkQuality* parse_lq(char* value, bool nested) {
                 if(token != NULL) {
                     unsigned int bucket_duration_s = strtol(token, NULL, 10);
 
-                    lq_metric = SMALinkQuality(initial_quality, n_buckets, bucket_duration_s);
+                    return SMALinkQuality(initial_quality, n_buckets, bucket_duration_s);
                 } else {
                     printf("Parameter 3 of %s not passed!\n", name);
                     exit(-1);
@@ -266,7 +269,7 @@ static LinkQuality* parse_lq(char* value, bool nested) {
                 if(token != NULL) {
                     unsigned int bucket_duration_s = strtol(token, NULL, 10);
 
-                    lq_metric = WMALinkQuality(initial_quality, n_buckets, bucket_duration_s);
+                    return WMALinkQuality(initial_quality, n_buckets, bucket_duration_s);
                 } else {
                     printf("Parameter 3 of %s not passed!\n", name);
                     exit(-1);
@@ -296,7 +299,7 @@ static LinkQuality* parse_lq(char* value, bool nested) {
                     if(token != NULL) {
                         unsigned int bucket_duration_s = strtol(token, NULL, 10);
 
-                        lq_metric = EMALinkQuality(initial_quality, scalling, n_buckets, bucket_duration_s);
+                        return EMALinkQuality(initial_quality, scalling, n_buckets, bucket_duration_s);
                     } else {
                         printf("Parameter 4 of %s not passed!\n", name);
                         exit(-1);
@@ -322,7 +325,7 @@ static LinkQuality* parse_lq(char* value, bool nested) {
             if(token != NULL) {
                 unsigned int window_size = strtol(token, NULL, 10);
 
-                lq_metric = SlidingWindowLinkQuality(initial_quality, window_size);
+                return SlidingWindowLinkQuality(initial_quality, window_size);
             } else {
                 printf("Parameter 2 of %s not passed!\n", name);
                 exit(-1);
@@ -335,8 +338,63 @@ static LinkQuality* parse_lq(char* value, bool nested) {
         printf("Unrecognized LinkQuality! \n");
         exit(-1);
     }
+}
 
-    return lq_metric;
+static LinkAdmission* parse_la(char* value, bool nested) {
+
+        if(value == NULL) {
+            printf("No parameter passed");
+            exit(-1);
+        }
+
+        char* name = NULL;
+        char* ptr = NULL;
+        char* token = NULL;
+
+        int len = strlen(value);
+        char str[len+1];
+
+        if(!nested) {
+            memcpy(str, value, len+1);
+            token  = strtok_r(str, " ", &ptr);
+        } else {
+            token  = value;
+        }
+
+        if( strcmp(token, (name = "No")) == 0 || strcmp(token, (name = "NoAdmission")) == 0 ) {
+            return NoAdmission();
+        } else if( strcmp(token, (name = "Age")) == 0 || strcmp(token, (name = "AgeAdmission")) == 0 ) {
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                unsigned int min_hellos = strtol(token, NULL, 10);
+
+                return AgeAdmission(min_hellos);
+            } else {
+                printf("Parameter 1 of %s not passed!\n", name);
+                exit(-1);
+            }
+        } else if( strcmp(token, (name = "Hysteresis")) == 0 || strcmp(token, (name = "HysteresisAdmission")) == 0 ) {
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                double hyst_reject = strtod(token, NULL);
+
+                token = strtok_r(NULL, " ", &ptr);
+                if(token != NULL) {
+                    double hyst_accept = strtod(token, NULL);
+
+                    return HysteresisAdmission(hyst_reject, hyst_accept);
+                } else {
+                    printf("Parameter 2 of %s not passed!\n", name);
+                    exit(-1);
+                }
+            } else {
+                printf("Parameter 1 of %s not passed!\n", name);
+                exit(-1);
+            }
+        } else {
+            printf("Unrecognized LinkQuality! \n");
+            exit(-1);
+        }
 }
 
 static DiscoveryPeriod* parse_d_period(char* value, bool nested) {

@@ -25,6 +25,7 @@ typedef struct NeighborEntry_ NeighborEntry;
 typedef struct TwoHopNeighborEntry_ TwoHopNeighborEntry;
 
 typedef enum {
+    PENDING_NEIGH,
     UNI_NEIGH,
     BI_NEIGH,
     LOST_NEIGH
@@ -64,9 +65,9 @@ struct timespec* NE_getNeighborFoundTime(NeighborEntry* neigh);
 
 struct timespec* NE_getNeighborDeletedTime(NeighborEntry* neigh);
 
-bool NE_isDeleted(NeighborEntry* neigh);
+bool NE_isLost(NeighborEntry* neigh);
 
-void NE_setDeleted(NeighborEntry* neigh, struct timespec* current_time);
+void NE_setLost(NeighborEntry* neigh, struct timespec* current_time);
 
 unsigned long NE_getNeighborHelloPeriod(NeighborEntry* neigh);
 
@@ -105,6 +106,14 @@ void NE_setTxLinkQuality(NeighborEntry* neigh, double tx_lq);
 void* NE_setLinkQualityAttributes(NeighborEntry* neigh, void* lq_attributes);
 
 void* NE_getLinkQualityAttributes(NeighborEntry* neigh);
+
+bool NE_isPending(NeighborEntry* neigh);
+
+void NE_setPending(NeighborEntry* neigh, bool pending);
+
+bool NE_isAccepted(NeighborEntry* neigh);
+
+void NE_setAccepted(NeighborEntry* neigh, bool accepted);
 
 double NE_getOutTraffic(NeighborEntry* neigh);
 
