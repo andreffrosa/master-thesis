@@ -42,7 +42,7 @@ typedef struct NeighborEntry_ {
     // Timestamps
     struct timespec last_neighbor_timer;
     struct timespec found_time;
-    struct timespec deleted_time;
+    struct timespec lost_time;
     // bool deleted;
 
     struct timespec rx_exp_time;
@@ -53,6 +53,10 @@ typedef struct NeighborEntry_ {
     double tx_lq;
     double rx_lq;
     void* lq_attributes;
+
+    // Link Admission
+    bool pending;
+    bool accepted;
 
     // Traffic
     double out_traffic;
@@ -169,7 +173,7 @@ NeighborEntry* newNeighborEntry(WLANAddr* mac_addr, unsigned char* id, unsigned 
     // Timestamps
     copy_timespec(&neigh->last_neighbor_timer, found_time);
     copy_timespec(&neigh->found_time, found_time);
-    copy_timespec(&neigh->deleted_time, &zero_timespec);
+    copy_timespec(&neigh->lost_time, &zero_timespec);
     copy_timespec(&neigh->rx_exp_time, rx_exp_time);
     copy_timespec(&neigh->tx_exp_time, &zero_timespec);
     copy_timespec(&neigh->removal_time, &zero_timespec);
@@ -178,6 +182,10 @@ NeighborEntry* newNeighborEntry(WLANAddr* mac_addr, unsigned char* id, unsigned 
     neigh->tx_lq = 0.0;
     neigh->rx_lq = 0.0;
     neigh->lq_attributes = NULL;
+
+    // Link Admission
+    neigh->pending = true;
+    neigh->accepted = false;
 
     // Traffic
     neigh->out_traffic = out_traffic;
@@ -242,24 +250,33 @@ struct timespec* NE_getNeighborFoundTime(NeighborEntry* neigh) {
     return &neigh->found_time;
 }
 
-struct timespec* NE_getNeighborDeletedTime(NeighborEntry* neigh) {
+struct timespec* NE_getNeighborLostTime(NeighborEntry* neigh) {
     assert(neigh);
-    return &neigh->deleted_time;
+    return &neigh->lost_time;
 }
 
-bool NE_isDeleted(NeighborEntry* neigh) {
+bool NE_isLost(NeighborEntry* neigh) {
     assert(neigh);
 
-    bool deleted = compare_timespec(&neigh->deleted_time, (struct timespec*)&zero_timespec) != 0;
+    bool lost = compare_timespec(&neigh->lost_time, (struct timespec*)&zero_timespec) != 0;
 
-    assert( !deleted || (compare_timespec(&neigh->rx_exp_time, &neigh->deleted_time) <= 0 /*&& compare_timespec(&neigh->tx_exp_time, &neigh->deleted_time) <= 0*/ ) );
+    //assert( !lost || (compare_timespec(&neigh->rx_exp_time, &neigh->lost_time) <= 0 /*&& compare_timespec(&neigh->tx_exp_time, &neigh->deleted_time) <= 0*/ ) );
 
-    return deleted;
+    assert( !lost || ( !neigh->accepted || compare_timespec(&neigh->rx_exp_time, &neigh->lost_time) <= 0 ));
+
+    /*if(deleted) {
+        assert(neigh->accepted == false);
+    }*/
+
+    return lost;
 }
 
-void NE_setDeleted(NeighborEntry* neigh, struct timespec* current_time) {
+void NE_setLost(NeighborEntry* neigh, struct timespec* current_time) {
     assert(neigh);
-    copy_timespec(&neigh->deleted_time, current_time);
+
+    assert(!neigh->accepted || compare_timespec(&neigh->rx_exp_time, current_time) <= 0);
+
+    copy_timespec(&neigh->lost_time, current_time);
 }
 
 struct timespec* NE_getNeighborRxExpTime(NeighborEntry* neigh) {
@@ -280,16 +297,20 @@ struct timespec* NE_getNeighborRemovalTime(NeighborEntry* neigh) {
 DiscoveryNeighborType NE_getNeighborType(NeighborEntry* neigh, struct timespec* current_time) {
     assert(neigh);
 
-    if(compare_timespec(&neigh->rx_exp_time, current_time) >= 0) {
-        if(compare_timespec(&neigh->tx_exp_time, current_time) >= 0) {
-            return BI_NEIGH;
-        } else {
-            return UNI_NEIGH;
-        }
+    if(neigh->pending) {
+        assert(!neigh->accepted);
+        return PENDING_NEIGH;
     } else {
-        // assert( NE_isDeleted(neigh) ); // GC could have not expired yet so neigh is not deleted yet
-
-        return LOST_NEIGH;
+        // neigh timer could have not expired yet so neigh is not (notified as) lost yet
+        if(compare_timespec(&neigh->rx_exp_time, current_time) >= 0 && !NE_isLost(neigh)) {
+            if(compare_timespec(&neigh->tx_exp_time, current_time) >= 0) {
+                return BI_NEIGH;
+            } else {
+                return UNI_NEIGH;
+            }
+        } else {
+            return LOST_NEIGH;
+        }
     }
 }
 
@@ -369,6 +390,26 @@ void* NE_setLinkQualityAttributes(NeighborEntry* neigh, void* lq_attributes) {
 void* NE_getLinkQualityAttributes(NeighborEntry* neigh) {
     assert(neigh);
     return neigh->lq_attributes;
+}
+
+bool NE_isPending(NeighborEntry* neigh) {
+    assert(neigh);
+    return neigh->pending;
+}
+
+void NE_setPending(NeighborEntry* neigh, bool pending) {
+    assert(neigh);
+    neigh->pending = pending;
+}
+
+bool NE_isAccepted(NeighborEntry* neigh) {
+    assert(neigh);
+    return neigh->accepted;
+}
+
+void NE_setAccepted(NeighborEntry* neigh, bool accepted) {
+    assert(neigh);
+    neigh->accepted = accepted;
 }
 
 double NE_getOutTraffic(NeighborEntry* neigh) {
@@ -533,8 +574,7 @@ TwoHopNeighborEntry* NE_addTwoHopNeighborEntry(NeighborEntry* neigh, TwoHopNeigh
 
 char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, unsigned char* myID, WLANAddr* myMAC, unsigned short my_seq) {
     char* header = " # |                 ID                   |"
-    "        MAC        |  SEQ  | T |"
-    "   PERIODS   |"
+    "        MAC        |  SEQ  | T | A |   PERIODS   |"
     " RX_LQ | TX_LQ | TRAFFIC | RX_EXP | TX_EXP | FOUND  |  LOST  | REMOVE | NEIGHS \n";
 
     unsigned int line_size = strlen(header) + 1;
@@ -574,6 +614,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
 
         char* type_str = "";
         switch(NE_getNeighborType(current_neigh, current_time)) {
+            case PENDING_NEIGH: type_str = "P"; break;
             case UNI_NEIGH: type_str = "U"; break;
             case BI_NEIGH: type_str = "B"; break;
             case LOST_NEIGH:
@@ -587,7 +628,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
 
         char rx_exp_str[7];
         char rx_lq_str[6];
-        if(NE_isDeleted(current_neigh)) {
+        if(NE_isLost(current_neigh)) {
             sprintf(rx_lq_str, "  -  ");
 
             sprintf(rx_exp_str, "   -  ");
@@ -596,7 +637,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
             timespec_to_string(&aux_t, remove_str, 6, 1);
             align_str(remove_str, remove_str, 6, "CR");
 
-            subtract_timespec(&aux_t, current_time, NE_getNeighborDeletedTime(current_neigh));
+            subtract_timespec(&aux_t, current_time, NE_getNeighborLostTime(current_neigh));
             timespec_to_string(&aux_t, lost_str, 6, 1);
             align_str(lost_str, lost_str, 6, "CR");
         } else {
@@ -642,10 +683,11 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
         sprintf(periods_str, "%d s %d s", (char)NE_getNeighborHelloPeriod(current_neigh), (char)NE_getNeighborHackPeriod(current_neigh));
         align_str(periods_str, periods_str, 11, "CR");
 
+        char* accepted_str = NE_isAccepted(current_neigh) ? "A" : "F";
 
-        sprintf(ptr, "%2.d   %s   %s   %s   %s   %s   %s   %s   "
+        sprintf(ptr, "%2.d   %s   %s   %s   %s   %s   %s   %s   %s   "
         " %s    %s   %s   %s   %s   %s   %s \n",
-        counter+1, id_str, addr_str, seq_str, type_str, periods_str, rx_lq_str, tx_lq_str, traffic_str, rx_exp_str, tx_exp_str, found_str, lost_str, remove_str, neighs_str);
+        counter+1, id_str, addr_str, seq_str, type_str, accepted_str, periods_str, rx_lq_str, tx_lq_str, traffic_str, rx_exp_str, tx_exp_str, found_str, lost_str, remove_str, neighs_str);
         ptr += strlen(ptr);
 
         // 2-hop neighs
@@ -717,7 +759,8 @@ void NT_serialize(NeighborsTable* nt, unsigned char* myID, WLANAddr* myMAC, doub
     NeighborEntry* current_neigh = NULL;
     while( (current_neigh = NT_nextNeighbor(nt, &iterator)) ) {
 
-        if( !NE_isDeleted(current_neigh) ) {
+        bool not_pending = !NE_isPending(current_neigh);
+        if( !NE_isLost(current_neigh) && not_pending ) {
 
             unsigned char* neigh_id = NE_getNeighborID(current_neigh);
 

@@ -24,10 +24,11 @@
 #include "discovery_period/discovery_period.h"
 #include "discovery_context/discovery_context.h"
 #include "link_quality/link_quality.h"
+#include "link_admission/link_admission.h"
 
 typedef struct _DiscoveryAlgorithm DiscoveryAlgorithm;
 
-DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, DiscoveryPeriod* d_period, LinkQuality* lq_metric, DiscoveryContext* d_context);
+DiscoveryAlgorithm* newDiscoveryAlgorithm(DiscoveryPattern* d_pattern, DiscoveryPeriod* d_period, LinkQuality* lq_metric, LinkAdmission* la_policy, DiscoveryContext* d_context);
 
 void destroyDiscoveryAlgorithm(DiscoveryAlgorithm* alg);
 
@@ -36,6 +37,8 @@ void DA_setDiscoveryPattern(DiscoveryAlgorithm* alg, DiscoveryPattern* new_d_pat
 void DA_setDiscoveryPeriod(DiscoveryAlgorithm* alg, DiscoveryPeriod* new_d_period);
 
 void DA_setLinkQuality(DiscoveryAlgorithm* alg, LinkQuality* new_lq_metric);
+
+void DA_setLinkAdmission(DiscoveryAlgorithm* alg, LinkAdmission* new_la_policy);
 
 void DA_setDiscoveryContext(DiscoveryAlgorithm* alg, DiscoveryContext* new_d_context);
 
@@ -98,6 +101,8 @@ double DA_computeLinkQuality(DiscoveryAlgorithm* alg, void* lq_attrs, double pre
 void* DA_createLinkQualityAttributes(DiscoveryAlgorithm* alg);
 
 void DA_destroyLinkQualityAttributes(DiscoveryAlgorithm* alg, void* lq_attrs);
+
+bool DA_evalLinkAdmission(DiscoveryAlgorithm* alg, NeighborEntry* neigh, struct timespec* current_time);
 
 void DA_createMessage(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size);
 
