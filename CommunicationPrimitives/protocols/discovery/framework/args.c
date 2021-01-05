@@ -17,7 +17,7 @@
 
 #include <assert.h>
 
-discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algorithm, unsigned int hello_misses, unsigned int hack_misses, unsigned long neigh_hold_time_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_transition_period_n, bool ignore_zero_seq, double lq_epsilon, int lq_precision, double lq_threshold, double traffic_epsilon, int traffic_precision, double traffic_threshold, unsigned int discov_env_refresh_period_s, unsigned int traffic_n_bucket, unsigned int traffic_bucket_duration_s, unsigned int churn_n_bucket, unsigned int churn_bucket_duration_s, char* traffic_window_type, char* churn_window_type, double churn_epsilon, int churn_precision, double neigh_density_epsilon, int neigh_density_precision) {
+discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algorithm, unsigned int hello_misses, unsigned int hack_misses, unsigned long neigh_hold_time_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_transition_period_n, unsigned long min_hello_interval_ms, unsigned long min_hack_interval_ms, bool ignore_zero_seq, double lq_epsilon, int lq_precision, double lq_threshold, double traffic_epsilon, int traffic_precision, double traffic_threshold, unsigned int discov_env_refresh_period_s, unsigned int traffic_n_bucket, unsigned int traffic_bucket_duration_s, unsigned int churn_n_bucket, unsigned int churn_bucket_duration_s, char* traffic_window_type, char* churn_window_type, double churn_epsilon, int churn_precision, double neigh_density_epsilon, int neigh_density_precision, bool toggle_env) {
 
     discovery_framework_args* args = malloc(sizeof(discovery_framework_args));
 
@@ -30,6 +30,9 @@ discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algor
     args->max_jitter_ms = max_jitter_ms;
     args->period_margin_ms = max_jitter_ms;
     args->announce_transition_period_n = announce_transition_period_n;
+
+    args->min_hello_interval_ms = min_hello_interval_ms;
+    args->min_hack_interval_ms = min_hack_interval_ms;
 
     args->ignore_zero_seq = ignore_zero_seq;
 
@@ -55,6 +58,8 @@ discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algor
     args->neigh_density_epsilon = neigh_density_epsilon;
     args->neigh_density_precision = neigh_density_precision;
 
+    args->toggle_env = toggle_env;
+
     return args;
 }
 
@@ -76,6 +81,8 @@ discovery_framework_args* default_discovery_framework_args() {
         500, //unsigned long max_jitter_ms,
         500, //unsigned long period_margin_ms,
         3, //unsigned int announce_transition_period_n,
+        1000, //unsigned long min_hello_interval_ms,
+        1000, //unsigned long min_hack_interval_ms
         true, //bool ignore_zero_seq,
         0.05, //double lq_epsilon,
         -2, //int lq_precision,
@@ -93,7 +100,8 @@ discovery_framework_args* default_discovery_framework_args() {
         0.1, //double churn_epsilon,
         -2, //double churn_precision,
         0.1, //double neigh_density_epsilon,
-        -2 //double neigh_density_precision
+        -2, //double neigh_density_precision
+        false // toggle_env
     );
 }
 
@@ -155,8 +163,12 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
                 args->period_margin_ms = strtol(value, NULL, 10);
             } else if( strcmp(key, "announce_transition_period_n") == 0  ) {
                 args->announce_transition_period_n = strtol(value, NULL, 10);
+            } else if( strcmp(key, "min_hello_interval_ms") == 0  ) {
+                args->min_hello_interval_ms = strtol(value, NULL, 10);
+            } else if( strcmp(key, "min_hack_interval_ms") == 0  ) {
+                args->min_hack_interval_ms = strtol(value, NULL, 10);
             } else if( strcmp(key, "ignore_zero_seq") == 0  ) {
-                args->ignore_zero_seq = strcmp(value, "true") == 0 || strcmp(value, "True") == 0;
+                args->ignore_zero_seq = parse_bool(value);
             } else if( strcmp(key, "lq_epsilon") == 0  ) {
                 args->lq_epsilon = strtod(value, NULL);
             } else if( strcmp(key, "lq_precision") == 0  ) {
@@ -191,6 +203,8 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
                 args->neigh_density_epsilon = strtod(value, NULL);
             } else if( strcmp(key, "neigh_density_precision") == 0  ) {
                 args->neigh_density_precision = strtol(value, NULL, 10);
+            } else if( strcmp(key, "toggle_env") == 0  ) {
+                args->toggle_env = parse_bool(value);
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
