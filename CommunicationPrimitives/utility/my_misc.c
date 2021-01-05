@@ -19,6 +19,8 @@
 #include "Yggdrasil/core/utils/hashfunctions.h"
 
 #include "utility/my_sys.h"
+#include "utility/my_string.h"
+
 #include <linux/limits.h>
 
 #include <assert.h>
@@ -359,7 +361,7 @@ topology_manager_args* load_overlay(char* overlay_path, char* hostname) {
 
     int db_size = (int) strtol(str, NULL, 10);
 
-	topology_manager_args* t_args = topology_manager_args_init(db_size, db_file_path, neighs_file_path, true);
+	topology_manager_args* t_args = topology_manager_args_init(db_size, new_str(db_file_path), new_str(neighs_file_path), true);
 	return t_args;
 }
 

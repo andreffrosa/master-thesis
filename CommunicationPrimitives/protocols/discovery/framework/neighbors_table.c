@@ -625,14 +625,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
 
         char remove_str[7];
         char lost_str[7];
-
-        char rx_exp_str[7];
-        char rx_lq_str[6];
         if(NE_isLost(current_neigh)) {
-            sprintf(rx_lq_str, "  -  ");
-
-            sprintf(rx_exp_str, "   -  ");
-
             subtract_timespec(&aux_t, NE_getNeighborRemovalTime(current_neigh), current_time);
             timespec_to_string(&aux_t, remove_str, 6, 1);
             align_str(remove_str, remove_str, 6, "CR");
@@ -641,26 +634,30 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
             timespec_to_string(&aux_t, lost_str, 6, 1);
             align_str(lost_str, lost_str, 6, "CR");
         } else {
+            sprintf(remove_str, "   -  ");
+            sprintf(lost_str, "   -  ");
+        }
+
+        char rx_exp_str[7];
+        char rx_lq_str[6];
+        if(compare_timespec(NE_getNeighborRxExpTime(current_neigh), current_time) <= 0 ) {
+            sprintf(rx_lq_str, "  -  ");
+            sprintf(rx_exp_str, "   -  ");
+        } else {
             sprintf(rx_lq_str, "%0.3f", NE_getRxLinkQuality(current_neigh));
 
             subtract_timespec(&aux_t, NE_getNeighborRxExpTime(current_neigh), current_time);
             timespec_to_string(&aux_t, rx_exp_str, 6, 1);
             align_str(rx_exp_str, rx_exp_str, 6, "CR");
-
-            sprintf(remove_str, "   -  ");
-
-            sprintf(lost_str, "   -  ");
         }
 
         char tx_exp_str[7];
         char tx_lq_str[6];
-        if(compare_timespec(NE_getNeighborTxExpTime(current_neigh), current_time) < 0) {
+        if(compare_timespec(NE_getNeighborTxExpTime(current_neigh), current_time) <= 0) {
             sprintf(tx_exp_str, "   -  ");
-
             sprintf(tx_lq_str, "  -  ");
         } else {
             sprintf(tx_lq_str, "%0.3f", NE_getTxLinkQuality(current_neigh));
-
 
             subtract_timespec(&aux_t, NE_getNeighborTxExpTime(current_neigh), current_time);
             timespec_to_string(&aux_t, tx_exp_str, 6, 1);
@@ -683,7 +680,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
         sprintf(periods_str, "%d s %d s", (char)NE_getNeighborHelloPeriod(current_neigh), (char)NE_getNeighborHackPeriod(current_neigh));
         align_str(periods_str, periods_str, 11, "CR");
 
-        char* accepted_str = NE_isAccepted(current_neigh) ? "A" : "F";
+        char* accepted_str = NE_isAccepted(current_neigh) ? "T" : "F";
 
         sprintf(ptr, "%2.d   %s   %s   %s   %s   %s   %s   %s   %s   "
         " %s    %s   %s   %s   %s   %s   %s \n",
@@ -720,7 +717,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
 
             char c = uuid_compare(myID, nneigh->id) == 0 ? '*' : ' ';
 
-            sprintf(ptr, "     %c   %s                   %s   %s                 %s   %s    %s             %s  \n",
+            sprintf(ptr, "     %c   %s                   %s   %s                     %s   %s    %s             %s  \n",
             c, id_str, seq_str, type_str, rx_lq_str, tx_lq_str, traffic_str, rx_exp_str);
             ptr += strlen(ptr);
         }

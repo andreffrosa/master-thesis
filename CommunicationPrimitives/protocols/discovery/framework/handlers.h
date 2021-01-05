@@ -78,7 +78,7 @@ void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_pa
 
 void DF_uponNeighborChangesTimer(discovery_framework_state* state);
 
-bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh);
+bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh_id);
 
 void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state);
 
