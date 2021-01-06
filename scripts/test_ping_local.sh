@@ -11,8 +11,8 @@ PIS=$1
 DURATION=$2
 
 TESTS=(
-"routing/static"
-#"routing/olsr;broadcast/mpr;discovery/OLSRDiscovery"
+#"routing/static"
+"routing/olsr;broadcast/mpr;discovery/OLSRDiscovery"
 )
 
 i=1

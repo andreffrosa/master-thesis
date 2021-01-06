@@ -282,6 +282,10 @@ static void rcvMessage(YggMessage* msg, unsigned int* last_rep_counter, RoutingA
 
     void* ptr = NULL;
 
+    unsigned short src_proto = 0;
+    ptr = YggMessage_readPayload(msg, ptr, &src_proto, sizeof(src_proto));
+    assert(src_proto == ROUTING_FRAMEWORK_PROTO_ID);
+
     unsigned short payload_size = 0;
     ptr = YggMessage_readPayload(msg, ptr, &payload_size, sizeof(payload_size));
 
@@ -295,6 +299,9 @@ static void rcvMessage(YggMessage* msg, unsigned int* last_rep_counter, RoutingA
     char type[4] = {0};
     unsigned int counter = 0;
     struct timespec time = {0};
+
+    printf("%s\n", m);
+    fflush(stdout);
 
     int ret = sscanf(m, "%s [%u] %lu %lu", type, &counter, &time.tv_sec, &time.tv_nsec);
     assert(ret == 4);

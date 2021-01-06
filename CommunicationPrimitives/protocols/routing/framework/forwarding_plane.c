@@ -68,6 +68,8 @@ void RF_DeliverMessage(routing_framework_state* state, RoutingHeader* header, Yg
 void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
     state->stats.messages_requested++;
 
+    printf("XE\n");
+
     // Deserialize request
     void* ptr = NULL;
     uuid_t destination_id;
@@ -119,21 +121,24 @@ void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
 
 void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
 
-    // Check if the current node is the next-hop
-    bool im_next_hop = memcmp(msg->destAddr.data, getMyWLANAddr()->data, WLAN_ADDR_LEN) == 0;
+    // Remove Framework's header of the message
+    YggMessage toDeliver;
+    RoutingHeader header;
+    RF_deserializeMessage(msg, &header, &toDeliver);
 
-    if(!im_next_hop) {
+    // Check if the current node is the next-hop
+    //bool im_next_hop = memcmp(msg->destAddr.data, state->myAddr.data, WLAN_ADDR_LEN) == 0;
+    bool im_next_hop = uuid_compare(header.next_hop_id, state->myID) == 0;
+
+    printf("im_next_hop: %s\n", (im_next_hop?"T":"F"));
+
+    /*if(!im_next_hop) {
         WLANAddr* bcast_addr = getBroadcastAddr();
         im_next_hop = memcmp(msg->destAddr.data, bcast_addr->data, WLAN_ADDR_LEN) == 0;
         free(bcast_addr);
-    }
+    }*/
 
     if( im_next_hop ) {
-
-        // Remove Framework's header of the message
-        YggMessage toDeliver;
-        RoutingHeader header;
-        RF_deserializeMessage(msg, &header, &toDeliver);
 
         bool send_ack = false; // TODO:
         if(send_ack) {
@@ -156,9 +161,12 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
             }
             #endif
 
+            printf("JJJ\n");
+
             RF_processMessage(state, &header, &toDeliver);
         } else {
             // Duplicate message: ignore
+            printf("Duplicate message\n");
         }
     } else {
         // Message is not meant for this node: ignore
@@ -241,8 +249,8 @@ void RF_SendMessage(routing_framework_state* state, RoutingHeader* old_header, u
 
 void RF_serializeMessage(routing_framework_state* state, YggMessage* m, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, unsigned short ttl, YggMessage* toDeliver) {
 
-	assert(state != NULL);
-	assert(m != NULL);
+	assert(m);
+    assert(next_hop_addr);
     assert(old_header);
 
     YggMessage_init(m, next_hop_addr, ROUTING_FRAMEWORK_PROTO_ID);

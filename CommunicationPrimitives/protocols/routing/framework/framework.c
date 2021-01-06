@@ -157,8 +157,12 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
         ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
         type = aux;
 
+        printf("RECEIVED MSG \n");
+
         if(type == MSG_ROUTING_MESSAGE) {
             YggMessage_addPayload(&msg, ptr, message->dataLen - sizeof(unsigned short) - sizeof(byte));
+
+            printf("RECEIVED ROUTING MSG \n");
 
             RF_uponNewMessage(f_state, &msg);
             return true;

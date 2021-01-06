@@ -22,7 +22,7 @@
 //#define DEBUG_INCLUDE_EQ(current_level, statement_level) (current_level == statement_level)
 #define DEBUG_INCLUDE_GT(current_level, statement_level) (current_level >= statement_level)
 
-#define DISCOVERY_DEBUG_LEVEL FULL_DEBUG
+#define DISCOVERY_DEBUG_LEVEL SIMPLE_DEBUG
 #define BROADCAST_DEBUG_LEVEL SIMPLE_DEBUG
 #define ROUTING_DEBUG_LEVEL FULL_DEBUG
 
