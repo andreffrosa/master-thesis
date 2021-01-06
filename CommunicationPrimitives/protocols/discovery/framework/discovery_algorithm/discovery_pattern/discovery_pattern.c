@@ -209,25 +209,10 @@ DiscoveryInternalEventResult* DP_triggerEvent(DiscoveryPattern* dp, DiscoveryInt
         }
 
         case DPE_NEIGHBORHOOD_CHANGE_TIMER: {
-            NeighborChangeSummary* summary = event_args;
+            bool* aux = (bool*)event_args;
 
-            bool new_neighbor = summary->new_neighbor;
-            bool lost_neighbor = summary->lost_neighbor;
-            bool updated_neighbor = summary->updated_neighbor;
-
-            bool context_updates = summary->context_updates;
-
-            bool send_hello = \
-            (HELLO_newNeighbor(dp->hello_sh) && new_neighbor) || \
-            (HELLO_lostNeighbor(dp->hello_sh)  && lost_neighbor) || \
-            (HELLO_updateNeighbor(dp->hello_sh) && updated_neighbor) || \
-            (HELLO_updateContext(dp->hello_sh) && context_updates);
-
-            bool send_hack = \
-            (HACK_newNeighbor(dp->hack_sh) && new_neighbor) || \
-            (HACK_lostNeighbor(dp->hack_sh)  && lost_neighbor) || \
-            (HACK_updateNeighbor(dp->hack_sh) && updated_neighbor) || \
-            (HACK_updateContext(dp->hack_sh) && context_updates);
+            bool send_hello = aux[0];
+            bool send_hack = aux[1];
 
             if( send_hello || send_hack ) {
                 if(!send_hello) {

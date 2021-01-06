@@ -55,8 +55,10 @@ typedef struct discovery_framework_state_ {
     // Neighbor Change Timer
     bool neighbor_change_timer_active;          //
     uuid_t neighbor_change_timer_id;            //
-    struct timespec set_neighbor_change_time;   //
-    NeighborChangeSummary neighbor_change_summary;
+    //struct timespec set_neighbor_change_time;   //
+    //NeighborChangeSummary neighbor_change_summary;
+    struct timespec next_reactive_hello_time;
+    struct timespec next_reactive_hack_time;
 
     uuid_t discovery_environment_timer_id;                    //
 
@@ -78,7 +80,7 @@ void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_pa
 
 void DF_uponNeighborChangesTimer(discovery_framework_state* state);
 
-bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh);
+bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh_id);
 
 void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state);
 
