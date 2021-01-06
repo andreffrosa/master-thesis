@@ -125,7 +125,7 @@ void* NE_setContextAttributes(NeighborEntry* neigh, void* context_attributes);
 
 NeighborEntry* NT_nextNeighbor(NeighborsTable* neighbors, void** iterator);
 
-TwoHopNeighborEntry* newTwoHopNeighborEntry(unsigned char* id, unsigned short seq, bool is_bi, double rx_lq, double tx_lq, double traffic, struct timespec* expiration);
+TwoHopNeighborEntry* newTwoHopNeighborEntry(unsigned char* id, unsigned short seq, bool is_bi, bool is_lost, double rx_lq, double tx_lq, double traffic, struct timespec* expiration);
 
 unsigned char* THNE_getID(TwoHopNeighborEntry* two_hop_neigh);
 
@@ -136,6 +136,10 @@ void THNE_setHSEQ(TwoHopNeighborEntry* two_hop_neigh, unsigned short new_hseq);
 bool THNE_isBi(TwoHopNeighborEntry* two_hop_neigh);
 
 void THNE_setBi(TwoHopNeighborEntry* two_hop_neigh, bool is_bi);
+
+bool THNE_isLost(TwoHopNeighborEntry* two_hop_neigh);
+
+void THNE_setLost(TwoHopNeighborEntry* two_hop_neigh, bool is_lost);
 
 double THNE_getRxLinkQuality(TwoHopNeighborEntry* two_hop_neigh);
 

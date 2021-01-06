@@ -32,6 +32,14 @@ long lMax(long a, long b) {
 	return a > b ? a : b;
 }
 
+unsigned long ulMin(unsigned long a, unsigned long b) {
+	return a < b ? a : b;
+}
+
+unsigned long ulMax(unsigned long a, unsigned long b) {
+	return a > b ? a : b;
+}
+
 int iMin(int a, int b) {
 	return a < b ? a : b;
 }

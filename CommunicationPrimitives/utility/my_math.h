@@ -19,6 +19,8 @@
 // Min and Max
 long lMin(long a, long b);
 long lMax(long a, long b);
+unsigned long ulMin(unsigned long a, unsigned long b);
+unsigned long ulMax(unsigned long a, unsigned long b);
 double dMin(double a, double b);
 double dMax(double a, double b);
 int iMin(int a, int b);

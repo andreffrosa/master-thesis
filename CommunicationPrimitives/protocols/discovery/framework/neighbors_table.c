@@ -73,6 +73,7 @@ typedef struct TwoHopNeighborEntry_ {
     uuid_t id;
     unsigned short hseq;
     bool is_bi;
+    bool is_lost;
     double rx_lq;
     double tx_lq;
     double traffic;
@@ -443,12 +444,13 @@ NeighborEntry* NT_nextNeighbor(NeighborsTable* nt, void** iterator) {
     }
 }
 
-TwoHopNeighborEntry* newTwoHopNeighborEntry(unsigned char* id, unsigned short seq, bool is_bi, double rx_lq, double tx_lq, double traffic, struct timespec* expiration) {
+TwoHopNeighborEntry* newTwoHopNeighborEntry(unsigned char* id, unsigned short seq, bool is_bi, bool is_lost, double rx_lq, double tx_lq, double traffic, struct timespec* expiration) {
     TwoHopNeighborEntry* nt = malloc(sizeof(TwoHopNeighborEntry));
 
     uuid_copy(nt->id, id);
     nt->hseq = seq;
     nt->is_bi = is_bi;
+    nt->is_lost = is_lost;
     nt->rx_lq = rx_lq;
     nt->tx_lq = tx_lq;
     nt->traffic = traffic;
@@ -485,6 +487,18 @@ void THNE_setBi(TwoHopNeighborEntry* two_hop_neigh, bool is_bi) {
     assert(two_hop_neigh);
 
     two_hop_neigh->is_bi = is_bi;
+}
+
+bool THNE_isLost(TwoHopNeighborEntry* two_hop_neigh) {
+    assert(two_hop_neigh);
+
+    return two_hop_neigh->is_lost;
+}
+
+void THNE_setLost(TwoHopNeighborEntry* two_hop_neigh, bool is_lost) {
+    assert(two_hop_neigh);
+
+    two_hop_neigh->is_lost = is_lost;
 }
 
 double THNE_getRxLinkQuality(TwoHopNeighborEntry* two_hop_neigh) {
@@ -625,14 +639,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
 
         char remove_str[7];
         char lost_str[7];
-
-        char rx_exp_str[7];
-        char rx_lq_str[6];
         if(NE_isLost(current_neigh)) {
-            sprintf(rx_lq_str, "  -  ");
-
-            sprintf(rx_exp_str, "   -  ");
-
             subtract_timespec(&aux_t, NE_getNeighborRemovalTime(current_neigh), current_time);
             timespec_to_string(&aux_t, remove_str, 6, 1);
             align_str(remove_str, remove_str, 6, "CR");
@@ -641,26 +648,30 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
             timespec_to_string(&aux_t, lost_str, 6, 1);
             align_str(lost_str, lost_str, 6, "CR");
         } else {
+            sprintf(remove_str, "   -  ");
+            sprintf(lost_str, "   -  ");
+        }
+
+        char rx_exp_str[7];
+        char rx_lq_str[6];
+        if(compare_timespec(NE_getNeighborRxExpTime(current_neigh), current_time) <= 0 ) {
+            sprintf(rx_lq_str, "  -  ");
+            sprintf(rx_exp_str, "   -  ");
+        } else {
             sprintf(rx_lq_str, "%0.3f", NE_getRxLinkQuality(current_neigh));
 
             subtract_timespec(&aux_t, NE_getNeighborRxExpTime(current_neigh), current_time);
             timespec_to_string(&aux_t, rx_exp_str, 6, 1);
             align_str(rx_exp_str, rx_exp_str, 6, "CR");
-
-            sprintf(remove_str, "   -  ");
-
-            sprintf(lost_str, "   -  ");
         }
 
         char tx_exp_str[7];
         char tx_lq_str[6];
-        if(compare_timespec(NE_getNeighborTxExpTime(current_neigh), current_time) < 0) {
+        if(compare_timespec(NE_getNeighborTxExpTime(current_neigh), current_time) <= 0) {
             sprintf(tx_exp_str, "   -  ");
-
             sprintf(tx_lq_str, "  -  ");
         } else {
             sprintf(tx_lq_str, "%0.3f", NE_getTxLinkQuality(current_neigh));
-
 
             subtract_timespec(&aux_t, NE_getNeighborTxExpTime(current_neigh), current_time);
             timespec_to_string(&aux_t, tx_exp_str, 6, 1);
@@ -683,7 +694,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
         sprintf(periods_str, "%d s %d s", (char)NE_getNeighborHelloPeriod(current_neigh), (char)NE_getNeighborHackPeriod(current_neigh));
         align_str(periods_str, periods_str, 11, "CR");
 
-        char* accepted_str = NE_isAccepted(current_neigh) ? "A" : "F";
+        char* accepted_str = NE_isAccepted(current_neigh) ? "T" : "F";
 
         sprintf(ptr, "%2.d   %s   %s   %s   %s   %s   %s   %s   %s   "
         " %s    %s   %s   %s   %s   %s   %s \n",
@@ -703,7 +714,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
             sprintf(seq_str, "%hu", nneigh->hseq);
             align_str(seq_str, seq_str, 5, "R");
 
-            type_str = nneigh->is_bi ? "B" : "U";
+            type_str = nneigh->is_lost ? "L" : (nneigh->is_bi ? "B" : "U");
 
             sprintf(rx_lq_str, "%0.3f", nneigh->rx_lq);
             if( !nneigh->is_bi ) {
@@ -720,7 +731,7 @@ char* NT_print(NeighborsTable* nt, char** str, struct timespec* current_time, un
 
             char c = uuid_compare(myID, nneigh->id) == 0 ? '*' : ' ';
 
-            sprintf(ptr, "     %c   %s                   %s   %s                 %s   %s    %s             %s  \n",
+            sprintf(ptr, "     %c   %s                   %s   %s                     %s   %s    %s             %s  \n",
             c, id_str, seq_str, type_str, rx_lq_str, tx_lq_str, traffic_str, rx_exp_str);
             ptr += strlen(ptr);
         }
@@ -806,39 +817,41 @@ void NT_serialize(NeighborsTable* nt, unsigned char* myID, WLANAddr* myMAC, doub
             while( (hit = hash_table_iterator_next(neighs, &iterator)) ) {
                 TwoHopNeighborEntry* current_neigh_2 = (TwoHopNeighborEntry*)hit->value;
 
-                unsigned char* neigh2_id = THNE_getID(current_neigh_2);
+                if( !THNE_isLost(current_neigh_2) ) {
+                    unsigned char* neigh2_id = THNE_getID(current_neigh_2);
 
-                if( uuid_compare(neigh2_id, myID) != 0 ) {
-                    graph_node* node = graph_find_node(g, neigh2_id);
-                    if( node == NULL ) {
-                        unsigned char* key = malloc(sizeof(uuid_t));
-                        uuid_copy(key, neigh2_id);
+                    if( uuid_compare(neigh2_id, myID) != 0 ) {
+                        graph_node* node = graph_find_node(g, neigh2_id);
+                        if( node == NULL ) {
+                            unsigned char* key = malloc(sizeof(uuid_t));
+                            uuid_copy(key, neigh2_id);
 
-                        byte* value = malloc(value_size);
-                        memset(value, 0, WLAN_ADDR_LEN);
-                        double traffic = THNE_getTraffic(current_neigh_2);
-                        memcpy(value+WLAN_ADDR_LEN, &traffic, sizeof(double));
+                            byte* value = malloc(value_size);
+                            memset(value, 0, WLAN_ADDR_LEN);
+                            double traffic = THNE_getTraffic(current_neigh_2);
+                            memcpy(value+WLAN_ADDR_LEN, &traffic, sizeof(double));
 
-                        graph_insert_node(g, key, value);
-                    }
+                            graph_insert_node(g, key, value);
+                        }
 
-                    edge = graph_find_edge(g, neigh2_id, neigh_id);
-                    assert(edge == NULL);
-
-                    label = malloc(sizeof(double));
-                    *label = THNE_getRxLinkQuality(current_neigh_2);
-
-                    graph_insert_edge(g, neigh2_id, neigh_id, label);
-
-                    // Is not two hop neigh also and is bi
-                    if( NT_getNeighbor(nt, neigh2_id) == NULL && THNE_isBi(current_neigh_2) ) {
-                        edge = graph_find_edge(g, neigh_id, neigh2_id);
+                        edge = graph_find_edge(g, neigh2_id, neigh_id);
                         assert(edge == NULL);
 
                         label = malloc(sizeof(double));
-                        *label = THNE_getTxLinkQuality(current_neigh_2);
+                        *label = THNE_getRxLinkQuality(current_neigh_2);
 
-                        graph_insert_edge(g, neigh_id, neigh2_id, label);
+                        graph_insert_edge(g, neigh2_id, neigh_id, label);
+
+                        // Is not two hop neigh also and is bi
+                        if( NT_getNeighbor(nt, neigh2_id) == NULL && THNE_isBi(current_neigh_2) ) {
+                            edge = graph_find_edge(g, neigh_id, neigh2_id);
+                            assert(edge == NULL);
+
+                            label = malloc(sizeof(double));
+                            *label = THNE_getTxLinkQuality(current_neigh_2);
+
+                            graph_insert_edge(g, neigh_id, neigh2_id, label);
+                        }
                     }
                 }
             }

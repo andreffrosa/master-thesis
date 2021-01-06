@@ -49,6 +49,9 @@ typedef struct discovery_framework_args_ {
     unsigned long period_margin_ms;
     unsigned int announce_transition_period_n;
 
+    unsigned long min_hello_interval_ms;
+    unsigned long min_hack_interval_ms;
+
     bool ignore_zero_seq;
 
     double lq_epsilon;
@@ -70,13 +73,15 @@ typedef struct discovery_framework_args_ {
     int churn_precision;
     double neigh_density_epsilon;
     int neigh_density_precision;
+
+    bool toggle_env;
 } discovery_framework_args;
 
 proto_def* discovery_framework_init(void* arg);
 
 void* discovery_framework_main_loop(main_loop_args* args);
 
-discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algorithm, unsigned int hello_misses, unsigned int hack_misses, unsigned long neigh_hold_time_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_transition_period_n, bool ignore_zero_seq, double lq_epsilon, int lq_precision, double lq_threshold, double traffic_epsilon, int traffic_precision, double traffic_threshold, unsigned int discov_env_refresh_period_s, unsigned int traffic_n_bucket, unsigned int traffic_bucket_duration_s, unsigned int churn_n_bucket, unsigned int churn_bucket_duration_s, char* traffic_window_type, char* churn_window_type, double churn_epsilon, int churn_precision, double neigh_density_epsilon, int neigh_density_precision);
+discovery_framework_args* new_discovery_framework_args(DiscoveryAlgorithm* algorithm, unsigned int hello_misses, unsigned int hack_misses, unsigned long neigh_hold_time_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_transition_period_n, unsigned long min_hello_interval_ms, unsigned long min_hack_interval_ms, bool ignore_zero_seq, double lq_epsilon, int lq_precision, double lq_threshold, double traffic_epsilon, int traffic_precision, double traffic_threshold, unsigned int discov_env_refresh_period_s, unsigned int traffic_n_bucket, unsigned int traffic_bucket_duration_s, unsigned int churn_n_bucket, unsigned int churn_bucket_duration_s, char* traffic_window_type, char* churn_window_type, double churn_epsilon, int churn_precision, double neigh_density_epsilon, int neigh_density_precision, bool toggle_env);
 
 discovery_framework_args* default_discovery_framework_args();
 
