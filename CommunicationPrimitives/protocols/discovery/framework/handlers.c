@@ -1272,7 +1272,7 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
 
     if(hello_is_set || hack_is_set) {
 
-            printf("YO hello_is_set = %s (%lu %lu)    hack_is_set = %s (%lu %lu)\n", hello_is_set?"T":"F", hello_t.tv_sec, hello_t.tv_nsec, hack_is_set?"T":"F", hack_t.tv_sec, hack_t.tv_nsec);
+            //printf("YO hello_is_set = %s (%lu %lu)    hack_is_set = %s (%lu %lu)\n", hello_is_set?"T":"F", hello_t.tv_sec, hello_t.tv_nsec, hack_is_set?"T":"F", hack_t.tv_sec, hack_t.tv_nsec);
 
             if( !state->neighbor_change_timer_active ) {
                 assert(compare_timespec(&next_timer, (struct timespec*)&zero_timespec) == 0);
@@ -1282,7 +1282,7 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
 
                 SetTimer(&min_t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
 
-                printf("SET TIMER %lu %lu\n", min_t.tv_sec, min_t.tv_nsec);
+                //printf("SET TIMER %lu %lu\n", min_t.tv_sec, min_t.tv_nsec);
             } else {
                 //assert(compare_timespec(&next_timer, (struct timespec*)&zero_timespec) != 0);
 
@@ -1294,10 +1294,10 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
                     CancelTimer(state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID);
 
                     SetTimer(&min_t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
-                    printf("RESET TIMER %lu %lu\n", min_t.tv_sec, min_t.tv_nsec);
+                    // printf("RESET TIMER %lu %lu\n", min_t.tv_sec, min_t.tv_nsec);
                 }
 
-                printf("XO\n");
+                //printf("XO\n");
             }
     }
 }
