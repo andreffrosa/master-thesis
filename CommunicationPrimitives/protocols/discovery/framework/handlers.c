@@ -1229,8 +1229,11 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
             }
         }
     } else {
-        assert(compare_timespec(&state->next_reactive_hello_time, &state->current_time) >= 0);
-        subtract_timespec(&hello_t, &state->next_reactive_hello_time, &state->current_time);
+        if( compare_timespec(&state->next_reactive_hello_time, &state->current_time) >= 0 ) {
+            subtract_timespec(&hello_t, &state->next_reactive_hello_time, &state->current_time);
+        } else {
+            copy_timespec(&hello_t, &zero_timespec);
+        }
     }
 
     struct timespec hack_t = {0};
@@ -1253,8 +1256,11 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
             }
         }
     } else {
-        assert(compare_timespec(&state->next_reactive_hack_time, &state->current_time) >= 0);
-        subtract_timespec(&hack_t, &state->next_reactive_hack_time, &state->current_time);
+        if( compare_timespec(&state->next_reactive_hack_time, &state->current_time) >= 0 ) {
+            subtract_timespec(&hack_t, &state->next_reactive_hack_time, &state->current_time);
+        } else {
+            copy_timespec(&hack_t, &zero_timespec);
+        }
     }
 
     struct timespec min_t = {0};
