@@ -654,10 +654,10 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
                 bool accepted = DA_evalLinkAdmission(state->args->algorithm, neigh, &state->current_time);
                 NE_setAccepted(neigh, accepted);
 
-                bool became_accepted = !old_accepted && accepted;
+                //bool became_accepted = !old_accepted && accepted;
                 bool lost_accepted = old_accepted && !accepted;
 
-                assert(!became_accepted);
+                //assert(!became_accepted);
 
                 if(lost_accepted) {
                     assert(!NE_isPending(neigh));
@@ -801,12 +801,15 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         bool schedule = false;
 
         if( summary->lost_neighbor ) {
-            DF_notifyLostNeighbor(state, neigh);
+            if(!NE_isPending(neigh)) {
+                DF_notifyLostNeighbor(state, neigh);
+
+                DE_registerLostNeighbor(state->environment, &state->current_time);
+            }
 
             changed = true;
             schedule = true;
 
-            DE_registerLostNeighbor(state->environment, &state->current_time);
         } else {
             if( summary->updated_neighbor || summary->lost_2hop_neighbor ) {
                 if(!NE_isPending(neigh)) {
@@ -884,7 +887,7 @@ void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state) {
 
     changed |= DE_setNeigbhorsDensity(state->environment, neighbors_density, state->args->neigh_density_epsilon);
 
-    if( changed ) {
+    if( changed && state->args->toggle_env ) {
         // Log
         #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
         char* str = NULL;
@@ -1017,6 +1020,8 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
 
     bool send_hack = compare_timespec(&state->next_reactive_hack_time, (struct timespec*)&zero_timespec) != 0 && compare_timespec(&state->next_reactive_hack_time, &state->current_time) <= 0;
 
+    assert(send_hello || send_hack);
+
     bool aux[2] = {send_hello, send_hack};
 
     YggMessage msg = {0};
@@ -1044,17 +1049,41 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR-CHANGE TIMER", str);
     #endif
 
-    if(dsp->hello) {
+    if(send_hello) {
         copy_timespec(&state->next_reactive_hello_time, &zero_timespec);
     }
 
-    if(dsp->hacks) {
+    if(send_hack) {
         copy_timespec(&state->next_reactive_hack_time, &zero_timespec);
     }
 
-    DF_sendMessage(state, dsp, &msg);
+    bool hello_is_set = compare_timespec(&state->next_reactive_hello_time, (struct timespec*)&zero_timespec) != 0;
+    bool hack_is_set = compare_timespec(&state->next_reactive_hack_time, (struct timespec*)&zero_timespec) != 0;
 
-    //state->neighbor_change_timer_active = false;
+    struct timespec next_timer = {0};
+    if(hello_is_set && !hack_is_set) {
+        copy_timespec(&next_timer, &state->next_reactive_hello_time);
+    } else if(!hello_is_set && hack_is_set) {
+        copy_timespec(&next_timer, &state->next_reactive_hack_time);
+    } else if(hello_is_set || hack_is_set) {
+        if( compare_timespec(&state->next_reactive_hello_time, &state->next_reactive_hack_time) < 0 ) {
+            copy_timespec(&next_timer, &state->next_reactive_hello_time);
+        } else {
+            copy_timespec(&next_timer, &state->next_reactive_hack_time);
+        }
+    } /*else {
+        assert(!state->neighbor_change_timer_active);
+    }*/
+
+    if(hello_is_set || hack_is_set) {
+        struct timespec t = {0};
+        subtract_timespec(&t, &next_timer, &state->current_time);
+        SetTimer(&t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
+    } else {
+        state->neighbor_change_timer_active = false;
+    }
+
+    DF_sendMessage(state, dsp, &msg);
 }
 
 bool computeNextTimer(unsigned long max_jitter_ms, unsigned long min_interval_ms, struct timespec* current_time, struct timespec* last_timer, struct timespec* next_timer, struct timespec* other_timer, struct timespec* t) {
@@ -1067,16 +1096,16 @@ bool computeNextTimer(unsigned long max_jitter_ms, unsigned long min_interval_ms
     struct timespec t_min = {0};
     add_timespec(&t_min, last_timer, &min_interval);
 
-    if( compare_timespec(&t_min, &t_max) < 0 && compare_timespec(&t_max, current_time) < 0 ) {
+    if( compare_timespec(&t_min, &t_max) < 0 && compare_timespec(current_time, &t_max) < 0 ) {
         struct timespec diff_ = {0};
-        subtract_timespec(&diff_, &t_min, &t_max);
+        subtract_timespec(&diff_, &t_max, &t_min);
         unsigned long diff = timespec_to_milli(&diff_);
 
         struct timespec diff2_ = {0};
         subtract_timespec(&diff2_, &t_max, current_time);
-        unsigned long diff2 = timespec_to_milli(&diff_);
+        unsigned long diff2 = timespec_to_milli(&diff2_);
 
-        bool set_timer = compare_timespec(current_time, &t_max) < 0 && compare_timespec(&t_min, &t_max) && diff >= max_jitter_ms && diff2 >= max_jitter_ms;
+        bool set_timer = diff >= max_jitter_ms && diff2 >= max_jitter_ms;
 
         if(set_timer) {
             struct timespec jitter = {0};
@@ -1093,7 +1122,8 @@ bool computeNextTimer(unsigned long max_jitter_ms, unsigned long min_interval_ms
                 add_timespec(&close, current_time, &close);
 
                 if( other_timer && compare_timespec(other_timer, &close) <= 0 ) {
-                    copy_timespec(t, other_timer);
+                    assert(compare_timespec(other_timer, current_time) >= 0);
+                    subtract_timespec(t, other_timer, current_time);
                     return true;
                 } else {
                     copy_timespec(t, &jitter);
@@ -1161,17 +1191,27 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
     bool lost_neighbor = summary.lost_neighbor;
     bool updated_neighbor = summary.updated_neighbor;
 
+    bool hello_is_set = compare_timespec(&state->next_reactive_hello_time, (struct timespec*)&zero_timespec) != 0;
+    bool hack_is_set = compare_timespec(&state->next_reactive_hack_time, (struct timespec*)&zero_timespec) != 0;
+
     struct timespec next_timer = {0};
-    if( compare_timespec(&state->next_reactive_hello_time, &state->next_reactive_hack_time) < 0 ) {
+    if(hello_is_set && !hack_is_set) {
         copy_timespec(&next_timer, &state->next_reactive_hello_time);
+    } else if(!hello_is_set && hack_is_set) {
+        copy_timespec(&next_timer, &state->next_reactive_hack_time);
+    } else if(hello_is_set || hack_is_set) {
+        if( compare_timespec(&state->next_reactive_hello_time, &state->next_reactive_hack_time) < 0 ) {
+            copy_timespec(&next_timer, &state->next_reactive_hello_time);
+        } else {
+            copy_timespec(&next_timer, &state->next_reactive_hack_time);
+        }
     } else {
-        copy_timespec(&next_timer, &state->next_reactive_hello_time);
+        assert(!state->neighbor_change_timer_active);
     }
 
-    bool hello_is_not_set = compare_timespec(&state->next_reactive_hello_time, (struct timespec*)&zero_timespec) == 0;
-    bool hack_is_not_set = compare_timespec(&state->next_reactive_hack_time, (struct timespec*)&zero_timespec) == 0;
+    struct timespec hello_t = {0};
 
-    if( hello_is_not_set ) {
+    if( !hello_is_set ) {
         bool send_hello = \
         (DA_HelloNewNeighbor(alg) && new_neighbor) || \
         (DA_HelloLostNeighbor(alg)  && lost_neighbor) || \
@@ -1179,19 +1219,23 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
         (DA_HelloContextUpdate(alg) && context_updates);
 
         if(send_hello) {
-            struct timespec* other_timer = hack_is_not_set ? NULL : &state->next_reactive_hack_time;
+            struct timespec* other_timer = hack_is_set ? &state->next_reactive_hack_time : NULL;
 
-            struct timespec t = {0};
-            bool set = computeNextTimer(state->args->max_jitter_ms, state->args->min_hello_interval_ms, &state->current_time, &state->last_hello_time, &state->next_hello_time, other_timer, &t);
+            bool set = computeNextTimer(state->args->max_jitter_ms, state->args->min_hello_interval_ms, &state->current_time, &state->last_hello_time, &state->next_hello_time, other_timer, &hello_t);
 
             if(set) {
-                copy_timespec(&state->next_reactive_hello_time, &t);
+                add_timespec(&state->next_reactive_hello_time, &state->current_time, &hello_t);
+                hello_is_set = true;
             }
         }
+    } else {
+        assert(compare_timespec(&state->next_reactive_hello_time, &state->current_time) >= 0);
+        subtract_timespec(&hello_t, &state->next_reactive_hello_time, &state->current_time);
     }
-    hello_is_not_set = compare_timespec(&state->next_reactive_hello_time, (struct timespec*)&zero_timespec) == 0;
 
-    if( hack_is_not_set ) {
+    struct timespec hack_t = {0};
+
+    if( !hack_is_set ) {
         bool send_hack =  \
         (DA_HackNewNeighbor(alg) && new_neighbor) || \
         (DA_HackLostNeighbor(alg)  && lost_neighbor) || \
@@ -1199,45 +1243,62 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
         (DA_HackContextUpdate(alg) && context_updates);
 
         if(send_hack) {
-            struct timespec* other_timer = hello_is_not_set ? NULL : &state->next_reactive_hello_time;
+            struct timespec* other_timer = hello_is_set ? &state->next_reactive_hello_time : NULL;
 
-            struct timespec t = {0};
-            bool set = computeNextTimer(state->args->max_jitter_ms, state->args->min_hack_interval_ms, &state->current_time, &state->last_hack_time, &state->next_hack_time, other_timer, &t);
+            bool set = computeNextTimer(state->args->max_jitter_ms, state->args->min_hack_interval_ms, &state->current_time, &state->last_hack_time, &state->next_hack_time, other_timer, &hack_t);
 
             if(set) {
-                copy_timespec(&state->next_reactive_hack_time, &t);
+                add_timespec(&state->next_reactive_hack_time, &state->current_time, &hack_t);
+                hack_is_set = true;
             }
         }
-    }
-    hack_is_not_set = compare_timespec(&state->next_reactive_hack_time, (struct timespec*)&zero_timespec) == 0;
-
-    struct timespec min_next = {0};
-    if( compare_timespec(&state->next_reactive_hello_time, &state->next_reactive_hack_time) < 0 ) {
-        copy_timespec(&min_next, &state->next_reactive_hello_time);
     } else {
-        copy_timespec(&min_next, &state->next_reactive_hello_time);
+        assert(compare_timespec(&state->next_reactive_hack_time, &state->current_time) >= 0);
+        subtract_timespec(&hack_t, &state->next_reactive_hack_time, &state->current_time);
     }
 
-    if( !state->neighbor_change_timer_active ) {
-        assert(compare_timespec(&next_timer, (struct timespec*)&zero_timespec) == 0);
-
-        if(compare_timespec(&min_next, (struct timespec*)&zero_timespec) != 0) {
-            // Set timer
-            state->neighbor_change_timer_active = true;
-
-            struct timespec t = {0};
-            subtract_timespec(&t, &state->current_time, &min_next);
-            SetTimer(&t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
+    struct timespec min_t = {0};
+    if(hello_is_set && !hack_is_set) {
+        copy_timespec(&min_t, &hello_t);
+    } else if(!hello_is_set && hack_is_set) {
+        copy_timespec(&min_t, &hack_t);
+    } else if(hello_is_set || hack_is_set) {
+        if( compare_timespec(&hello_t, &hack_t) < 0 ) {
+            copy_timespec(&min_t, &hello_t);
+        } else {
+            copy_timespec(&min_t, &hack_t);
         }
-    } else {
-        if(compare_timespec(&min_next, &next_timer) < 0) {
-            // Reset Timer
-            CancelTimer(state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID);
+    }
 
-            struct timespec t = {0};
-            subtract_timespec(&t, &state->current_time, &min_next);
-            SetTimer(&t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
-        }
+    if(hello_is_set || hack_is_set) {
+
+            printf("YO hello_is_set = %s (%lu %lu)    hack_is_set = %s (%lu %lu)\n", hello_is_set?"T":"F", hello_t.tv_sec, hello_t.tv_nsec, hack_is_set?"T":"F", hack_t.tv_sec, hack_t.tv_nsec);
+
+            if( !state->neighbor_change_timer_active ) {
+                assert(compare_timespec(&next_timer, (struct timespec*)&zero_timespec) == 0);
+
+                // Set timer
+                state->neighbor_change_timer_active = true;
+
+                SetTimer(&min_t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
+
+                printf("SET TIMER %lu %lu\n", min_t.tv_sec, min_t.tv_nsec);
+            } else {
+                //assert(compare_timespec(&next_timer, (struct timespec*)&zero_timespec) != 0);
+
+                struct timespec min_next = {0};
+                add_timespec(&min_next, &min_t, &state->current_time);
+
+                if(compare_timespec(&min_next, &next_timer) < 0) {
+                    // Reset Timer
+                    CancelTimer(state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID);
+
+                    SetTimer(&min_t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
+                    printf("RESET TIMER %lu %lu\n", min_t.tv_sec, min_t.tv_nsec);
+                }
+
+                printf("XO\n");
+            }
     }
 }
 
@@ -2372,7 +2433,7 @@ void DF_notifyNeighborhood(discovery_framework_state* state) {
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
     char* str1 = NULL, *str2 = NULL;
 
-    if(!state->args->toggle_env) {
+    if(state->args->toggle_env) {
         DF_uponDiscoveryEnvironmentTimer(state);
         NE_print(state->environment, &str1);
     } else {
