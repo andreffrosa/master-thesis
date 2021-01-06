@@ -104,15 +104,17 @@ void DF_init(discovery_framework_state* state) {
     // Neighbor Change Timer
     genUUID(state->neighbor_change_timer_id);
     state->neighbor_change_timer_active = false;
-    copy_timespec(&state->set_neighbor_change_time, &zero_timespec);
-    memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
+    //copy_timespec(&state->set_neighbor_change_time, &zero_timespec);
+    //memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
+    copy_timespec(&state->next_reactive_hello_time, &zero_timespec);
+    copy_timespec(&state->next_reactive_hack_time, &zero_timespec);
 
     // Stats
 	memset(&state->stats, 0, sizeof(discovery_stats));
 
     // Discovery Environment Timer
     genUUID(state->discovery_environment_timer_id);
-    if(state->args->discov_env_refresh_period_s > 0) {
+    if(state->args->discov_env_refresh_period_s > 0 && state->args->toggle_env) {
         struct timespec t_ = {0};
         milli_to_timespec(&t_, state->args->discov_env_refresh_period_s*1000);
         SetPeriodicTimer(&t_, state->discovery_environment_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_TIMER);
@@ -282,6 +284,7 @@ void DF_processMessage(discovery_framework_state* state, byte* data, unsigned sh
                 if(hack_summary->neigh) {
                     assert(neigh == hack_summary->neigh);
 
+
                     bool aux = (hack_summary->updated_neighbor || hack_summary->updated_2hop_neighbor || hack_summary->added_2hop_neighbor || hack_summary->lost_2hop_neighbor);
 
                     updated_neighbor |= aux;
@@ -294,8 +297,12 @@ void DF_processMessage(discovery_framework_state* state, byte* data, unsigned sh
                 }
             }
 
-            if( updated_neighbor && !NE_isPending(neigh) ) {
-                DF_notifyUpdateNeighbor(state, neigh);
+            if( updated_neighbor ) {
+                if( !NE_isPending(neigh) ) {
+                    DF_notifyUpdateNeighbor(state, neigh);
+                } else {
+                    DF_printNeighbors(state);
+                }
             }
         }
 
@@ -327,7 +334,7 @@ void scheduleHelloTimer(discovery_framework_state* state, bool now) {
 
         unsigned long allowed_max_jitter_ms = timespec_to_milli(&allowed_max_jitter_);
 
-        unsigned long max_jitter_ms = lMin(state->args->max_jitter_ms, allowed_max_jitter_ms);
+        unsigned long max_jitter_ms = ulMin(state->args->max_jitter_ms, allowed_max_jitter_ms);
 
         unsigned long jitter = (unsigned long)(randomProb()*max_jitter_ms);
 
@@ -376,7 +383,7 @@ void scheduleHackTimer(discovery_framework_state* state, bool now) {
 
         unsigned long allowed_max_jitter_ms = timespec_to_milli(&allowed_max_jitter_);
 
-        unsigned long max_jitter_ms = lMin(state->args->max_jitter_ms, allowed_max_jitter_ms);
+        unsigned long max_jitter_ms = ulMin(state->args->max_jitter_ms, allowed_max_jitter_ms);
 
         unsigned long jitter = (unsigned long)(randomProb()*max_jitter_ms);
 
@@ -548,32 +555,76 @@ void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_pa
     DF_sendMessage(state, dsp, &msg);
 }
 
-bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh) {
+bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh_id) {
+    NeighborEntry* neigh = NT_getNeighbor(state->neighbors, neigh_id);
     assert(neigh);
+
+    NeighborTimerSummary* summary = newNeighborTimerSummary();
+    summary->neigh = neigh;
 
     // Last Timer
     struct timespec last_neighbor_timer;
     copy_timespec(&last_neighbor_timer, NE_getLastNeighborTimer(neigh));
     NE_setLastNeighborTimer(neigh, &state->current_time);
 
-    struct timespec* rx_exp_time = NE_getNeighborRxExpTime(neigh);
-    struct timespec* tx_exp_time = NE_getNeighborTxExpTime(neigh);
+    // If neighbor is Lost
+    if( NE_isLost(neigh) ) {
+        // Check if
+        struct timespec* removal_time = NE_getNeighborRemovalTime(neigh);
+        if( compare_timespec(removal_time, &state->current_time) <= 0 ) {
+            #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+            char id_str[UUID_STR_LEN+1];
+            id_str[UUID_STR_LEN] = '\0';
+            uuid_unparse(NE_getNeighborID(neigh), id_str);
 
-    unsigned long next_timer = 0;
+            char str[200];
+            sprintf(str, "%s    (REMOVAL TIME)", id_str);
 
-    NeighborTimerSummary* summary = newNeighborTimerSummary();
+            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REMOVED NEIGHBOR", str);
+            #endif
 
-    summary->neigh = neigh;
+            flushNeighbor(state, neigh);
+            neigh = NULL;
 
-    // Neighbor is not dead
-    if( compare_timespec(NE_getNeighborRemovalTime(neigh), &state->current_time) > 0 ) {
-        if( compare_timespec(rx_exp_time, &state->current_time) > 0 ) {
+            summary->removed = true;
+        }
+    }
 
+    // If neigh was not removed
+    if( !summary->removed ) {
+        unsigned long next_timer_ms = ULONG_MAX;
+
+        unsigned int hello_misses = state->args->hello_misses;
+        unsigned int hack_misses = state->args->hack_misses;
+
+        unsigned int missed_hellos = 0;
+        unsigned int missed_hacks = 0;
+
+
+        // Check if rx expired
+        struct timespec* rx_exp_time = NE_getNeighborRxExpTime(neigh);
+        if( compare_timespec(rx_exp_time, &state->current_time) <= 0 ) {
+
+            if( !NE_isLost(neigh) ) {
+                NE_setLost(neigh, &state->current_time);
+
+                state->stats.lost_neighbors++;
+
+                summary->lost_neighbor = true;
+
+                struct timespec removal_time;
+                milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
+                add_timespec(&removal_time, &removal_time,  &state->current_time);
+                NE_setNeighborRemovalTime(neigh, &removal_time);
+
+                next_timer_ms = ulMin(next_timer_ms, state->args->neigh_hold_time_s*1000);
+            }
+
+        } else { // Check if missed an hello
             // Compute missed hellos
             unsigned long hello_period = NE_getNeighborHelloPeriod(neigh)*1000;
-            unsigned int hello_misses = state->args->hello_misses;
 
-            unsigned int missed_hellos = compute_missed(hello_misses, hello_period, rx_exp_time, &state->current_time);
+            missed_hellos = compute_missed(hello_misses, hello_period, rx_exp_time, &state->current_time);
 
             unsigned int prev_missed_hellos = compute_missed(hello_misses, hello_period, rx_exp_time, &last_neighbor_timer);
 
@@ -597,194 +648,174 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
                         summary->updated_quality_threshold = true;
                     }
                 }
-            }
 
-            unsigned long next_hello_miss = compute_next_moment(rx_exp_time, &state->current_time, hello_misses, missed_hellos, hello_period);
+                // Update Link Admission
+                bool old_accepted = NE_isAccepted(neigh);
+                bool accepted = DA_evalLinkAdmission(state->args->algorithm, neigh, &state->current_time);
+                NE_setAccepted(neigh, accepted);
 
-            // Check if tx not expired
-            if( compare_timespec(tx_exp_time, &state->current_time) > 0 ) {
-                unsigned long hack_period = NE_getNeighborHackPeriod(neigh)*1000;
-                unsigned int hack_misses = state->args->hack_misses;
+                //bool became_accepted = !old_accepted && accepted;
+                bool lost_accepted = old_accepted && !accepted;
 
-                unsigned int missed_hacks = compute_missed(hack_misses, hack_period, tx_exp_time, &state->current_time);
+                //assert(!became_accepted);
 
-                unsigned int prev_missed_hacks = compute_missed(hack_misses, hack_period, tx_exp_time, &last_neighbor_timer);
+                if(lost_accepted) {
+                    assert(!NE_isPending(neigh));
 
-                if( missed_hacks > prev_missed_hacks ) {
-                    state->stats.missed_hacks++;
+                    // Neighbor is dead
+                    if( !NE_isLost(neigh) ) {
+                        NE_setLost(neigh, &state->current_time);
 
-                    summary->missed_hacks++;
-                }
+                        state->stats.lost_neighbors++;
 
-                unsigned long next_hack_miss = compute_next_moment(tx_exp_time, &state->current_time, hack_misses, missed_hacks, hack_period);
+                        summary->lost_neighbor = true;
 
-                // Log
-                #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-                if( missed_hellos > 0 || missed_hacks > 0 ) {
-                    char id_str[UUID_STR_LEN+1];
-                    id_str[UUID_STR_LEN] = '\0';
-                    uuid_unparse(NE_getNeighborID(neigh), id_str);
+                        struct timespec removal_time;
+                        milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
+                        add_timespec(&removal_time, &removal_time,  &state->current_time);
+                        NE_setNeighborRemovalTime(neigh, &removal_time);
 
-                    char str[200];
-                    sprintf(str, "%s    missed hellos: %u/%u    missed hacks: %u/%u", id_str, missed_hellos, hello_misses, missed_hacks, hack_misses);
-                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
-                }
-                #endif
-
-                next_timer = lMin(next_hello_miss, next_hack_miss);
-            } else {
-
-                // Check if tx expired after the previous neighbor timer
-                if( compare_timespec(tx_exp_time, &last_neighbor_timer) > 0 ) {
-                    summary->lost_bi = true;
-
-                    // Log
-                    #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-                    char id_str[UUID_STR_LEN+1];
-                    id_str[UUID_STR_LEN] = '\0';
-                    uuid_unparse(NE_getNeighborID(neigh), id_str);
-
-                    char str[200];
-                    sprintf(str, "%s", id_str);
-                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
-                    #endif
-                }
-
-                // Log
-                #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-                if( missed_hellos > 0 ) {
-                    char id_str[UUID_STR_LEN+1];
-                    id_str[UUID_STR_LEN] = '\0';
-                    uuid_unparse(NE_getNeighborID(neigh), id_str);
-
-                    char str[200];
-                    sprintf(str, "%s    missed hellos: %u/%u    missed hacks: expired", id_str, missed_hellos, hello_misses);
-                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
-                }
-                #endif
-
-                next_timer = next_hello_miss;
-            }
-
-            // Update Link Admission
-            bool old_accepted = NE_isAccepted(neigh);
-            bool accepted = DA_evalLinkAdmission(state->args->algorithm, neigh, &state->current_time);
-            NE_setAccepted(neigh, accepted);
-
-            bool became_accepted = !old_accepted && accepted;
-            bool lost_accepted = old_accepted && !accepted;
-
-            assert(!became_accepted);
-
-            if(lost_accepted) {
-                assert(!NE_isPending(neigh));
-
-                // Neighbor is dead
-                if( !NE_isLost(neigh) ) {
-                    NE_setLost(neigh, &state->current_time);
-
-                    state->stats.lost_neighbors++;
-
-                    summary->lost_neighbor = true;
-
-                    struct timespec removal_time;
-                    milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
-                    add_timespec(&removal_time, &removal_time,  &state->current_time);
-                    NE_setNeighborRemovalTime(neigh, &removal_time);
-
-                    next_timer = lMin(next_timer, state->args->neigh_hold_time_s*1000);
-                } else {
-                    assert(false); // Error
-                }
-            }
-
-            // 2-hop Neighs GC + compute next expiration
-            struct timespec min_exp;
-            bool first = true;
-            hash_table* ht = NE_getTwoHopNeighbors(neigh);
-            void* iterator = NULL;
-            hash_table_item* hit = NULL;
-            while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
-                TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
-                if( compare_timespec(THNE_getExpiration(nn), &state->current_time) < 0 ) {
-                    hash_table_remove_item(ht, THNE_getID(nn));
-                    free(nn);
-                    free(hit);
-                    summary->deleted_2hop++;
-                } else {
-                    if( first || compare_timespec(THNE_getExpiration(nn), &min_exp) < 0 ) {
-                        first = false;
-                        copy_timespec(&min_exp, THNE_getExpiration(nn));
+                        next_timer_ms = ulMin(next_timer_ms, state->args->neigh_hold_time_s*1000);
+                    } else {
+                        assert(false); // Error
                     }
                 }
             }
-            summary->lost_2hop_neighbor = summary->deleted_2hop > 0;
 
-            subtract_timespec(&min_exp, &min_exp, &state->current_time);
-            unsigned long nn_exp =  timespec_to_milli(&min_exp);
-
-            next_timer = lMin(next_timer, nn_exp);
-        } else {
-
-            /*NE_setLost(neigh, &state->current_time);
-
-            state->stats.lost_neighbors++;
-
-            summary->lost_neighbor = true;
-
-            struct timespec removal_time;
-            milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
-            add_timespec(&removal_time, &removal_time,  &state->current_time);
-            NE_setNeighborRemovalTime(neigh, &removal_time);
-
-            next_timer = state->args->neigh_hold_time_s*1000;*/
-
-            #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-            char id_str[UUID_STR_LEN+1];
-            id_str[UUID_STR_LEN] = '\0';
-            uuid_unparse(NE_getNeighborID(neigh), id_str);
-            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REMOVED NEIGHBOR", id_str);
-            #endif
-
-            flushNeighbor(state, neigh);
-            neigh = NULL;
-
-            summary->removed = true;
+            unsigned long next_hello_miss = compute_next_moment(rx_exp_time, &state->current_time, hello_misses, missed_hellos, hello_period);
+            next_timer_ms = ulMin(next_timer_ms, next_hello_miss);
         }
-    } else {
 
-        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+        // Check if tx not expired
+        struct timespec* tx_exp_time = NE_getNeighborTxExpTime(neigh);
+        if( compare_timespec(tx_exp_time, &state->current_time) <= 0 ) {
+            // Check if tx expired after the previous neighbor timer
+            if( compare_timespec(tx_exp_time, &last_neighbor_timer) > 0 ) {
+                summary->lost_bi = true;
+
+                // Log
+                #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+                char id_str[UUID_STR_LEN+1];
+                id_str[UUID_STR_LEN] = '\0';
+                uuid_unparse(NE_getNeighborID(neigh), id_str);
+
+                char str[200];
+                sprintf(str, "%s", id_str);
+                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
+                #endif
+            }
+
+        } else {
+            unsigned long hack_period = NE_getNeighborHackPeriod(neigh)*1000;
+
+            missed_hacks = compute_missed(hack_misses, hack_period, tx_exp_time, &state->current_time);
+
+            unsigned int prev_missed_hacks = compute_missed(hack_misses, hack_period, tx_exp_time, &last_neighbor_timer);
+
+            if( missed_hacks > prev_missed_hacks ) {
+                state->stats.missed_hacks++;
+
+                summary->missed_hacks++;
+            }
+
+            unsigned long next_hack_miss = compute_next_moment(tx_exp_time, &state->current_time, hack_misses, missed_hacks, hack_period);
+            next_timer_ms = ulMin(next_timer_ms, next_hack_miss);
+        }
+
+        struct timespec removal_time = {0};
+        milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
+        add_timespec(&removal_time, &removal_time,  &state->current_time);
+
+        // 2-hop Neighs GC + compute next expiration
+        hash_table* two_hop_neighbors = NE_getTwoHopNeighbors(neigh);
+        void* iterator = NULL;
+        hash_table_item* hit = NULL;
+        while( (hit = hash_table_iterator_next(two_hop_neighbors, &iterator)) ) {
+            TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+
+            struct timespec* two_hop_neigh_exp_time = THNE_getExpiration(nn);
+            if( compare_timespec(two_hop_neigh_exp_time, &state->current_time) < 0 ) {
+                if( THNE_isLost(nn) ) {
+                    hash_table_remove_item(two_hop_neighbors, THNE_getID(nn));
+                    free(nn);
+                    free(hit);
+                } else {
+                    THNE_setLost(nn, true);
+                    THNE_setExpiration(nn, &removal_time);
+                    summary->deleted_2hop++;
+
+                    next_timer_ms = ulMin(next_timer_ms, timespec_to_milli(&removal_time));
+                }
+            } else {
+                struct timespec aux;
+                subtract_timespec(&aux, two_hop_neigh_exp_time, &state->current_time);
+
+                next_timer_ms = ulMin(next_timer_ms, timespec_to_milli(&aux));
+            }
+        }
+        summary->lost_2hop_neighbor = summary->deleted_2hop > 0;
+
+        summary->updated_neighbor = summary->lost_bi || summary->updated_quality;
+
+        // Log
+        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
+
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(NE_getNeighborID(neigh), id_str);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REMOVED NEIGHBOR", id_str);
+
+        char hellos_str[20];
+        if( compare_timespec(rx_exp_time, &state->current_time) > 0 ) {
+            if(summary->missed_hellos > 0) {
+                sprintf(hellos_str, "%u/%u(+1)", missed_hellos, hello_misses);
+            } else {
+                sprintf(hellos_str, "%u/%u", missed_hellos, hello_misses);
+            }
+        } else {
+            sprintf(hellos_str, "expired%s", (summary->missed_hellos > 0?"(+1)":""));
+        }
+
+        char hacks_str[20];
+        if(compare_timespec(tx_exp_time, &state->current_time) > 0) {
+            if(summary->missed_hacks > 0) {
+                sprintf(hacks_str, "%u/%u(+1)", missed_hacks, hack_misses);
+            } else {
+                sprintf(hacks_str, "%u/%u", missed_hacks, hack_misses);
+            }
+        } else {
+            //if() {
+            //    sprintf(hacks_str, "lost bi");
+            //} else {
+            //    sprintf(hacks_str, "expired");
+            //}
+            sprintf(hacks_str, "expired%s", (summary->missed_hacks > 0?"(+1)":""));
+        }
+
+        char str[200];
+        sprintf(str, "%s  missed hellos: %s  missed hacks: %s  lost 2-hop neighs: %u", id_str, hellos_str, hacks_str, summary->deleted_2hop);
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
+
         #endif
-
-        flushNeighbor(state, neigh);
-        neigh = NULL;
-
-        summary->removed = true;
-
-    }
-
-    summary->updated_neighbor = summary->lost_bi || summary->updated_quality;
-
-    if( !summary->removed ) {
 
         bool changed = false;
         bool schedule = false;
 
         if( summary->lost_neighbor ) {
-            DF_notifyLostNeighbor(state, neigh);
+            if(!NE_isPending(neigh)) {
+                DF_notifyLostNeighbor(state, neigh);
+
+                DE_registerLostNeighbor(state->environment, &state->current_time);
+            }
 
             changed = true;
             schedule = true;
 
-            DE_registerLostNeighbor(state->environment, &state->current_time);
         } else {
             if( summary->updated_neighbor || summary->lost_2hop_neighbor ) {
                 if(!NE_isPending(neigh)) {
                     DF_notifyUpdateNeighbor(state, neigh);
+                } else {
+                    DF_printNeighbors(state);
                 }
 
                 changed = true;
@@ -793,6 +824,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
                     schedule = true;
                 }
             }
+
         }
 
         if( changed ) {
@@ -805,8 +837,9 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
             }
         }
 
+        //scheduleNeighborTimer(state, neigh);
         struct timespec t;
-        milli_to_timespec(&t, next_timer);
+        milli_to_timespec(&t, next_timer_ms);
         SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
     }
 
@@ -818,6 +851,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh
 }
 
 void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state) {
+    //assert(state->args->toggle_env);
 
     bool changed = false;
 
@@ -853,7 +887,7 @@ void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state) {
 
     changed |= DE_setNeigbhorsDensity(state->environment, neighbors_density, state->args->neigh_density_epsilon);
 
-    if( changed ) {
+    if( changed && state->args->toggle_env ) {
         // Log
         #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
         char* str = NULL;
@@ -875,90 +909,75 @@ void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state) {
 void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neigh) {
     assert(neigh);
 
-    struct timespec* rx_exp_time = NE_getNeighborRxExpTime(neigh);
-    struct timespec* tx_exp_time = NE_getNeighborTxExpTime(neigh);
-
-    unsigned long next_timer = 0;
+    unsigned long next_timer_ms = ULONG_MAX;
 
     // Check if rx not expired
+    struct timespec* rx_exp_time = NE_getNeighborRxExpTime(neigh);
     if( compare_timespec(rx_exp_time, &state->current_time) > 0 ) {
+        // Compute missed hellos
+        unsigned long hello_period = NE_getNeighborHelloPeriod(neigh)*1000;
+        unsigned int hello_misses = state->args->hello_misses;
 
-            // Compute missed hellos
-            unsigned long hello_period = NE_getNeighborHelloPeriod(neigh)*1000;
-            unsigned int hello_misses = state->args->hello_misses;
+        unsigned int missed_hellos = compute_missed(hello_misses, hello_period, rx_exp_time, &state->current_time);
 
-            unsigned int missed_hellos = compute_missed(hello_misses, hello_period, rx_exp_time, &state->current_time);
+        unsigned long next_hello_miss = compute_next_moment(rx_exp_time, &state->current_time, hello_misses, missed_hellos, hello_period);
 
-            unsigned long next_hello_miss =  compute_next_moment(rx_exp_time, &state->current_time, hello_misses, missed_hellos, hello_period);
+        next_timer_ms = ulMin(next_timer_ms, next_hello_miss);
+    }
 
-            // Check if tx not expired
-            if( compare_timespec(tx_exp_time, &state->current_time) > 0 ) {
-                unsigned long hack_period = NE_getNeighborHackPeriod(neigh)*1000;
-                unsigned int hack_misses = state->args->hack_misses;
+    // Check if tx not expired
+    struct timespec* tx_exp_time = NE_getNeighborTxExpTime(neigh);
+    if( compare_timespec(tx_exp_time, &state->current_time) > 0 ) {
+        // Compute missed hacks
+        unsigned long hack_period = NE_getNeighborHackPeriod(neigh)*1000;
+        unsigned int hack_misses = state->args->hack_misses;
 
-                unsigned int missed_hacks = compute_missed(hack_misses, hack_period, tx_exp_time, &state->current_time);
+        unsigned int missed_hacks = compute_missed(hack_misses, hack_period, tx_exp_time, &state->current_time);
 
-                unsigned long next_hack_miss = compute_next_moment(tx_exp_time, &state->current_time, hack_misses, missed_hacks, hack_period);
+        unsigned long next_hack_miss = compute_next_moment(tx_exp_time, &state->current_time, hack_misses, missed_hacks, hack_period);
 
-                next_timer = lMin(next_hello_miss, next_hack_miss);
-            } else {
-                next_timer = next_hello_miss;
-            }
+        next_timer_ms = ulMin(next_timer_ms, next_hack_miss);
+    }
 
-            // 2-hop Neighs GC + compute next expiration
-            struct timespec min_exp = {0};
-            bool first = true;
-            hash_table* ht = NE_getTwoHopNeighbors(neigh);
-            void* iterator = NULL;
-            hash_table_item* hit = NULL;
-            while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
-                TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
-                if( compare_timespec(THNE_getExpiration(nn), &state->current_time) < 0 ) {
-                    first = false;
-                    copy_timespec(&min_exp, THNE_getExpiration(nn));
-                    //next_timer = 0;
-                    break;
-                } else {
-                    if( first || compare_timespec(THNE_getExpiration(nn), &min_exp) < 0 ) {
-                        first = false;
-                        copy_timespec(&min_exp, THNE_getExpiration(nn));
-                    }
-                }
-            }
-            if(iterator)
-                free(iterator);
+    // Check if removal time
+    if( NE_isLost(neigh) ) {
+        struct timespec* removal_time = NE_getNeighborTxExpTime(neigh);
 
-            if(!first) {
-                if(compare_timespec(&min_exp, &state->current_time) < 0) {
-                    next_timer = 0;
-                } else {
-                    subtract_timespec(&min_exp, &min_exp, &state->current_time);
-                    unsigned long nn_exp =  timespec_to_milli(&min_exp);
-
-                    next_timer = lMin(next_timer, nn_exp);
-                }
-            }
-
+        // If already expired
+        if( compare_timespec(removal_time, &state->current_time) <= 0 ) {
+            next_timer_ms = 0;
         } else {
-            // Neighbor is dead
-            if( !NE_isLost(neigh) ) {
-                next_timer = 0;
-            } else {
-                if( compare_timespec(NE_getNeighborRemovalTime(neigh), &state->current_time) <= 0 ) {
-                    next_timer = 0;
-                } else {
-                    struct timespec aux;
-                    subtract_timespec(&aux, NE_getNeighborRemovalTime(neigh), &state->current_time);
-                    next_timer = timespec_to_milli(&aux);
-                }
-            }
-        }
+            struct timespec aux;
+            subtract_timespec(&aux, removal_time, &state->current_time);
 
-        // TODO: compare with old timer
-        CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
-        struct timespec t;
-        milli_to_timespec(&t, next_timer);
-        SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
+            next_timer_ms = ulMin(next_timer_ms, timespec_to_milli(&aux));
+        }
+    }
+
+    // Check 2-hop Neighbors
+    void* iterator = NULL;
+    hash_table_item* hit = NULL;
+    while( (hit = hash_table_iterator_next(NE_getTwoHopNeighbors(neigh), &iterator)) ) {
+        TwoHopNeighborEntry* two_hop_neigh = (TwoHopNeighborEntry*)hit->value;
+
+        struct timespec* two_hop_neigh_exp_time = THNE_getExpiration(two_hop_neigh);
+
+        // If already expired
+        if( compare_timespec(two_hop_neigh_exp_time, &state->current_time) <= 0 ) {
+            next_timer_ms = 0;
+        } else {
+            struct timespec aux;
+            subtract_timespec(&aux, two_hop_neigh_exp_time, &state->current_time);
+
+            next_timer_ms = ulMin(next_timer_ms, timespec_to_milli(&aux));
+        }
+    }
+
+    // TODO: compare with old timer
+    CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
+    struct timespec t;
+    milli_to_timespec(&t, next_timer_ms);
+    SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
 }
 
 void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
@@ -966,11 +985,12 @@ void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
 
     NT_removeNeighbor(state->neighbors, NE_getNeighborID(neigh));
 
+    CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
+
     void* lq_attrs = NULL, *msg_attrs = NULL;
     destroyNeighborEntry(neigh, &lq_attrs, &msg_attrs);
 
     DA_destroyLinkQualityAttributes(state->args->algorithm, lq_attrs);
-
     DA_destroyContextAttributes(state->args->algorithm, msg_attrs);
 }
 
@@ -996,10 +1016,16 @@ void scheduleReply(discovery_framework_state* state, HelloMessage* hello, HelloD
 void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
     assert( state->neighbor_change_timer_active );
 
-    NeighborChangeSummary* summary = &state->neighbor_change_summary;
+    bool send_hello = compare_timespec(&state->next_reactive_hello_time, (struct timespec*)&zero_timespec) != 0 && compare_timespec(&state->next_reactive_hello_time, &state->current_time) <= 0;
+
+    bool send_hack = compare_timespec(&state->next_reactive_hack_time, (struct timespec*)&zero_timespec) != 0 && compare_timespec(&state->next_reactive_hack_time, &state->current_time) <= 0;
+
+    assert(send_hello || send_hack);
+
+    bool aux[2] = {send_hello, send_hack};
 
     YggMessage msg = {0};
-    DiscoverySendPack* dsp = DF_triggerDiscoveryEvent(state, DPE_NEIGHBORHOOD_CHANGE_TIMER, summary, &msg);
+    DiscoverySendPack* dsp = DF_triggerDiscoveryEvent(state, DPE_NEIGHBORHOOD_CHANGE_TIMER, aux, &msg);
     assert(dsp);
 
     // Log
@@ -1023,16 +1049,96 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR-CHANGE TIMER", str);
     #endif
 
-    DF_sendMessage(state, dsp, &msg);
+    if(send_hello) {
+        copy_timespec(&state->next_reactive_hello_time, &zero_timespec);
+    }
 
-    state->neighbor_change_timer_active = false;
-    memset(&state->neighbor_change_summary, 0, sizeof(state->neighbor_change_summary));
+    if(send_hack) {
+        copy_timespec(&state->next_reactive_hack_time, &zero_timespec);
+    }
+
+    bool hello_is_set = compare_timespec(&state->next_reactive_hello_time, (struct timespec*)&zero_timespec) != 0;
+    bool hack_is_set = compare_timespec(&state->next_reactive_hack_time, (struct timespec*)&zero_timespec) != 0;
+
+    struct timespec next_timer = {0};
+    if(hello_is_set && !hack_is_set) {
+        copy_timespec(&next_timer, &state->next_reactive_hello_time);
+    } else if(!hello_is_set && hack_is_set) {
+        copy_timespec(&next_timer, &state->next_reactive_hack_time);
+    } else if(hello_is_set || hack_is_set) {
+        if( compare_timespec(&state->next_reactive_hello_time, &state->next_reactive_hack_time) < 0 ) {
+            copy_timespec(&next_timer, &state->next_reactive_hello_time);
+        } else {
+            copy_timespec(&next_timer, &state->next_reactive_hack_time);
+        }
+    } /*else {
+        assert(!state->neighbor_change_timer_active);
+    }*/
+
+    if(hello_is_set || hack_is_set) {
+        struct timespec t = {0};
+        subtract_timespec(&t, &next_timer, &state->current_time);
+        SetTimer(&t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
+    } else {
+        state->neighbor_change_timer_active = false;
+    }
+
+    DF_sendMessage(state, dsp, &msg);
+}
+
+bool computeNextTimer(unsigned long max_jitter_ms, unsigned long min_interval_ms, struct timespec* current_time, struct timespec* last_timer, struct timespec* next_timer, struct timespec* other_timer, struct timespec* t) {
+    struct timespec min_interval = {0};
+    milli_to_timespec(&min_interval, min_interval_ms);
+
+    struct timespec t_max = {0};
+    subtract_timespec(&t_max, next_timer, &min_interval);
+
+    struct timespec t_min = {0};
+    add_timespec(&t_min, last_timer, &min_interval);
+
+    if( compare_timespec(&t_min, &t_max) < 0 && compare_timespec(current_time, &t_max) < 0 ) {
+        struct timespec diff_ = {0};
+        subtract_timespec(&diff_, &t_max, &t_min);
+        unsigned long diff = timespec_to_milli(&diff_);
+
+        struct timespec diff2_ = {0};
+        subtract_timespec(&diff2_, &t_max, current_time);
+        unsigned long diff2 = timespec_to_milli(&diff2_);
+
+        bool set_timer = diff >= max_jitter_ms && diff2 >= max_jitter_ms;
+
+        if(set_timer) {
+            struct timespec jitter = {0};
+            milli_to_timespec(&jitter, (unsigned long)(randomProb()*max_jitter_ms));
+
+            if( compare_timespec(current_time, &t_min) < 0 ) {
+                struct timespec remaining = {0};
+                subtract_timespec(&remaining, &t_min, current_time);
+                add_timespec(t, &remaining, &jitter);
+                return true;
+            } else {
+                struct timespec close = {0};
+                milli_to_timespec(&close, max_jitter_ms);
+                add_timespec(&close, current_time, &close);
+
+                if( other_timer && compare_timespec(other_timer, &close) <= 0 ) {
+                    assert(compare_timespec(other_timer, current_time) >= 0);
+                    subtract_timespec(t, other_timer, current_time);
+                    return true;
+                } else {
+                    copy_timespec(t, &jitter);
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummary* hello_summary, HackDeliverSummary* hack_summary, NeighborTimerSummary* neighbor_timer_summary, bool context_updates) {
 
-    NeighborChangeSummary summary;
-    memset(&summary, 0, sizeof(summary));
+    NeighborChangeSummary summary = {0};
 
     if( hello_summary ) {
         summary.new_neighbor = hello_summary->new_neighbor;
@@ -1081,85 +1187,119 @@ void scheduleNeighborChange(discovery_framework_state* state, HelloDeliverSummar
 
     DiscoveryAlgorithm* alg = state->args->algorithm;
 
-    // New schedule
-    if( !state->neighbor_change_timer_active ) {
-        bool context_updates = summary.context_updates;
+    bool new_neighbor = summary.new_neighbor;
+    bool lost_neighbor = summary.lost_neighbor;
+    bool updated_neighbor = summary.updated_neighbor;
 
-        bool new_neighbor = summary.new_neighbor;
-        bool lost_neighbor = summary.lost_neighbor;
-        bool updated_neighbor = summary.updated_neighbor;
+    bool hello_is_set = compare_timespec(&state->next_reactive_hello_time, (struct timespec*)&zero_timespec) != 0;
+    bool hack_is_set = compare_timespec(&state->next_reactive_hack_time, (struct timespec*)&zero_timespec) != 0;
 
+    struct timespec next_timer = {0};
+    if(hello_is_set && !hack_is_set) {
+        copy_timespec(&next_timer, &state->next_reactive_hello_time);
+    } else if(!hello_is_set && hack_is_set) {
+        copy_timespec(&next_timer, &state->next_reactive_hack_time);
+    } else if(hello_is_set || hack_is_set) {
+        if( compare_timespec(&state->next_reactive_hello_time, &state->next_reactive_hack_time) < 0 ) {
+            copy_timespec(&next_timer, &state->next_reactive_hello_time);
+        } else {
+            copy_timespec(&next_timer, &state->next_reactive_hack_time);
+        }
+    } else {
+        assert(!state->neighbor_change_timer_active);
+    }
+
+    struct timespec hello_t = {0};
+
+    if( !hello_is_set ) {
         bool send_hello = \
         (DA_HelloNewNeighbor(alg) && new_neighbor) || \
         (DA_HelloLostNeighbor(alg)  && lost_neighbor) || \
         (DA_HelloUpdateNeighbor(alg) && updated_neighbor) || \
         (DA_HelloContextUpdate(alg) && context_updates);
 
+        if(send_hello) {
+            struct timespec* other_timer = hack_is_set ? &state->next_reactive_hack_time : NULL;
+
+            bool set = computeNextTimer(state->args->max_jitter_ms, state->args->min_hello_interval_ms, &state->current_time, &state->last_hello_time, &state->next_hello_time, other_timer, &hello_t);
+
+            if(set) {
+                add_timespec(&state->next_reactive_hello_time, &state->current_time, &hello_t);
+                hello_is_set = true;
+            }
+        }
+    } else {
+        assert(compare_timespec(&state->next_reactive_hello_time, &state->current_time) >= 0);
+        subtract_timespec(&hello_t, &state->next_reactive_hello_time, &state->current_time);
+    }
+
+    struct timespec hack_t = {0};
+
+    if( !hack_is_set ) {
         bool send_hack =  \
         (DA_HackNewNeighbor(alg) && new_neighbor) || \
         (DA_HackLostNeighbor(alg)  && lost_neighbor) || \
         (DA_HackUpdateNeighbor(alg) && updated_neighbor) || \
         (DA_HackContextUpdate(alg) && context_updates);
 
-        if( send_hello || send_hack ) {
+        if(send_hack) {
+            struct timespec* other_timer = hello_is_set ? &state->next_reactive_hello_time : NULL;
 
-            state->neighbor_change_timer_active = true;
-            copy_timespec(&state->set_neighbor_change_time, &state->current_time);
+            bool set = computeNextTimer(state->args->max_jitter_ms, state->args->min_hack_interval_ms, &state->current_time, &state->last_hack_time, &state->next_hack_time, other_timer, &hack_t);
 
-            memcpy(&state->neighbor_change_summary, &summary, sizeof(NeighborChangeSummary));
-
-            // Compute jitter
-            unsigned long max_jitter = state->args->max_jitter_ms;
-
-            struct timespec aux;
-            subtract_timespec(&aux, &state->next_hello_time, &state->current_time);
-            unsigned long aux2 = timespec_to_milli(&aux);
-            if( aux2 < state->args->max_jitter_ms ) {
-                max_jitter = aux2;
+            if(set) {
+                add_timespec(&state->next_reactive_hack_time, &state->current_time, &hack_t);
+                hack_is_set = true;
             }
+        }
+    } else {
+        assert(compare_timespec(&state->next_reactive_hack_time, &state->current_time) >= 0);
+        subtract_timespec(&hack_t, &state->next_reactive_hack_time, &state->current_time);
+    }
 
-            subtract_timespec(&aux, &state->next_hack_time, &state->current_time);
-            aux2 = timespec_to_milli(&aux);
-            if( aux2 < state->args->max_jitter_ms ) {
-                if( aux2 < max_jitter ) {
-                    max_jitter = aux2;
-                }
-            }
-
-            struct timespec t_ = {0};
-
-            if( max_jitter < state->args->max_jitter_ms ) {
-                milli_to_timespec(&t_, max_jitter > 1 ? max_jitter-1: 0);
-            } else {
-                unsigned long jitter = (unsigned long)(randomProb()*max_jitter);
-                milli_to_timespec(&t_, jitter);
-            }
-
-            SetTimer(&t_, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
+    struct timespec min_t = {0};
+    if(hello_is_set && !hack_is_set) {
+        copy_timespec(&min_t, &hello_t);
+    } else if(!hello_is_set && hack_is_set) {
+        copy_timespec(&min_t, &hack_t);
+    } else if(hello_is_set || hack_is_set) {
+        if( compare_timespec(&hello_t, &hack_t) < 0 ) {
+            copy_timespec(&min_t, &hello_t);
+        } else {
+            copy_timespec(&min_t, &hack_t);
         }
     }
 
-    // Update Neighbor Change Summary
-    else {
-        NeighborChangeSummary* s = &state->neighbor_change_summary;
+    if(hello_is_set || hack_is_set) {
 
-        s->new_neighbor |= summary.new_neighbor;
-        s->updated_neighbor |= summary.updated_neighbor;
-        s->lost_neighbor |= summary.lost_neighbor;
-        s->updated_2hop_neighbor |= summary.updated_2hop_neighbor;
-        s->added_2hop_neighbor |= summary.added_2hop_neighbor;
-        s->lost_2hop_neighbor |= summary.lost_2hop_neighbor;
-        s->context_updates |= summary.context_updates;
-        s->removed |= summary.removed;
-        s->rebooted |= summary.rebooted;
-        s->lost_bi |= summary.lost_bi;
-        s->became_bi |= summary.became_bi;
-        s->hello_period_changed |= summary.hello_period_changed;
-        s->hack_period_changed |= summary.hack_period_changed;
-        s->updated_quality |= summary.updated_quality;
-        s->updated_quality_threshold |= summary.updated_quality_threshold;
+            //printf("YO hello_is_set = %s (%lu %lu)    hack_is_set = %s (%lu %lu)\n", hello_is_set?"T":"F", hello_t.tv_sec, hello_t.tv_nsec, hack_is_set?"T":"F", hack_t.tv_sec, hack_t.tv_nsec);
+
+            if( !state->neighbor_change_timer_active ) {
+                assert(compare_timespec(&next_timer, (struct timespec*)&zero_timespec) == 0);
+
+                // Set timer
+                state->neighbor_change_timer_active = true;
+
+                SetTimer(&min_t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
+
+                //printf("SET TIMER %lu %lu\n", min_t.tv_sec, min_t.tv_nsec);
+            } else {
+                //assert(compare_timespec(&next_timer, (struct timespec*)&zero_timespec) != 0);
+
+                struct timespec min_next = {0};
+                add_timespec(&min_next, &min_t, &state->current_time);
+
+                if(compare_timespec(&min_next, &next_timer) < 0) {
+                    // Reset Timer
+                    CancelTimer(state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID);
+
+                    SetTimer(&min_t, state->neighbor_change_timer_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_CHANGE_TIMER);
+                    // printf("RESET TIMER %lu %lu\n", min_t.tv_sec, min_t.tv_nsec);
+                }
+
+                //printf("XO\n");
+            }
     }
-
 }
 
 HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* addr, MessageSummary* msg_summary) {
@@ -1426,6 +1566,8 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
             milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
             add_timespec(&removal_time, &removal_time,  &state->current_time);
             NE_setNeighborRemovalTime(neigh, &removal_time);
+
+
         } else {
             assert(false); // Error
         }
@@ -1435,10 +1577,10 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     double traffic_delta = fabs(NE_getOutTraffic(neigh) - hello->traffic);
     if( traffic_delta >= state->args->traffic_epsilon || (traffic_delta > 0 && hello->traffic == 0.0) ) {
         NE_setOutTraffic(neigh, hello->traffic);
-        summary->updated_traffic = true;
+        summary->updated_traffic = true && state->args->toggle_env;
 
         if( traffic_delta >= state->args->traffic_threshold ) {
-            summary->updated_traffic_threshold = true;
+            summary->updated_traffic_threshold = true && state->args->toggle_env;
         }
     }
 
@@ -1487,6 +1629,8 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
 HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMessage* hack) {
 
+    bool positive_hack = hack->neigh_type != LOST_NEIGH;
+
     // Log
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
         char id_str1[UUID_STR_LEN+1];
@@ -1498,7 +1642,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
         uuid_unparse(hack->dest_process_id, id_str2);
 
         char str[200];
-        sprintf(str, "SRC=%s DEST=%s SEQ=%hu P=%d s", id_str1, id_str2, hack->seq, hack->period);
+        sprintf(str, "SRC=%s DEST=%s SEQ=%hu P=%d s [%s]", id_str1, id_str2, hack->seq, hack->period, (positive_hack?"+":"-"));
         ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RECEIVED HACK", str);
     #endif
 
@@ -1517,7 +1661,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
             milli_to_timespec(&hack_exp_time, hack->period*1000*state->args->hack_misses);
             add_timespec(&hack_exp_time, &hack_exp_time, &state->current_time);
 
-            bool positive_hack = hack->neigh_type != LOST_NEIGH;
+
             summary->positive_hack = positive_hack;
 
             // If is a positive HACK
@@ -1657,7 +1801,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     // If my hello period is larger than my neighbor's hack period and if several hacks are missed, then it may happen that this hack is repeated_yet_fresh (valid)
 
                     summary->new_hack = seq_cmp > 0;
-                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && seq_cmp2 >= 0;
+                    summary->repeated_yet_fresh_hack = seq_cmp == 0 && seq_cmp2 >= 0 && !THNE_isLost(nn);
 
                     // if fresh hack
                     if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
@@ -1690,13 +1834,18 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         if( traffic_delta >= state->args->traffic_epsilon || (traffic_delta > 0 && hack->traffic == 0.0)) {
 
                             THNE_setTraffic(nn, hack->traffic);
-                            summary->updated_2hop_traffic = true;
+                            summary->updated_2hop_traffic = true && state->args->toggle_env;
 
                             if( traffic_delta >= state->args->traffic_threshold ) {
-                                summary->updated_2hop_traffic_threshold = true;
+                                summary->updated_2hop_traffic_threshold = true && state->args->toggle_env;
                             }
                         }
 
+                        // To avoid deleting before the neighbor deletes this 2hop neigh, which could lead to the 1hop neighbor sending a positive hack after the current node deleting
+                        /*struct timespec aux = {0};
+                        milli_to_timespec(&aux, hack->period*1000);
+                        add_timespec(&aux, &aux, &hack_exp_time);
+                        THNE_setExpiration(nn, &aux);*/
                         THNE_setExpiration(nn, &hack_exp_time);
                     } else {
                         // stale hack, ignore
@@ -1704,7 +1853,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                 } else {
                     // Insert new 2-hop neighbor
-                    TwoHopNeighborEntry* nn = newTwoHopNeighborEntry(hack->dest_process_id, hack->seq, hack->neigh_type == BI_NEIGH, hack->rx_lq, hack->tx_lq, hack->traffic, &hack_exp_time);
+                    TwoHopNeighborEntry* nn = newTwoHopNeighborEntry(hack->dest_process_id, hack->seq, hack->neigh_type == BI_NEIGH, false, hack->rx_lq, hack->tx_lq, hack->traffic, &hack_exp_time);
 
                     TwoHopNeighborEntry* aux = NE_addTwoHopNeighborEntry(neigh, nn);
                     assert(aux == NULL);
@@ -1747,6 +1896,10 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                     }
                 }
 
+                struct timespec removal_time = {0};
+                milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
+                add_timespec(&removal_time, &removal_time,  &state->current_time);
+
                 // Update 2-hop neighborhood
                 TwoHopNeighborEntry* nn = NE_getTwoHopNeighborEntry(neigh, hack->dest_process_id);
                 if( nn ) {
@@ -1761,13 +1914,24 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
                     // if fresh hack
                     if( summary->new_hack || summary->repeated_yet_fresh_hack ) {
+                        if( !THNE_isLost(nn) ) {
+                            THNE_setLost(nn, true);
+                            THNE_setExpiration(nn, &removal_time);
+                        }
+
                         // Remove from 2-hop neighborhood, if present
-                        TwoHopNeighborEntry* removed = NE_removeTwoHopNeighborEntry(neigh, hack->dest_process_id);
+                        /*TwoHopNeighborEntry* removed = NE_removeTwoHopNeighborEntry(neigh, hack->dest_process_id);
                         if(removed) {
                             free(removed);
                             summary->lost_2hop_neighbor = true;
-                        }
+                        }*/
                     }
+                } else {
+                    // Insert new 2-hop neighbor
+                    nn = newTwoHopNeighborEntry(hack->dest_process_id, hack->seq, false, true, hack->rx_lq, hack->tx_lq, hack->traffic, &removal_time);
+
+                    TwoHopNeighborEntry* aux = NE_addTwoHopNeighborEntry(neigh, nn);
+                    assert(aux == NULL);
                 }
             }
     } else {
@@ -2056,30 +2220,42 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
 
     // Append Neighbors
     hash_table* ht = NE_getTwoHopNeighbors(neigh);
-    byte n = ht->n_items;
-    YggEvent_addPayload(ev, &n, sizeof(byte));
+    byte n = 0;
 
     void* iterator = NULL;
     hash_table_item* hit = NULL;
     while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
         TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+        if(!THNE_isLost(nn)) {
+            n++;
+        }
+    }
 
-        // Append Neigh ID
-        YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+    YggEvent_addPayload(ev, &n, sizeof(byte));
 
-        // Append Neigh LQ
-        rx_lq = THNE_getRxLinkQuality(nn);
-        YggEvent_addPayload(ev, &rx_lq, sizeof(double));
-        tx_lq = THNE_getTxLinkQuality(nn);
-        YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+    iterator = NULL;
+    hit = NULL;
+    while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
+        TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
 
-        // Append Traffic
-        traffic = THNE_getTraffic(nn);
-        YggEvent_addPayload(ev, &traffic, sizeof(double));
+        if(!THNE_isLost(nn)) {
+            // Append Neigh ID
+            YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
 
-        // Append Neigh Type
-        is_bi = THNE_isBi(nn);
-        YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+            // Append Neigh LQ
+            rx_lq = THNE_getRxLinkQuality(nn);
+            YggEvent_addPayload(ev, &rx_lq, sizeof(double));
+            tx_lq = THNE_getTxLinkQuality(nn);
+            YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+
+            // Append Traffic
+            traffic = THNE_getTraffic(nn);
+            YggEvent_addPayload(ev, &traffic, sizeof(double));
+
+            // Append Neigh Type
+            is_bi = THNE_isBi(nn);
+            YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+        }
     }
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
@@ -2126,30 +2302,42 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
 
     // Append Neighbors
     hash_table* ht = NE_getTwoHopNeighbors(neigh);
-    byte n = ht->n_items;
-    YggEvent_addPayload(ev, &n, sizeof(byte));
+    byte n = 0;
 
     void* iterator = NULL;
     hash_table_item* hit = NULL;
     while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
         TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+        if(!THNE_isLost(nn)) {
+            n++;
+        }
+    }
 
-        // Append Neigh ID
-        YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+    YggEvent_addPayload(ev, &n, sizeof(byte));
 
-        // Append Neigh LQ
-        rx_lq = THNE_getRxLinkQuality(nn);
-        YggEvent_addPayload(ev, &rx_lq, sizeof(double));
-        tx_lq = THNE_getTxLinkQuality(nn);
-        YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+    iterator = NULL;
+    hit = NULL;
+    while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
+        TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
 
-        // Append Traffic
-        traffic = THNE_getTraffic(nn);
-        YggEvent_addPayload(ev, &traffic, sizeof(double));
+        if(!THNE_isLost(nn)) {
+            // Append Neigh ID
+            YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
 
-        // Append Neigh Type
-        is_bi = THNE_isBi(nn);
-        YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+            // Append Neigh LQ
+            rx_lq = THNE_getRxLinkQuality(nn);
+            YggEvent_addPayload(ev, &rx_lq, sizeof(double));
+            tx_lq = THNE_getTxLinkQuality(nn);
+            YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+
+            // Append Traffic
+            traffic = THNE_getTraffic(nn);
+            YggEvent_addPayload(ev, &traffic, sizeof(double));
+
+            // Append Neigh Type
+            is_bi = THNE_isBi(nn);
+            YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+        }
     }
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
@@ -2185,21 +2373,35 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
     assert(!NE_isPending(neigh));
 
     // Append Neighbors
+
+    // Append Neighbors
     hash_table* ht = NE_getTwoHopNeighbors(neigh);
-    byte n = ht->n_items;
-    YggEvent_addPayload(ev, &n, sizeof(byte));
+    byte n = 0;
 
     void* iterator = NULL;
     hash_table_item* hit = NULL;
     while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
         TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+        if(!THNE_isLost(nn)) {
+            n++;
+        }
+    }
 
-        // Append Neigh ID
-        YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+    YggEvent_addPayload(ev, &n, sizeof(byte));
 
-        // Append Neigh Type
-        is_bi = THNE_isBi(nn);
-        YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+    iterator = NULL;
+    hit = NULL;
+    while( (hit = hash_table_iterator_next(ht, &iterator)) ) {
+        TwoHopNeighborEntry* nn = (TwoHopNeighborEntry*)hit->value;
+
+        if(!THNE_isLost(nn)) {
+            // Append Neigh ID
+            YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+
+            // Append Neigh Type
+            is_bi = THNE_isBi(nn);
+            YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+        }
     }
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
@@ -2230,23 +2432,26 @@ void DF_notifyNeighborhood(discovery_framework_state* state) {
     free(buffer);
 
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
-    //char* str1 = NULL, *str2 = NULL;
-    char* str2 = NULL;
+    char* str1 = NULL, *str2 = NULL;
 
-    //DF_uponDiscoveryEnvironmentTimer(state); // temp
-    //NE_print(state->environment, &str1);
+    if(state->args->toggle_env) {
+        DF_uponDiscoveryEnvironmentTimer(state);
+        NE_print(state->environment, &str1);
+    } else {
+        str1 = "";
+    }
 
     NT_print(state->neighbors, &str2, &state->current_time, state->myID, &state->myAddr, state->my_seq);
 
-    //char str3[strlen(str1)+strlen(str2)+1];
-    //sprintf(str3, "\n%s\n%s", str1, str2);
-
-    char str3[strlen(str2)+1];
-    sprintf(str3, "\n%s", str2);
+    char str3[strlen(str1)+strlen(str2)+1];
+    sprintf(str3, "\n%s\n%s", str1, str2);
 
     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORHOOD", str3);
 
-    //free(str1);
+    if(state->args->toggle_env) {
+        free(str1);
+    }
+
     free(str2);
     #endif
 

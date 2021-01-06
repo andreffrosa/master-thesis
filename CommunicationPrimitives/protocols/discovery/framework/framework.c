@@ -133,9 +133,7 @@ static bool processTimer(discovery_framework_state* f_state, YggTimer* timer) {
     }
     // Neighbor Timer
     else if( timer->timer_type == NEIGHBOR_TIMER ) {
-        NeighborEntry* neigh = NT_getNeighbor(f_state->neighbors, timer->id);
-        assert(neigh);
-        DF_uponNeighborTimer(f_state, neigh);
+        DF_uponNeighborTimer(f_state, timer->id);
         return true;
     }
     // Discovery Environment Timer
