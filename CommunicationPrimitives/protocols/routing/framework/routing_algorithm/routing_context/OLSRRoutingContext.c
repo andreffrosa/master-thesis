@@ -103,7 +103,7 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
     	}
 
         // Recompute routing table
-        RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
+        //RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
 
         return false;
     }
@@ -138,6 +138,8 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
             YggMessage_addPayload(msg, (char*)&tx_cost, sizeof(double));
         }
 
+        printf("Sending TC msg seq = %hu amount=%d\n", seq, amount);
+
         return true;
     }
 
@@ -167,6 +169,8 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
     printf("Received TC message from %s with seq %hu\n", id_str, seq);
     fflush(stdout);
 
+    return; // discard; temp
+
     if( uuid_compare(src, myID) == 0 ) {
         return; // discard
     }
@@ -179,6 +183,9 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
 
     if(entry == NULL) {
         entry = malloc(sizeof(RouterSetEntry));
+
+        entry->seq = seq;
+        copy_timespec(&entry->exp_time, &zero_timespec);
 
         entry->links = list_init();
 
@@ -201,7 +208,7 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
         }
 
         // Recompute routing table
-        RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
+        //RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
     }
 
 }

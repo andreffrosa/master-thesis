@@ -476,13 +476,13 @@ static DijkstraTuple* find_min_cost(list* q, hash_table* routes) {
 
     DijkstraTuple* selected = NULL;
 
-    void* iterator = NULL;
-    hash_table_item* it = NULL;
-    while( (it = hash_table_iterator_next(routes, &iterator)) ) {
-        DijkstraTuple* dt = (DijkstraTuple*)it->value;
-
-        if( selected == NULL || dt->cost < selected->cost ) {
-            selected = dt;
+    for(list_item* it = q->head; it; it = it->next) {
+        uuid_t* id = (uuid_t*)it->data;
+        DijkstraTuple* dt = (DijkstraTuple*)hash_table_find_value(routes, id);
+        if(dt) {
+            if( selected == NULL || dt->cost < selected->cost ) {
+                selected = dt;
+            }
         }
     }
     assert(selected);
@@ -531,7 +531,9 @@ hash_table* Dijkstra(graph* g, unsigned char* source_id) {
 
             dt = hash_table_find_value(routes, neigh_id);
             if( dt == NULL ) {
-                dt = newDijkstraTuple(neigh_id, current->next_hop_id, new_cost, current->hops+1);
+                unsigned char* next_hop_id = uuid_compare(current->next_hop_id, source_id) == 0 ? neigh_id : current->next_hop_id;
+
+                dt = newDijkstraTuple(neigh_id, next_hop_id, new_cost, current->hops+1);
                 hash_table_insert(routes, new_id(neigh_id), dt);
             } else {
                 if( new_cost < dt->cost || (new_cost == dt->cost && current->hops + 1 < dt->hops) ) {

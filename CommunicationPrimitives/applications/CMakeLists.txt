@@ -11,7 +11,10 @@ link_directories(${PROJECT_SOURCE_DIR})
 
 #
 add_executable(connect_test ${PROJECT_SOURCE_DIR}/connect.c ${PROJECT_SOURCE_DIR}/app_common.c)
-target_link_libraries(connect_test utility yggcore ygginterfaces yggdatastruct ygglllib_obj)
+target_link_libraries(connect_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
+add_executable(dijkstra_test ${PROJECT_SOURCE_DIR}/aux/dijkstra_test.c)
+target_link_libraries(dijkstra_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
 
 # DISCOVERY
 
