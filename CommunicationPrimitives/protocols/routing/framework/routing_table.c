@@ -32,6 +32,7 @@ typedef struct RoutingTableEntry_ {
     WLANAddr next_hop_addr;
 
     double cost;
+    unsigned int hops;
 
     //unsigned short seq;
 
@@ -65,28 +66,28 @@ static void hash_table_delete_custom_fun(hash_table_item* it, void* args) {
     //}
 }
 
-void destroyRoutingTable(RoutingTable* table, void (*destroy_attrs)(void*, void*)) {
-    assert(table);
+void destroyRoutingTable(RoutingTable* rt/*, void (*destroy_attrs)(void*, void*)*/) {
+    assert(rt);
 
-    hash_table_delete_custom(table->ht, &hash_table_delete_custom_fun, destroy_attrs);
-    free(table);
+    hash_table_delete_custom(rt->ht, &hash_table_delete_custom_fun, NULL /*destroy_attrs*/);
+    free(rt);
 }
 
-RoutingTableEntry* RT_addEntry(RoutingTable* table, RoutingTableEntry* entry) {
-    assert(table && entry);
-    return (RoutingTableEntry*)hash_table_insert(table->ht, entry->destination_id, entry);
+RoutingTableEntry* RT_addEntry(RoutingTable* rt, RoutingTableEntry* entry) {
+    assert(rt && entry);
+    return (RoutingTableEntry*)hash_table_insert(rt->ht, entry->destination_id, entry);
 }
 
-RoutingTableEntry* RT_findEntry(RoutingTable* table, unsigned char* destination_id) {
-    assert(table);
+RoutingTableEntry* RT_findEntry(RoutingTable* rt, unsigned char* destination_id) {
+    assert(rt);
 
-    return (RoutingTableEntry*)hash_table_find_value(table->ht, destination_id);
+    return (RoutingTableEntry*)hash_table_find_value(rt->ht, destination_id);
 }
 
-RoutingTableEntry* RT_removeEntry(RoutingTable* table, unsigned char* destination_id) {
-    assert(table);
+RoutingTableEntry* RT_removeEntry(RoutingTable* rt, unsigned char* destination_id) {
+    assert(rt);
 
-    hash_table_item* it = hash_table_remove(table->ht, destination_id);
+    hash_table_item* it = hash_table_remove_item(rt->ht, destination_id);
     if(it) {
         RoutingTableEntry* entry = (RoutingTableEntry*)it->value;
         free(it);
@@ -96,13 +97,68 @@ RoutingTableEntry* RT_removeEntry(RoutingTable* table, unsigned char* destinatio
     }
 }
 
-RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, struct timespec* found_time) {
+bool RT_update(RoutingTable* rt, list* to_update, list* to_remove) {
+    assert(rt);
+
+    bool updated = false;
+
+    if(to_update) {
+        RoutingTableEntry* new_entry = NULL;
+        while( (new_entry = list_remove_head(to_update)) ) {
+
+            RoutingTableEntry* old_entry = RT_removeEntry(rt, new_entry->destination_id);
+            if(old_entry) {
+
+                if(uuid_compare(new_entry->next_hop_id, old_entry->next_hop_id) == 0) {
+                    copy_timespec(&new_entry->found_time, &old_entry->found_time);
+                    copy_timespec(&new_entry->last_used_time, &old_entry->last_used_time);
+                    new_entry->messages_forwarded = old_entry->messages_forwarded;
+                } else {
+                    RTE_resetMessagesForwarded(new_entry);
+                    //RTE_setFoundTime(current_entry, current_time);
+                    RTE_setLastUsedTime(new_entry, (struct timespec*)&zero_timespec);
+                }
+
+                RT_addEntry(rt, new_entry);
+
+                free(old_entry);
+
+                updated = true;
+            } else {
+                RT_addEntry(rt, new_entry);
+
+                updated = true;
+            }
+        }
+
+        list_delete(to_update);
+    }
+
+    if(to_remove) {
+        unsigned char* id = NULL;
+        while( (id = list_remove_head(to_remove)) ) {
+            RoutingTableEntry* old_entry = RT_removeEntry(rt, id);
+            free(old_entry);
+
+            free(id);
+
+            updated = true;
+        }
+
+        free(to_remove);
+    }
+
+    return updated;
+}
+
+RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time) {
     RoutingTableEntry* entry = malloc(sizeof(RoutingTableEntry));
 
     uuid_copy(entry->destination_id, destination_id);
     uuid_copy(entry->next_hop_id, next_hop_id);
     memcpy(entry->next_hop_addr.data, next_hop_addr->data, WLAN_ADDR_LEN);
     entry->cost = cost;
+    entry->hops = hops;
     //entry->seq = seq;
 
     copy_timespec(&entry->found_time, found_time);
@@ -157,6 +213,16 @@ void RTE_setCost(RoutingTableEntry* entry, double new_cost) {
     entry->cost = new_cost;
 }
 
+unsigned int RTE_getHops(RoutingTableEntry* entry) {
+    assert(entry);
+    return entry->hops;
+}
+
+void RTE_setHops(RoutingTableEntry* entry, unsigned int new_hops) {
+    assert(entry);
+    entry->hops = new_hops;
+}
+
 /*unsigned short RTE_getSEQ(RoutingTableEntry* entry) {
     assert(entry);
     return entry->seq;
@@ -209,8 +275,8 @@ unsigned int RTE_getAttrsSize(RoutingTableEntry* entry) {
 }
 */
 
-RoutingTableEntry* RT_nextRoute(RoutingTable* table, void** iterator) {
-    hash_table_item* item = hash_table_iterator_next(table->ht, iterator);
+RoutingTableEntry* RT_nextRoute(RoutingTable* rt, void** iterator) {
+    hash_table_item* item = hash_table_iterator_next(rt->ht, iterator);
     if(item) {
         return (RoutingTableEntry*)(item->value);
     } else {
@@ -251,15 +317,15 @@ char* RTE_toString(RoutingTableEntry* entry, struct timespec* current_time) {
 }
 */
 
-char* RT_toString(RoutingTable* table, char** str, struct timespec* current_time) {
-    assert(table && current_time);
+char* RT_toString(RoutingTable* rt, char** str, struct timespec* current_time) {
+    assert(rt && current_time);
 
-    char* header = " # |            DESTINATION ID            |             NEXT HOP ID              |    NEXT HOP MAC   |  COST  |  FOUND  |  USED  |  FORWARDED  |  \n";
+    char* header = " # |            DESTINATION ID            |             NEXT HOP ID              |    NEXT HOP MAC   |  COST  |  HOPS  |  FOUND  |  USED  |  FORWARDED  |  \n";
 
     unsigned int line_size = strlen(header) + 1;
 
-    //unsigned int n_routes = table->ht->size;
-    unsigned long buffer_size = (table->ht->n_items+1)*line_size;
+    //unsigned int n_routes = rt->ht->size;
+    unsigned long buffer_size = (rt->ht->n_items+1)*line_size;
 
     char* buffer = malloc(buffer_size);
     char* ptr = buffer;
@@ -271,7 +337,7 @@ char* RT_toString(RoutingTable* table, char** str, struct timespec* current_time
     unsigned int counter = 0;
     void* iterator = NULL;
     RoutingTableEntry* current_route = NULL;
-    while( (current_route = RT_nextRoute(table, &iterator)) ) {
+    while( (current_route = RT_nextRoute(rt, &iterator)) ) {
 
         char dest_id_str[UUID_STR_LEN+1];
         uuid_unparse(RTE_getDestinationID(current_route), dest_id_str);
@@ -294,6 +360,10 @@ char* RT_toString(RoutingTable* table, char** str, struct timespec* current_time
         char cost_str[6];
         sprintf(cost_str, "%0.3f", RTE_getCost(current_route));
 
+        char hops_str[6];
+        sprintf(hops_str, "%u", RTE_getHops(current_route));
+        align_str(hops_str, hops_str, 5, "R");
+
         //assert(entry->cost < 1000);
         //unsigned int padding = 3 - (entry->cost == 0 ? 0 : (int)log10(entry->cost));
         //char cost_str[20] = {0};
@@ -313,10 +383,10 @@ char* RT_toString(RoutingTable* table, char** str, struct timespec* current_time
 
         char forwarded_str[12];
         sprintf(forwarded_str, "%lu", RTE_getMessagesForwarded(current_route));
-        align_str(used_time_str, used_time_str, 11, "R");
+        align_str(forwarded_str, forwarded_str, 11, "R");
 
-        sprintf(ptr, "%2.d   %s   %s   %s   %s   %s   %s   %s  \n",
-        counter+1, dest_id_str, next_hop_id_str, next_hop_addr_str, cost_str, found_time_str, used_time_str, forwarded_str);
+        sprintf(ptr, "%2.d   %s   %s   %s   %s     %s    %s   %s   %s  \n",
+        counter+1, dest_id_str, next_hop_id_str, next_hop_addr_str, cost_str, hops_str, found_time_str, used_time_str, forwarded_str);
         ptr += strlen(ptr);
 
         counter++;

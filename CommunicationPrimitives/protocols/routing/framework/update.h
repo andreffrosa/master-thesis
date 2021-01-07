@@ -11,21 +11,11 @@
  * (C) 2020
  *********************************************************/
 
-#ifndef _BROADCAST_ALGORITHM_COMMON_H_
-#define _BROADCAST_ALGORITHM_COMMON_H_
+#ifndef _ROUTING_UPDATE_H_
+#define _ROUTING_UPDATE_H_
 
-#include "Yggdrasil.h"
+#include "routing_table.h"
 
-#include "utility/byte.h"
-#include "utility/my_misc.h"
+void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, struct timespec* current_time);
 
-#include "../routing_table.h"
-#include "../routing_neighbors.h"
-
-#include "../routing_header.h"
-
-#include "../internal_events.h"
-
-#include "../update.h"
-
-#endif /* _BROADCAST_ALGORITHM_COMMON_H_ */
+#endif /*_ROUTING_UPDATE_H_*/

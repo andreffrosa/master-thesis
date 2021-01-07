@@ -461,10 +461,10 @@ void delete_n1_item(hash_table_item* hit, void* aux) {
 
 ////////////////////////////////////////////////7
 
-DijkstraTuple* newDijkstraTuple(unsigned char* dest_id, unsigned char* next_hop_id, double cost, unsigned int hops) {
+DijkstraTuple* newDijkstraTuple(unsigned char* destination_id, unsigned char* next_hop_id, double cost, unsigned int hops) {
     DijkstraTuple* dt = malloc(sizeof(DijkstraTuple));
 
-    uuid_copy(dt->dest_id, dest_id);
+    uuid_copy(dt->destination_id, destination_id);
     uuid_copy(dt->next_hop_id, next_hop_id);
     dt->cost = cost;
     dt->hops = hops;
@@ -485,7 +485,7 @@ static DijkstraTuple* find_min_cost(list* q, hash_table* routes) {
             }
         }
     }
-    assert(selected);
+    //assert(selected);
 
     return selected;
 }
@@ -512,39 +512,45 @@ hash_table* Dijkstra(graph* g, unsigned char* source_id) {
     while( !list_is_empty(q) ) {
         DijkstraTuple* current = find_min_cost(q, routes);
 
-        void* aux = list_remove_item(q, &equalID, current->dest_id);
-        free(aux);
+        if(current) {
+            void* aux = list_remove_item(q, &equalID, current->destination_id);
+            free(aux);
 
-        graph_node* current_node = graph_find_node(g, current->dest_id);
-        assert(current_node);
-        list* neighbors = graph_get_adjacencies_from_node(g, current_node, OUT_ADJ);
-        for(list_item* it = neighbors->head; it; it = it->next) {
-            unsigned char* neigh_id = (unsigned char*)it->data;
+            graph_node* current_node = graph_find_node(g, current->destination_id);
+            assert(current_node);
+            list* neighbors = graph_get_adjacencies_from_node(g, current_node, OUT_ADJ);
+            for(list_item* it = neighbors->head; it; it = it->next) {
+                unsigned char* neigh_id = (unsigned char*)it->data;
 
-            graph_edge* edge = graph_find_edge(g, current_node->key, neigh_id);
-            assert(edge);
+                graph_edge* edge = graph_find_edge(g, current_node->key, neigh_id);
+                assert(edge);
 
-            double* link_cost = edge->label;
-            assert(link_cost);
+                double* link_cost = edge->label;
+                assert(link_cost);
 
-            double new_cost = current->cost + *link_cost;
+                double new_cost = current->cost + *link_cost;
 
-            dt = hash_table_find_value(routes, neigh_id);
-            if( dt == NULL ) {
-                unsigned char* next_hop_id = uuid_compare(current->next_hop_id, source_id) == 0 ? neigh_id : current->next_hop_id;
+                dt = hash_table_find_value(routes, neigh_id);
+                if( dt == NULL ) {
+                    unsigned char* next_hop_id = uuid_compare(current->next_hop_id, source_id) == 0 ? neigh_id : current->next_hop_id;
 
-                dt = newDijkstraTuple(neigh_id, next_hop_id, new_cost, current->hops+1);
-                hash_table_insert(routes, new_id(neigh_id), dt);
-            } else {
-                if( new_cost < dt->cost || (new_cost == dt->cost && current->hops + 1 < dt->hops) ) {
-                    uuid_copy(dt->next_hop_id, current->next_hop_id);
-                    dt->cost = new_cost;
-                    dt->hops = current->hops + 1;
+                    dt = newDijkstraTuple(neigh_id, next_hop_id, new_cost, current->hops+1);
+                    hash_table_insert(routes, new_id(neigh_id), dt);
+                } else {
+                    if( new_cost < dt->cost || (new_cost == dt->cost && current->hops + 1 < dt->hops) ) {
+                        uuid_copy(dt->next_hop_id, current->next_hop_id);
+                        dt->cost = new_cost;
+                        dt->hops = current->hops + 1;
+                    }
                 }
             }
+            list_delete(neighbors);
+        } else {
+            break;
         }
-        list_delete(neighbors);
     }
+
+    list_delete(q);
 
     // Remove Source
     dt = hash_table_remove(routes, source_id);

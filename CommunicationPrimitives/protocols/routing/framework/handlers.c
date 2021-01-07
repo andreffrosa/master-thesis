@@ -195,6 +195,27 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
     RA_rcvControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->myID, &state->current_time, message);
 }
 
+void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, struct timespec* current_time) {
+
+    #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+        bool updated = RT_update(rt, to_update, to_remove);
+
+        if(updated) {
+            char* table_str = NULL;
+            RT_toString(rt, &table_str, current_time);
+
+            char str[strlen(table_str) + 2];
+            sprintf(str, "\n%s\n", table_str);
+            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
+
+            free(table_str);
+        }
+    #else
+        RT_update(rt, to_update, to_remove);
+    #endif
+}
+
+
 void RF_runGarbageCollector(routing_framework_state* state) {
 
     struct timespec seen_expiration = {0, 0};

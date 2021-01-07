@@ -24,6 +24,7 @@ static void parseNode(unsigned char* id, unsigned int node_id);
 static graph* create_topology();
 
 int main(int argc, char* argv[]) {
+
     graph* g = create_topology();
 
     uuid_t source;
@@ -42,7 +43,7 @@ int main(int argc, char* argv[]) {
 
         char dest_str[UUID_STR_LEN+1];
         dest_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(dt->dest_id, dest_str);
+        uuid_unparse(dt->destination_id, dest_str);
 
         char next_hop_str[UUID_STR_LEN+1];
         next_hop_str[UUID_STR_LEN] = '\0';

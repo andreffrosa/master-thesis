@@ -16,22 +16,26 @@
 
 #include "Yggdrasil.h"
 
+#include "data_structures/list.h"
+
 typedef struct RoutingTable_ RoutingTable;
 typedef struct RoutingTableEntry_ RoutingTableEntry;
 
 RoutingTable* newRoutingTable();
 
-void destroyRoutingTable(RoutingTable* table, void (*destroy_attrs)(void*, void*));
+void destroyRoutingTable(RoutingTable* rt);
 
-RoutingTableEntry* RT_addEntry(RoutingTable* table, RoutingTableEntry* entry);
+RoutingTableEntry* RT_addEntry(RoutingTable* rt, RoutingTableEntry* entry);
 
-RoutingTableEntry* RT_findEntry(RoutingTable* table, unsigned char* destination_id);
+RoutingTableEntry* RT_findEntry(RoutingTable* rt, unsigned char* destination_id);
 
-RoutingTableEntry* RT_removeEntry(RoutingTable* table, unsigned char* destination_id);
+RoutingTableEntry* RT_removeEntry(RoutingTable* rt, unsigned char* destination_id);
 
-RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, struct timespec* found_time);
+bool RT_update(RoutingTable* rt, list* to_update, list* to_remove);
 
-RoutingTableEntry* RT_nextRoute(RoutingTable* table, void** iterator);
+RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time);
+
+RoutingTableEntry* RT_nextRoute(RoutingTable* rt, void** iterator);
 
 void destroyRoutingTableEntry(RoutingTableEntry* entry);
 
@@ -46,6 +50,10 @@ void RTE_setNexHop(RoutingTableEntry* entry, unsigned char* id, WLANAddr* addr);
 double RTE_getCost(RoutingTableEntry* entry);
 
 void RTE_setCost(RoutingTableEntry* entry, double new_cost);
+
+unsigned int RTE_getHops(RoutingTableEntry* entry);
+
+void RTE_setHops(RoutingTableEntry* entry, unsigned int new_hops);
 
 //unsigned short RTE_getSEQ(RoutingTableEntry* entry);
 
@@ -71,6 +79,6 @@ unsigned int RTE_getAttrsSize(RoutingTableEntry* entry);
 char* RTE_toString(RoutingTableEntry* entry, struct timespec* current_time);
 */
 
-char* RT_toString(RoutingTable* table, char** str, struct timespec* current_time);
+char* RT_toString(RoutingTable* rt, char** str, struct timespec* current_time);
 
 #endif /* _ROUTING_FRAMEWORK_ROUTING_TABLE_H_ */

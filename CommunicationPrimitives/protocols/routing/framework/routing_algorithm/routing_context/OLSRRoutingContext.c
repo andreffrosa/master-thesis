@@ -51,7 +51,7 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
         YggEvent* ev = args;
         assert(ev);
 
-        printf("XE\n");
+        //printf("XE\n");
 
         if(ev->notification_id == GENERIC_DISCOVERY_EVENT) {
 
@@ -103,14 +103,14 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
     	}
 
         // Recompute routing table
-        //RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
+        RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
 
         return false;
     }
 
     else if(event_type == RTE_ANNOUNCE_TIMER) {
 
-        printf("XO\n");
+        //printf("XO\n");
 
         if(state->dirty) {
             // TODO: inc seq
@@ -169,8 +169,6 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
     printf("Received TC message from %s with seq %hu\n", id_str, seq);
     fflush(stdout);
 
-    return; // discard; temp
-
     if( uuid_compare(src, myID) == 0 ) {
         return; // discard
     }
@@ -189,7 +187,7 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
 
         entry->links = list_init();
 
-        hash_table_insert(state->topology_set, src, entry);
+        hash_table_insert(state->topology_set, new_id(src), entry);
     }
 
     // TODO: fazer o exp
@@ -208,7 +206,7 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
         }
 
         // Recompute routing table
-        //RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
+        RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
     }
 
 }
@@ -249,7 +247,17 @@ static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* ne
 
         graph_insert_edge(g, myID, neigh_id, new_double(RNE_getCost(neigh)));
         graph_insert_edge(g, neigh_id, myID, new_double(RNE_getCost(neigh)));
+
+        /*
+char str[UUID_STR_LEN];
+        uuid_unparse(neigh_id, str);
+        printf("neigh_id: %s\n", str);
+*/
+
+
     }
+
+    //printf("tc:\n");
 
     iterator = NULL;
     hash_table_item* hit = NULL;
@@ -268,12 +276,51 @@ static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* ne
                 graph_insert_node(g, new_id(link->to), NULL);
             }
 
-            assert(graph_find_edge(g, entry_id, link->to) == NULL);
-            graph_insert_edge(g, entry_id, link->to, new_double(link->tx_cost));
+            //bool inserted = false;
+
+            if(graph_find_edge(g, entry_id, link->to) == NULL) {
+                graph_insert_edge(g, entry_id, link->to, new_double(link->tx_cost));
+                //inserted = true;
+            }
+
+            /*
+char from_str[UUID_STR_LEN];
+            uuid_unparse(entry_id, from_str);
+
+            char to_str[UUID_STR_LEN];
+            uuid_unparse(link->to, to_str);
+
+            printf("%s -> %s : %f %s\n", from_str, to_str, link->tx_cost, (inserted?"T":"F"));
+*/
+
+
         }
     }
 
+    //printf("graph:\n");
+
+    // Temp
+    for(list_item* it = g->edges->head; it; it = it->next) {
+        graph_edge* edge = (graph_edge*)it->data;
+
+        char from_str[UUID_STR_LEN];
+        uuid_unparse(edge->start_node->key, from_str);
+
+        char to_str[UUID_STR_LEN];
+        uuid_unparse(edge->end_node->key, to_str);
+
+        double* cost = (double*)edge->label;
+        assert(cost);
+
+        //printf("%s -> %s : %f\n", from_str, to_str, *cost);
+    }
+
     hash_table* routes = Dijkstra(g, myID);
+
+    //printf("routes %d\n", routes->n_items);
+
+    list* to_update = list_init();
+    list* to_remove = list_init();
 
     iterator = NULL;
     RoutingTableEntry* current_entry = NULL;
@@ -281,29 +328,23 @@ static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* ne
 
         DijkstraTuple* dt = hash_table_remove(routes, RTE_getDestinationID(current_entry));
         if( dt ) {
-            // Update Route
-            unsigned char* next_hop = RTE_getNextHopID(current_entry);
-            if(uuid_compare(next_hop, dt->next_hop_id) == 0) {
-                // Just set cost
-                RTE_setCost(current_entry, dt->cost);
-            } else {
-                // Set cost, next_hop and found_time and reset last used
-                RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, dt->next_hop_id);
-                assert(neigh);
-                WLANAddr* addr = RNE_getAddr(neigh);
-                RTE_setNexHop(current_entry, dt->next_hop_id, addr);
+            RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, dt->next_hop_id);
+            assert(neigh);
+            WLANAddr* addr = RNE_getAddr(neigh);
 
-                RTE_setCost(current_entry, dt->cost);
-                RTE_resetMessagesForwarded(current_entry);
-                RTE_setFoundTime(current_entry, current_time);
-                RTE_setLastUsedTime(current_entry, current_time);
-            }
+            RoutingTableEntry* new_entry = newRoutingTableEntry(dt->destination_id, dt->next_hop_id, addr, dt->cost, dt->hops, current_time);
+
+            list_add_item_to_tail(to_update, new_entry);
 
             free(dt);
         } else {
-            RoutingTableEntry* aux = RT_removeEntry(routing_table, RTE_getDestinationID(current_entry));
-            assert(aux == current_entry);
-            free(aux);
+            RoutingTableEntry* old_entry = RT_findEntry(routing_table, RTE_getDestinationID(current_entry));
+            assert(old_entry == current_entry);
+
+            list_add_item_to_tail(to_remove, new_id(RTE_getDestinationID(old_entry)));
+
+
+            //free(old_entry);
         }
     }
 
@@ -316,11 +357,13 @@ static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* ne
         assert(neigh);
         WLANAddr* addr = RNE_getAddr(neigh);
 
-        RoutingTableEntry* route_entry = newRoutingTableEntry(dt->dest_id, dt->next_hop_id, addr, dt->cost, current_time);
-        RT_addEntry(routing_table, route_entry);
+        RoutingTableEntry* new_entry = newRoutingTableEntry(dt->destination_id, dt->next_hop_id, addr, dt->cost, dt->hops, current_time);
+
+        list_add_item_to_tail(to_update, new_entry);
     }
 
     hash_table_delete(routes);
-
     graph_delete(g);
+
+    RF_updateRoutingTable(routing_table, to_update, to_remove, current_time);
 }

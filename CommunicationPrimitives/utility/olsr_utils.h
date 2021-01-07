@@ -49,7 +49,7 @@ void delete_n1_item(hash_table_item* hit, void* aux);
 /////////////////////////////////////////
 
 typedef struct DijkstraTuple_ {
-    uuid_t dest_id;
+    uuid_t destination_id;
     uuid_t next_hop_id;
     double cost;
     unsigned int hops;

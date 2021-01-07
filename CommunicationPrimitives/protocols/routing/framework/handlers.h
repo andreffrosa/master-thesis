@@ -25,6 +25,8 @@
 
 #include "protocols/discovery/framework/framework.h"
 
+#include "update.h"
+
 #include "framework.h"
 
 typedef struct routing_framework_state_ {
