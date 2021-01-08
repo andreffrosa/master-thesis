@@ -40,7 +40,7 @@ typedef struct RouterSetEntry_ {
 
 static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time);
 
-
+static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time);
 
 /*static void OLSRRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
 
@@ -51,63 +51,8 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
 
     if(event_type == RTE_NEIGHBORS_CHANGE) {
         YggEvent* ev = args;
-        assert(ev);
 
-        //printf("XE\n");
-
-        if(ev->notification_id == GENERIC_DISCOVERY_EVENT) {
-
-            unsigned int str_len = 0;
-            void* ptr = NULL;
-            ptr = YggEvent_readPayload(ev, ptr, &str_len, sizeof(unsigned int));
-
-            char type[str_len+1];
-            ptr = YggEvent_readPayload(ev, ptr, type, str_len*sizeof(char));
-            type[str_len] = '\0';
-
-            if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
-                unsigned int amount = 0;
-                ptr = YggEvent_readPayload(ev, ptr, &amount, sizeof(unsigned int));
-
-                // Skip Flooding
-                ptr += amount*sizeof(uuid_t);
-
-                amount = 0;
-                ptr = YggEvent_readPayload(ev, ptr, &amount, sizeof(unsigned int));
-
-                list* l = list_init();
-
-                for(int i = 0; i < amount; i++) {
-                    //uuid_t id;
-                    unsigned char* id = malloc(sizeof(uuid_t));
-                    ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
-
-                    list_add_item_to_tail(l, id);
-
-                    /*
-                    char id_str[UUID_STR_LEN+1];
-                    id_str[UUID_STR_LEN] = '\0';
-                    uuid_unparse(id, id_str);
-                    printf("%s\n", id_str);
-                    */
-                }
-
-                if( strcmp(type, "MPRS") == 0  ) {
-                    list_delete(state->mprs);
-                    state->mprs = l;
-                } else if( strcmp(type, "MPR SELECTORS") == 0 ) {
-                    list_delete(state->mpr_selectors);
-                    state->mpr_selectors = l;
-
-                    state->dirty = true;
-                }
-            }
-    	}
-
-        // Recompute routing table
-        RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
-
-        return false;
+        return ProcessDiscoveryEvent(ev, state, routing_table, neighbors, source_set, myID, current_time);
     }
 
     else if(event_type == RTE_ANNOUNCE_TIMER) {
@@ -368,4 +313,64 @@ char from_str[UUID_STR_LEN];
     graph_delete(g);
 
     RF_updateRoutingTable(routing_table, to_update, to_remove, current_time);
+}
+
+static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time) {
+    assert(ev);
+
+    //printf("XE\n");
+
+    if(ev->notification_id == GENERIC_DISCOVERY_EVENT) {
+
+        unsigned int str_len = 0;
+        void* ptr = NULL;
+        ptr = YggEvent_readPayload(ev, ptr, &str_len, sizeof(unsigned int));
+
+        char type[str_len+1];
+        ptr = YggEvent_readPayload(ev, ptr, type, str_len*sizeof(char));
+        type[str_len] = '\0';
+
+        if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
+            unsigned int amount = 0;
+            ptr = YggEvent_readPayload(ev, ptr, &amount, sizeof(unsigned int));
+
+            // Skip Flooding
+            ptr += amount*sizeof(uuid_t);
+
+            amount = 0;
+            ptr = YggEvent_readPayload(ev, ptr, &amount, sizeof(unsigned int));
+
+            list* l = list_init();
+
+            for(int i = 0; i < amount; i++) {
+                //uuid_t id;
+                unsigned char* id = malloc(sizeof(uuid_t));
+                ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+
+                list_add_item_to_tail(l, id);
+
+                /*
+                char id_str[UUID_STR_LEN+1];
+                id_str[UUID_STR_LEN] = '\0';
+                uuid_unparse(id, id_str);
+                printf("%s\n", id_str);
+                */
+            }
+
+            if( strcmp(type, "MPRS") == 0  ) {
+                list_delete(state->mprs);
+                state->mprs = l;
+            } else if( strcmp(type, "MPR SELECTORS") == 0 ) {
+                list_delete(state->mpr_selectors);
+                state->mpr_selectors = l;
+
+                state->dirty = true;
+            }
+        }
+    }
+
+    // Recompute routing table
+    RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
+
+    return false;
 }
