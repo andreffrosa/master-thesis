@@ -52,6 +52,7 @@ void destroyRoutingNeighbors(RoutingNeighbors* neighbors) {
 
     if(neighbors) {
         hash_table_delete_custom(neighbors->ht, &delete_routing_neighbors_custom, NULL);
+        free(neighbors);
     }
 }
 

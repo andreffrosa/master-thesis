@@ -50,8 +50,8 @@ unsigned int RA_getAnnouncePeriod(RoutingAlgorithm* alg);
 
 void RA_disseminateControlMessage(RoutingAlgorithm* alg, YggMessage* msg);
 
-bool RA_triggerEvent(RoutingAlgorithm* alg, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+bool RA_triggerEvent(RoutingAlgorithm* alg, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
 
-void RA_rcvControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+void RA_rcvControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
 
 #endif /* _ROUTING_ALGORITHM_H_ */

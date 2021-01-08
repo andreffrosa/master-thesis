@@ -46,20 +46,20 @@ void RCtx_init(RoutingContext* context, proto_def* protocol_definition, unsigned
         context->init(&context->state, protocol_definition, myID, r_table, current_time);
 }
 
-bool RCtx_triggerEvent(RoutingContext* context, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+bool RCtx_triggerEvent(RoutingContext* context, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     assert(context);
 
     if(context->trigger_event) {
-        return context->trigger_event(&context->state, seq, event_type, args, routing_table, neighbors, myID, current_time, msg);
+        return context->trigger_event(&context->state, seq, event_type, args, routing_table, neighbors, source_set, myID, current_time, msg);
     } else {
         return false;
     }
 }
 
-void RCtx_rcvMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+void RCtx_rcvMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     assert(context);
 
     if(context->rcv_msg) {
-        context->rcv_msg(&context->state, routing_table, neighbors, myID, current_time, msg);
+        context->rcv_msg(&context->state, routing_table, neighbors, source_set, myID, current_time, msg);
     }
 }

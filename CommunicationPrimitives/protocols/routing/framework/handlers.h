@@ -22,6 +22,7 @@
 
 #include "routing_table.h"
 #include "routing_neighbors.h"
+#include "source_set.h"
 
 #include "protocols/discovery/framework/framework.h"
 
@@ -39,6 +40,7 @@ typedef struct routing_framework_state_ {
 
     RoutingTable* routing_table;     // Routing Table
     RoutingNeighbors* neighbors;
+    SourceSet* source_set;
 
 	SeenMessages* seen_msgs;  	    // List of seen messages so far
 	uuid_t gc_id;			 		// Garbage Collector timer id

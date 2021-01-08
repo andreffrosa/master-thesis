@@ -18,7 +18,6 @@
 #include "utility/my_math.h"
 #include "utility/seq.h"
 
-
 #include "debug.h"
 
 #include <limits.h>
@@ -34,6 +33,8 @@ void RF_init(routing_framework_state* state) {
     state->routing_table = newRoutingTable();
 
     state->neighbors = newRoutingNeighbors();
+
+    state->source_set = newSourceSet();
 
     state->seen_msgs = newSeenMessages();
 
@@ -176,7 +177,7 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
     int add_result = YggMessage_addPayload(&msg, (char*) &msg_type, sizeof(byte));
     assert(add_result != FAILED);
 
-    bool send = RA_triggerEvent(state->args->algorithm, new_seq, event_type, event_args, state->routing_table, state->neighbors, state->myID, &state->current_time, &msg);
+    bool send = RA_triggerEvent(state->args->algorithm, new_seq, event_type, event_args, state->routing_table, state->neighbors, state->source_set, state->myID, &state->current_time, &msg);
 
     if(send) {
         state->my_seq = new_seq;
@@ -192,7 +193,7 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
 
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message) {
 
-    RA_rcvControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->myID, &state->current_time, message);
+    RA_rcvControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_set, state->myID, &state->current_time, message);
 }
 
 void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, struct timespec* current_time) {

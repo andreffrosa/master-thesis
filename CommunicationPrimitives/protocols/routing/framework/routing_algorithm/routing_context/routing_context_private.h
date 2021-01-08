@@ -18,9 +18,9 @@
 
 typedef void (*rc_init)(ModuleState* m_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* r_table, struct timespec* current_time);
 
-typedef bool (*rc_triggerEvent)(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+typedef bool (*rc_triggerEvent)(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
 
-typedef void (*rc_rcvMsg)(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+typedef void (*rc_rcvMsg)(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
 
 typedef void (*rc_destroy)(ModuleState* m_state);
 

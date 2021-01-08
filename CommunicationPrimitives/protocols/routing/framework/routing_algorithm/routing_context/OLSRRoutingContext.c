@@ -40,11 +40,13 @@ typedef struct RouterSetEntry_ {
 
 static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time);
 
+
+
 /*static void OLSRRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
 
 }*/
 
-static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     if(event_type == RTE_NEIGHBORS_CHANGE) {
@@ -146,7 +148,7 @@ static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short 
     return false;
 }
 
-static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     void* ptr = NULL;
