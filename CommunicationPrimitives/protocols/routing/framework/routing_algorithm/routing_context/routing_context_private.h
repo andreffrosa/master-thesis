@@ -18,9 +18,11 @@
 
 typedef void (*rc_init)(ModuleState* m_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* r_table, struct timespec* current_time);
 
-typedef bool (*rc_triggerEvent)(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+typedef RoutingContextSendType (*rc_triggerEvent)(ModuleState* m_state, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time);
 
-typedef void (*rc_rcvMsg)(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+typedef void (*rc_createMsg)(ModuleState* m_state, unsigned short seq, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+
+typedef void (*rc_processMsg)(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
 
 typedef void (*rc_destroy)(ModuleState* m_state);
 
@@ -31,11 +33,12 @@ typedef struct _RoutingContext {
 
     rc_triggerEvent trigger_event;
 
-    rc_rcvMsg rcv_msg;
+    rc_createMsg create_msg;
+    rc_processMsg process_msg;
 
     rc_destroy destroy;
 } RoutingContext;
 
-RoutingContext* newRoutingContext(void* args, void* vars, rc_init init, rc_triggerEvent trigger_event, rc_rcvMsg rcv_msg, rc_destroy destroy);
+RoutingContext* newRoutingContext(void* args, void* vars, rc_init init, rc_triggerEvent trigger_event, rc_createMsg create_msg, rc_processMsg rcv_msg, rc_destroy destroy);
 
 #endif /* _ROUTING_CONTEXT_PRIVATE_H_ */

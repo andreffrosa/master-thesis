@@ -372,14 +372,18 @@ char* RT_toString(RoutingTable* rt, char** str, struct timespec* current_time) {
         struct timespec aux_t = {0};
 
         char found_time_str[7];
-        subtract_timespec(&aux_t, RTE_getFoundTime(current_route), current_time);
+        subtract_timespec(&aux_t, current_time, RTE_getFoundTime(current_route));
         timespec_to_string(&aux_t, found_time_str, 6, 1);
         align_str(found_time_str, found_time_str, 6, "CR");
 
         char used_time_str[7];
-        subtract_timespec(&aux_t, RTE_getLastUsedTime(current_route), current_time);
-        timespec_to_string(&aux_t, used_time_str, 6, 1);
-        align_str(used_time_str, used_time_str, 6, "CR");
+        if( compare_timespec(RTE_getLastUsedTime(current_route), (struct timespec*)&zero_timespec) != 0) {
+            subtract_timespec(&aux_t, current_time, RTE_getLastUsedTime(current_route));
+            timespec_to_string(&aux_t, used_time_str, 6, 1);
+            align_str(used_time_str, used_time_str, 6, "CR");
+        } else {
+            sprintf(used_time_str, "   -  ");
+        }
 
         char forwarded_str[12];
         sprintf(forwarded_str, "%lu", RTE_getMessagesForwarded(current_route));

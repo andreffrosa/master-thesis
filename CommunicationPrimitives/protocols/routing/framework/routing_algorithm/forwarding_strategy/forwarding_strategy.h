@@ -20,7 +20,7 @@ typedef struct ForwardingStrategy_ ForwardingStrategy;
 
 void destroyForwardingStrategy(ForwardingStrategy* f_strategy);
 
-bool FS_getNextHop(ForwardingStrategy* f_strategy, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr);
+bool FS_getNextHop(ForwardingStrategy* f_strategy, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time);
 
 ///////
 

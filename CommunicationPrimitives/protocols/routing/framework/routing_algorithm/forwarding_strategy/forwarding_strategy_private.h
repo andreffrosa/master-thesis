@@ -17,7 +17,7 @@
 #include "forwarding_strategy.h"
 
 typedef bool (*getNextHop)(ModuleState* state, RoutingTable* routing_table,
-unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr);
+unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time);
 
 typedef void (*destroy_fs)(ModuleState* state);
 

@@ -63,6 +63,7 @@ typedef enum {
 
 typedef enum {
 	TIMER_PERIODIC_ANNOUNCE = 0,
+    TIMER_SOURCE_ENTRY,
     TIMER_RETRY,
 	ROUTING_TIMER_TYPE_COUNT
 } RoutingTimerType;

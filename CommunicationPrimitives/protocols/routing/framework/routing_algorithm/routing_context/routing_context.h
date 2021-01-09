@@ -18,13 +18,21 @@
 
 typedef struct _RoutingContext RoutingContext;
 
+typedef enum {
+    NO_SEND,
+    SEND_NO_INC,
+    SEND_INC
+} RoutingContextSendType;
+
 void destroyRoutingContext(RoutingContext* context);
 
 void RCtx_init(RoutingContext* context, proto_def* protocol_definition, unsigned char* myID, RoutingTable* r_table, struct timespec* current_time);
 
-bool RCtx_triggerEvent(RoutingContext* context, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+RoutingContextSendType RCtx_triggerEvent(RoutingContext* context, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time);
 
-void RCtx_rcvMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+void RCtx_createMsg(RoutingContext* context, unsigned short seq, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+
+void RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
 
 ///////////////////////////////////////////////////////////////////
 

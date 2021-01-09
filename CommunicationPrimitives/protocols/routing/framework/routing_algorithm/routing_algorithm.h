@@ -40,7 +40,7 @@ void RA_setAnnouncePeriod(RoutingAlgorithm* alg, AnnouncePeriod* new_a_period);
 
 void RA_setDisseminationStrategy(RoutingAlgorithm* alg, DisseminationStrategy* new_d_strategy);
 
-bool RA_getNextHop(RoutingAlgorithm* alg, RoutingTable* routing_table, unsigned char* destination_hop_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr);
+bool RA_getNextHop(RoutingAlgorithm* alg, RoutingTable* routing_table, unsigned char* destination_hop_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time);
 
 void RA_init(RoutingAlgorithm* alg, proto_def* protocol_definition, unsigned char* myID, RoutingTable* r_table, struct timespec* current_time);
 
@@ -50,8 +50,10 @@ unsigned int RA_getAnnouncePeriod(RoutingAlgorithm* alg);
 
 void RA_disseminateControlMessage(RoutingAlgorithm* alg, YggMessage* msg);
 
-bool RA_triggerEvent(RoutingAlgorithm* alg, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+RoutingContextSendType RA_triggerEvent(RoutingAlgorithm* alg, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time);
 
-void RA_rcvControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+void RA_createControlMsg(RoutingAlgorithm* alg, unsigned short seq, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
+
+void RA_processControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg);
 
 #endif /* _ROUTING_ALGORITHM_H_ */

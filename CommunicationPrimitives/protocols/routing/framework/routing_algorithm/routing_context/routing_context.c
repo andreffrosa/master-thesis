@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-RoutingContext* newRoutingContext(void* args, void* vars, rc_init init, rc_triggerEvent trigger_event, rc_rcvMsg rcv_msg, rc_destroy destroy) {
+RoutingContext* newRoutingContext(void* args, void* vars, rc_init init, rc_triggerEvent trigger_event, rc_createMsg create_msg, rc_processMsg process_msg, rc_destroy destroy) {
 
     RoutingContext* rc = malloc(sizeof(RoutingContext));
 
@@ -23,7 +23,8 @@ RoutingContext* newRoutingContext(void* args, void* vars, rc_init init, rc_trigg
     rc->state.vars = vars;
     rc->init = init;
     rc->trigger_event = trigger_event;
-    rc->rcv_msg = rcv_msg;
+    rc->create_msg = create_msg;
+    rc->process_msg = process_msg;
     rc->destroy = destroy;
 
     return rc;
@@ -46,20 +47,28 @@ void RCtx_init(RoutingContext* context, proto_def* protocol_definition, unsigned
         context->init(&context->state, protocol_definition, myID, r_table, current_time);
 }
 
-bool RCtx_triggerEvent(RoutingContext* context, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+RoutingContextSendType RCtx_triggerEvent(RoutingContext* context, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
     assert(context);
 
     if(context->trigger_event) {
-        return context->trigger_event(&context->state, seq, event_type, args, routing_table, neighbors, source_set, myID, current_time, msg);
+        return context->trigger_event(&context->state, event_type, args, routing_table, neighbors, source_table, myID, current_time);
     } else {
         return false;
     }
 }
 
-void RCtx_rcvMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+void RCtx_createMsg(RoutingContext* context, unsigned short seq, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     assert(context);
 
-    if(context->rcv_msg) {
-        context->rcv_msg(&context->state, routing_table, neighbors, source_set, myID, current_time, msg);
+    if(context->create_msg) {
+        context->create_msg(&context->state, seq, routing_table, neighbors, source_table, myID, current_time, msg);
+    }
+}
+
+void RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+    assert(context);
+
+    if(context->process_msg) {
+        context->process_msg(&context->state, routing_table, neighbors, source_table, myID, current_time, msg);
     }
 }

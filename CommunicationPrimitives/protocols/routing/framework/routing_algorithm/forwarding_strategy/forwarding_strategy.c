@@ -37,8 +37,8 @@ void destroyForwardingStrategy(ForwardingStrategy* f_strategy) {
     }
 }
 
-bool FS_getNextHop(ForwardingStrategy* f_strategy, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr) {
+bool FS_getNextHop(ForwardingStrategy* f_strategy, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time) {
     assert(f_strategy);
 
-    return f_strategy->get_next_hop(&f_strategy->state, routing_table, destination_id, next_hop_id, next_hop_addr);
+    return f_strategy->get_next_hop(&f_strategy->state, routing_table, destination_id, next_hop_id, next_hop_addr, current_time);
 }

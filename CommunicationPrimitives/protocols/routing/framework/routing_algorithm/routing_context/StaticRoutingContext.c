@@ -204,6 +204,7 @@ RoutingContext* StaticRoutingContext() {
         &StaticRoutingContextInit,
         NULL,
         NULL,
+        NULL,
         NULL
     );
 }

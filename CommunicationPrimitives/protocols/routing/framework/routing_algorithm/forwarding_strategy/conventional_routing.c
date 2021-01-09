@@ -15,12 +15,16 @@
 
 #include <assert.h>
 
-static bool ConventionalRouting_getNextHop(ModuleState* m_state, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr) {
+static bool ConventionalRouting_getNextHop(ModuleState* m_state, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time) {
 
     RoutingTableEntry* entry = RT_findEntry(routing_table, destination_id);
     if(entry) {
         uuid_copy(next_hop_id, RTE_getNextHopID(entry));
         memcpy(next_hop_addr->data, RTE_getNextHopAddr(entry)->data, WLAN_ADDR_LEN);
+
+        RTE_setLastUsedTime(entry, current_time);
+        RTE_incMessagesForwarded(entry);
+
         return true;
     } else {
         return false;

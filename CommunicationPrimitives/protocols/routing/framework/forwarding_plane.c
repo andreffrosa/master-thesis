@@ -200,7 +200,7 @@ void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, un
     WLANAddr next_hop_addr;
     uuid_t next_hop_id;
 
-    bool found = RA_getNextHop(state->args->algorithm, state->routing_table, header->destination_id, next_hop_id, &next_hop_addr);
+    bool found = RA_getNextHop(state->args->algorithm, state->routing_table, header->destination_id, next_hop_id, &next_hop_addr, &state->current_time);
 
     if(found) {
         // Send

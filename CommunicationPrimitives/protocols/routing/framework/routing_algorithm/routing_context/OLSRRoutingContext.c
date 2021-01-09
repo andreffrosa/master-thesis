@@ -1,15 +1,15 @@
 /*********************************************************
- * This code was written in the context of the Lightkone
- * European project.
- * Code is of the authorship of NOVA (NOVA LINCS @ DI FCT
- * NOVA University of Lisbon)
- * Author:
- * André Rosa (af.rosa@campus.fct.unl.pt
- * Under the guidance of:
- * Pedro Ákos Costa (pah.costa@campus.fct.unl.pt)
- * João Leitão (jc.leitao@fct.unl.pt)
- * (C) 2020
- *********************************************************/
+* This code was written in the context of the Lightkone
+* European project.
+* Code is of the authorship of NOVA (NOVA LINCS @ DI FCT
+* NOVA University of Lisbon)
+* Author:
+* André Rosa (af.rosa@campus.fct.unl.pt
+* Under the guidance of:
+* Pedro Ákos Costa (pah.costa@campus.fct.unl.pt)
+* João Leitão (jc.leitao@fct.unl.pt)
+* (C) 2020
+*********************************************************/
 
 #include "routing_context_private.h"
 
@@ -23,7 +23,7 @@ typedef struct OLSRState_ {
     list* mprs;
     list* mpr_selectors;
     //hash_table* router_set;
-    hash_table* topology_set;
+    //hash_table* topology_set;
     bool dirty;
 } OLSRState;
 
@@ -32,74 +32,78 @@ typedef struct LinkEntry_ {
     double tx_cost;
 } LinkEntry;
 
-typedef struct RouterSetEntry_ {
-    unsigned short seq;
-    struct timespec exp_time;
-    list* links;
-} RouterSetEntry;
+//typedef struct RouterSetEntry_ {
+//unsigned short seq;
+//struct timespec exp_time;
+//list* links;
+//} RouterSetEntry;
 
-static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time);
+static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time);
 
-static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time);
+static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time);
 
 /*static void OLSRRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
 
 }*/
 
-static bool OLSRRoutingContextTriggerEvent(ModuleState* m_state, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+static RoutingContextSendType OLSRRoutingContextTriggerEvent(ModuleState* m_state, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     if(event_type == RTE_NEIGHBORS_CHANGE) {
         YggEvent* ev = args;
-
-        return ProcessDiscoveryEvent(ev, state, routing_table, neighbors, source_set, myID, current_time);
+        return ProcessDiscoveryEvent(ev, state, routing_table, neighbors, source_table, myID, current_time);
     }
 
     else if(event_type == RTE_ANNOUNCE_TIMER) {
 
-        //printf("XO\n");
-
-        if(state->dirty) {
-            // TODO: inc seq
-            state->dirty = false;
-        }
-
-        YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
-
-        YggMessage_addPayload(msg, (char*)&seq, sizeof(unsigned short));
-
-        byte period = 5; // TODO: como obter o period?
-        YggMessage_addPayload(msg, (char*)&period, sizeof(byte));
-
         byte amount = state->mpr_selectors->size;
-        YggMessage_addPayload(msg, (char*)&amount, sizeof(byte));
-
-        for(list_item* it = state->mpr_selectors->head; it; it = it->next) {
-            unsigned char* id = (unsigned char*)it->data;
-
-            RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, id);
-            assert(neigh);
-            double tx_cost = RNE_getCost(neigh);
-
-            YggMessage_addPayload(msg, (char*)id, sizeof(uuid_t));
-            YggMessage_addPayload(msg, (char*)&tx_cost, sizeof(double));
+        if( state->dirty ) {
+            state->dirty = false;
+            return SEND_INC;
+        } else if( amount > 0 ) {
+            return SEND_NO_INC;
+        } else {
+            return NO_SEND;
         }
-
-        printf("Sending TC msg seq = %hu amount=%d\n", seq, amount);
-
-        return true;
     }
 
-    return false;
+    return NO_SEND;
 }
 
-static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+static void OLSRRoutingContextCreateMsg(ModuleState* m_state, unsigned short seq, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     OLSRState* state = (OLSRState*)m_state->vars;
+
+    YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
+
+    YggMessage_addPayload(msg, (char*)&seq, sizeof(unsigned short));
+
+    byte period = 5; // TODO: como obter o period?
+    YggMessage_addPayload(msg, (char*)&period, sizeof(byte));
+
+    byte amount = state->mpr_selectors->size;
+    YggMessage_addPayload(msg, (char*)&amount, sizeof(byte));
+
+    for(list_item* it = state->mpr_selectors->head; it; it = it->next) {
+        unsigned char* id = (unsigned char*)it->data;
+
+        RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, id);
+        assert(neigh);
+        double tx_cost = RNE_getCost(neigh);
+
+        YggMessage_addPayload(msg, (char*)id, sizeof(uuid_t));
+        YggMessage_addPayload(msg, (char*)&tx_cost, sizeof(double));
+    }
+
+    printf("Sending TC msg seq = %hu amount=%d\n", seq, amount);
+}
+
+static void OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+    //OLSRState* state = (OLSRState*)m_state->vars;
 
     void* ptr = NULL;
 
-    uuid_t src;
-    ptr = YggMessage_readPayload(msg, ptr, src, sizeof(uuid_t));
+    uuid_t source_id;
+    ptr = YggMessage_readPayload(msg, ptr, source_id, sizeof(uuid_t));
 
     unsigned short seq = 0;
     ptr = YggMessage_readPayload(msg, ptr, &seq, sizeof(unsigned short));
@@ -110,50 +114,50 @@ static void OLSRRoutingContextRcvMsg(ModuleState* m_state, RoutingTable* routing
     byte amount = 0;
     ptr = YggMessage_readPayload(msg, ptr, &amount, sizeof(byte));
 
+    list* links = list_init();
+    for(int i = 0; i < amount; i++) {
+        LinkEntry* link = malloc(sizeof(LinkEntry));
+        ptr = YggMessage_readPayload(msg, ptr, link->to, sizeof(uuid_t));
+        ptr = YggMessage_readPayload(msg, ptr, &link->tx_cost, sizeof(double));
+        list_add_item_to_tail(links, link);
+    }
+
     char id_str[UUID_STR_LEN+1];
     id_str[UUID_STR_LEN] = '\0';
-    uuid_unparse(src, id_str);
+    uuid_unparse(source_id, id_str);
     printf("Received TC message from %s with seq %hu\n", id_str, seq);
     fflush(stdout);
 
-    if( uuid_compare(src, myID) == 0 ) {
+    if( uuid_compare(source_id, myID) == 0 ) {
         return; // discard
     }
 
-    RouterSetEntry* entry = hash_table_find_value(state->topology_set, src);
+    unsigned int misses = 3; // TODO:
 
-    if( entry && entry->seq > seq) {
-        return; // discard msg
-    }
+    struct timespec exp_time = {0};
+    milli_to_timespec(&exp_time, period*misses*1000);
+    add_timespec(&exp_time, &exp_time, current_time);
 
+    SourceEntry* entry = SS_getEntry(source_table, source_id);
     if(entry == NULL) {
-        entry = malloc(sizeof(RouterSetEntry));
+        entry = newSourceEntry(source_id, seq, &exp_time, links);
 
-        entry->seq = seq;
-        copy_timespec(&entry->exp_time, &zero_timespec);
-
-        entry->links = list_init();
-
-        hash_table_insert(state->topology_set, new_id(src), entry);
-    }
-
-    // TODO: fazer o exp
-
-    if( seq > entry->seq) {
-        entry->seq = seq;
-
-        list_delete(entry->links);
-        entry->links = list_init();
-
-        for(int i = 0; i < amount; i++) {
-            LinkEntry* link = malloc(sizeof(LinkEntry));
-            ptr = YggMessage_readPayload(msg, ptr, link->to, sizeof(uuid_t));
-            ptr = YggMessage_readPayload(msg, ptr, &link->tx_cost, sizeof(double));
-            list_add_item_to_tail(entry->links, link);
-        }
+        SS_addEntry(source_table, entry);
 
         // Recompute routing table
-        RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
+        RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
+    } else {
+        if( seq > SE_getSEQ(entry) ) {
+            SE_setSEQ(entry, seq);
+
+            list_delete(SE_getAttrs(entry));
+            SE_setAttrs(entry, links);
+
+            // Recompute routing table
+            RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
+        } else {
+            list_delete(links);
+        }
     }
 
 }
@@ -167,7 +171,7 @@ RoutingContext* OLSRRoutingContext() {
     state->mprs = list_init();
     state->mpr_selectors = list_init();
     //state->router_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
-    state->topology_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
+    //state->topology_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
     state->dirty = true;
 
     return newRoutingContext(
@@ -175,12 +179,13 @@ RoutingContext* OLSRRoutingContext() {
         state,
         NULL, //&OLSRRoutingContextInit,
         &OLSRRoutingContextTriggerEvent,
-        &OLSRRoutingContextRcvMsg,
+        &OLSRRoutingContextCreateMsg,
+        &OLSRRoutingContextProcessMsg,
         NULL
     );
 }
 
-static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
+static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
     graph* g = graph_init_complete((key_comparator)&uuid_compare, NULL, NULL, sizeof(uuid_t), 0, sizeof(double));
 
     graph_insert_node(g, new_id(myID), NULL);
@@ -196,27 +201,25 @@ static void RecomputeRoutingTable(hash_table* topology_set, RoutingNeighbors* ne
         graph_insert_edge(g, neigh_id, myID, new_double(RNE_getCost(neigh)));
 
         /*
-char str[UUID_STR_LEN];
+        char str[UUID_STR_LEN];
         uuid_unparse(neigh_id, str);
         printf("neigh_id: %s\n", str);
-*/
-
-
+        */
     }
 
     //printf("tc:\n");
 
     iterator = NULL;
-    hash_table_item* hit = NULL;
-    while( (hit = hash_table_iterator_next(topology_set, &iterator)) ) {
-        RouterSetEntry* entry = (RouterSetEntry*)hit->value;
-        unsigned char* entry_id = (unsigned char*)hit->key;
+    SourceEntry* entry = NULL;
+    while( (entry = SS_nexEntry(source_table, &iterator)) ) {
 
-        for(list_item* it = entry->links->head; it; it= it->next) {
+        list* links = SE_getAttrs(entry);
+
+        for(list_item* it = links->head; it; it= it->next) {
             LinkEntry* link = (LinkEntry*)it->data;
 
-            if(graph_find_node(g, entry_id) == NULL) {
-                graph_insert_node(g, new_id(entry_id), NULL);
+            if(graph_find_node(g, SE_getID(entry)) == NULL) {
+                graph_insert_node(g, new_id(SE_getID(entry)), NULL);
             }
 
             if(graph_find_node(g, link->to) == NULL) {
@@ -225,20 +228,20 @@ char str[UUID_STR_LEN];
 
             //bool inserted = false;
 
-            if(graph_find_edge(g, entry_id, link->to) == NULL) {
-                graph_insert_edge(g, entry_id, link->to, new_double(link->tx_cost));
+            if(graph_find_edge(g, SE_getID(entry), link->to) == NULL) {
+                graph_insert_edge(g, SE_getID(entry), link->to, new_double(link->tx_cost));
                 //inserted = true;
             }
 
             /*
-char from_str[UUID_STR_LEN];
+            char from_str[UUID_STR_LEN];
             uuid_unparse(entry_id, from_str);
 
             char to_str[UUID_STR_LEN];
             uuid_unparse(link->to, to_str);
 
             printf("%s -> %s : %f %s\n", from_str, to_str, link->tx_cost, (inserted?"T":"F"));
-*/
+            */
 
 
         }
@@ -296,7 +299,7 @@ char from_str[UUID_STR_LEN];
     }
 
     iterator = NULL;
-    hit = NULL;
+    hash_table_item* hit = NULL;
     while( (hit = hash_table_iterator_next(routes, &iterator)) ) {
         DijkstraTuple* dt = (DijkstraTuple*)hit->value;
 
@@ -315,7 +318,7 @@ char from_str[UUID_STR_LEN];
     RF_updateRoutingTable(routing_table, to_update, to_remove, current_time);
 }
 
-static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time) {
+static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
     assert(ev);
 
     //printf("XE\n");
@@ -370,7 +373,7 @@ static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* 
     }
 
     // Recompute routing table
-    RecomputeRoutingTable(state->topology_set, neighbors, myID, routing_table, current_time);
+    RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
 
     return false;
 }

@@ -16,18 +16,20 @@
 
 #include "utility/my_time.h"
 
-typedef struct SourceSet_ SourceSet;
+typedef struct SourceTable_ SourceTable;
 typedef struct SourceEntry_ SourceEntry;
 
-SourceSet* newSourceSet();
+SourceTable* newSourceTable();
 
-void destroySourceSet(SourceSet* ss);
+void destroySourceTable(SourceTable* ss);
 
-void SS_addEntry(SourceSet* ss, SourceEntry* entry);
+void SS_addEntry(SourceTable* ss, SourceEntry* entry);
 
-SourceEntry* SS_getEntry(SourceSet* ss, unsigned char* source_id);
+SourceEntry* SS_getEntry(SourceTable* ss, unsigned char* source_id);
 
-SourceEntry* SS_removeEntry(SourceSet* ss, unsigned char* source_id);
+SourceEntry* SS_removeEntry(SourceTable* ss, unsigned char* source_id);
+
+SourceEntry* SS_nexEntry(SourceTable* ss, void** iterator);
 
 SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, struct timespec* exp_time, void* attrs);
 

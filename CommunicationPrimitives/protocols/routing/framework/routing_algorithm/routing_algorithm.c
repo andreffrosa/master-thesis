@@ -77,10 +77,10 @@ void RA_setDisseminationStrategy(RoutingAlgorithm* alg, DisseminationStrategy* n
     alg->d_strategy = new_d_strategy;
 }
 
-bool RA_getNextHop(RoutingAlgorithm* alg, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr) {
+bool RA_getNextHop(RoutingAlgorithm* alg, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time) {
     assert(alg);
 
-    return FS_getNextHop(alg->f_strategy, routing_table, destination_id, next_hop_id, next_hop_addr);
+    return FS_getNextHop(alg->f_strategy, routing_table, destination_id, next_hop_id, next_hop_addr, current_time);
 }
 
 void RA_init(RoutingAlgorithm* alg, proto_def* protocol_definition, unsigned char* myID, RoutingTable* r_table, struct timespec* current_time) {
@@ -107,14 +107,20 @@ void RA_disseminateControlMessage(RoutingAlgorithm* alg, YggMessage* msg) {
     DS_disseminate(alg->d_strategy, msg);
 }
 
-bool RA_triggerEvent(RoutingAlgorithm* alg, unsigned short seq, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+RoutingContextSendType RA_triggerEvent(RoutingAlgorithm* alg, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
     assert(alg);
 
-    return RCtx_triggerEvent(alg->r_context, seq, event_type, args, routing_table, neighbors, source_set, myID, current_time, msg);
+    return RCtx_triggerEvent(alg->r_context, event_type, args, routing_table, neighbors, source_table, myID, current_time);
 }
 
-void RA_rcvControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceSet* source_set, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+void RA_createControlMsg(RoutingAlgorithm* alg, unsigned short seq, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     assert(alg);
 
-    RCtx_rcvMsg(alg->r_context, routing_table, neighbors, source_set, myID, current_time, msg);
+    RCtx_createMsg(alg->r_context, seq, routing_table, neighbors, source_table, myID, current_time, msg);
+}
+
+void RA_processControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+    assert(alg);
+
+    RCtx_processMsg(alg->r_context, routing_table, neighbors, source_table, myID, current_time, msg);
 }

@@ -34,7 +34,7 @@ void RF_init(routing_framework_state* state) {
 
     state->neighbors = newRoutingNeighbors();
 
-    state->source_set = newSourceSet();
+    state->source_table = newSourceTable();
 
     state->seen_msgs = newSeenMessages();
 
@@ -160,27 +160,32 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
 
 void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args) {
 
-    // Compute new SEQ
-    unsigned short new_seq = inc_seq(state->my_seq, state->args->ignore_zero_seq);
+    RoutingContextSendType send = RA_triggerEvent(state->args->algorithm, event_type, event_args, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time);
 
-    // Trigger context
-    YggMessage msg = {0};
-    YggMessage_initBcast(&msg, ROUTING_FRAMEWORK_PROTO_ID);
+    unsigned short seq = 0;
 
-    // Insert src_proto
-    /*unsigned short src_proto = ROUTING_FRAMEWORK_PROTO_ID;
-    int add_result = YggMessage_addPayload(&msg, (char*)&src_proto, sizeof(src_proto));
-    assert(add_result != FAILED);*/
+    if( send == SEND_INC ) {
+        // Compute new SEQ
+        state->my_seq = inc_seq(state->my_seq, state->args->ignore_zero_seq);
+    }
+    seq = state->my_seq;
 
-    // Insert Message Type
-    byte msg_type = MSG_CONTROL_MESSAGE;
-    int add_result = YggMessage_addPayload(&msg, (char*) &msg_type, sizeof(byte));
-    assert(add_result != FAILED);
+    if( send == SEND_INC || send == SEND_NO_INC  ) {
+        // Trigger context
+        YggMessage msg = {0};
+        YggMessage_initBcast(&msg, ROUTING_FRAMEWORK_PROTO_ID);
 
-    bool send = RA_triggerEvent(state->args->algorithm, new_seq, event_type, event_args, state->routing_table, state->neighbors, state->source_set, state->myID, &state->current_time, &msg);
+        // Insert src_proto
+        /*unsigned short src_proto = ROUTING_FRAMEWORK_PROTO_ID;
+        int add_result = YggMessage_addPayload(&msg, (char*)&src_proto, sizeof(src_proto));
+        assert(add_result != FAILED);*/
 
-    if(send) {
-        state->my_seq = new_seq;
+        // Insert Message Type
+        byte msg_type = MSG_CONTROL_MESSAGE;
+        int add_result = YggMessage_addPayload(&msg, (char*) &msg_type, sizeof(byte));
+        assert(add_result != FAILED);
+
+        RA_createControlMsg(state->args->algorithm, seq, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg);
 
         copy_timespec(&state->last_announce_time, &state->current_time);
 
@@ -188,12 +193,11 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
 
         RA_disseminateControlMessage(state->args->algorithm, &msg);
     }
-
 }
 
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message) {
 
-    RA_rcvControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_set, state->myID, &state->current_time, message);
+    RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, message);
 }
 
 void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, struct timespec* current_time) {
