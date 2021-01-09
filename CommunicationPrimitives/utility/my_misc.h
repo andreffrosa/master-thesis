@@ -21,12 +21,14 @@
 #define INT_STR_LEN 12
 #define LONG_STR_LEN 21
 
+/*
 typedef struct _Tuple {
     unsigned int size;
     void** entries;
 } Tuple;
 
 Tuple* newTuple(void** entries, unsigned int size);
+*/
 
 void insertionSort(void* v, unsigned int element_size, unsigned int n_elements, int (*cmp)(void*,void*));
 

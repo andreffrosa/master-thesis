@@ -11,11 +11,20 @@
  * (C) 2020
  *********************************************************/
 
-#ifndef UTILITY_BYTE_H_
-#define UTILITY_BYTE_H_
+#ifndef _UTILITY_TLV_PRIVATE_H_
+#define _UTILITY_TLV_PRIVATE_H_
 
-#define MAX_BYTE_VALUE 255
+#include "tlv.h"
 
-typedef unsigned char byte;
+#include "data_structures/hash_table.h"
 
-#endif /* MY_MISC_H_ */
+typedef struct TLVMessage_ {
+    hash_table* ht;
+} TLVMessage;
+
+typedef struct TLVTuple_ {
+    TLVType type;
+    void* value;
+} TLVTuple;
+
+#endif /*_UTILITY_TLV_PRIVATE_H_*/

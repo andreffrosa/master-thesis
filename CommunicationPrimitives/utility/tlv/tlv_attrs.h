@@ -11,11 +11,21 @@
  * (C) 2020
  *********************************************************/
 
-#ifndef UTILITY_BYTE_H_
-#define UTILITY_BYTE_H_
+#ifndef _UTILITY_TLV_ATTRS_H_
+#define _UTILITY_TLV_ATTRS_H_
 
-#define MAX_BYTE_VALUE 255
+#include "tlv_private.h"
 
-typedef unsigned char byte;
+typedef unsigned int (*TLVT_parse_)(TLVTuple* tlv, byte* buffer);
 
-#endif /* MY_MISC_H_ */
+typedef TLVTuple* (*TLVT_unparse_)(byte* buffer, unsigned int length);
+
+typedef struct TLVTypeAtrrs_ {
+    int length_size;
+    TLVT_parse_ parse;
+    TLVT_unparse_ unparse;
+} TLVTypeAttrs;
+
+extern const TLVTypeAttrs tlv_type[TLV_COUNT];
+
+#endif /*_UTILITY_TLV_ATTRS_H_*/

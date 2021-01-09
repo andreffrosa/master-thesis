@@ -25,6 +25,7 @@
 
 #include <assert.h>
 
+/*
 Tuple* newTuple(void** entries, unsigned int size) {
     Tuple* tuple = malloc(sizeof(Tuple));
     tuple->size = size;
@@ -33,7 +34,7 @@ Tuple* newTuple(void** entries, unsigned int size) {
         tuple->entries[i] = entries[i];
     }
     return tuple;
-}
+}*/
 
 bool equalID(void* a, void* b) {
 	return uuid_compare((unsigned char*)a, (unsigned char*)b) == 0;
