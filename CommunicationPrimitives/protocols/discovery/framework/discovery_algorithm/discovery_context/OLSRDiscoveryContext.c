@@ -64,9 +64,9 @@ static list* compute_broadcast_mprs(NeighborsTable* neighbors, unsigned char* my
 static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time, list* old_mprs);
 static NeighMPRType getMPRType(bool flooding_mpr, bool routing_mpr);
 static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors);
-static void notify(char* type, list* flooding_set, list* routing_set);
+static void notify(void* f_state, char* type, list* flooding_set, list* routing_set);
 
-static bool update(OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change);
+static bool update(void* f_state, OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change);
 
 static void OLSR_createMessage(ModuleState* m_state, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
@@ -196,15 +196,15 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
 
     // Notify
     if( changed_mpr_selectors ) {
-        notify("MPR SELECTORS", state->flooding_mpr_selectors, state->routing_mpr_selectors);
+        notify(f_state, "MPR SELECTORS", state->flooding_mpr_selectors, state->routing_mpr_selectors);
     }
 
-    bool changed_mprs = update(state, myID, neighbors, current_time, one_hop_change, two_hop_change);
+    bool changed_mprs = update(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
 
     return changed_mpr_selectors || changed_mprs;
 }
 
-static bool OLSRDiscovery_updateContext(ModuleState* m_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
+static bool OLSRDiscovery_updateContext(ModuleState* m_state, void* f_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     // Recompute mprs if necessary
@@ -212,7 +212,7 @@ static bool OLSRDiscovery_updateContext(ModuleState* m_state, unsigned char* myI
     bool one_hop_change = /*summary->new_neighbor ||*/ summary->updated_neighbor || summary->lost_neighbor;
     bool two_hop_change = /*summary->updated_2hop_neighbor || summary->added_2hop_neighbor ||*/ summary->lost_2hop_neighbor;
 
-    return  update(state, myID, neighbors, current_time, one_hop_change, two_hop_change);
+    return  update(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
 }
 
 
@@ -237,14 +237,14 @@ DiscoveryContext* OLSRDiscoveryContext() {
     return newDiscoveryContext(NULL, state, &OLSR_createMessage, &OLSR_processMessage, &OLSRDiscovery_updateContext, &OLSR_createAttrs, NULL, &OLSR_destructor);
 }
 
-static bool update(OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change) {
+static bool update(void* f_state, OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change) {
 
     if( one_hop_change || two_hop_change ) {
         bool changed = recompute_mprs(state, myID, current_time, neighbors);
 
         // Notify
         if( changed ) {
-            notify("MPRS", state->flooding_mprs, state->routing_mprs);
+            notify(f_state, "MPRS", state->flooding_mprs, state->routing_mprs);
         }
 
         return changed;
@@ -260,7 +260,7 @@ static bool update(OLSRState* state, unsigned char* myID, NeighborsTable* neighb
     return false;
 }
 
-static void notify(char* type, list* flooding_set, list* routing_set) {
+static void notify(void* f_state, char* type, list* flooding_set, list* routing_set) {
 
     unsigned int size = 2*sizeof(unsigned int) + (flooding_set->size + routing_set->size)*sizeof(uuid_t);
     byte buffer[size];
@@ -288,7 +288,7 @@ static void notify(char* type, list* flooding_set, list* routing_set) {
         ptr += sizeof(uuid_t);
     }
 
-    DF_notifyGenericEvent(type, buffer, size);
+    DF_notifyGenericEvent(f_state, type, buffer, size);
 }
 
 static NeighMPRType getMPRType(bool flooding_mpr, bool routing_mpr) {

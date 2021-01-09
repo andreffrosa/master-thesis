@@ -20,7 +20,7 @@ typedef void (*d_ctx_create_message)(ModuleState*, unsigned char*, NeighborsTabl
 
 typedef bool (*d_ctx_process_message)(ModuleState*, void*, unsigned char*, NeighborsTable*, struct timespec*, bool, WLANAddr*, byte*, unsigned short, MessageSummary*);
 
-typedef bool (*d_ctx_update_context)(ModuleState*, unsigned char*, NeighborEntry*, NeighborsTable*, struct timespec*, NeighborTimerSummary*);
+typedef bool (*d_ctx_update_context)(ModuleState*, void*, unsigned char*, NeighborEntry*, NeighborsTable*, struct timespec*, NeighborTimerSummary*);
 
 typedef void* (*d_ctx_create_attrs)(ModuleState* );
 

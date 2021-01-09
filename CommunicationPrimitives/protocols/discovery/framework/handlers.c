@@ -109,6 +109,8 @@ void DF_init(discovery_framework_state* state) {
     copy_timespec(&state->next_reactive_hello_time, &zero_timespec);
     copy_timespec(&state->next_reactive_hack_time, &zero_timespec);
 
+    state->pending_notifications = list_init();
+
     // Stats
 	memset(&state->stats, 0, sizeof(discovery_stats));
 
@@ -828,7 +830,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         }
 
         if( changed ) {
-            bool updated_context = DA_updateContext(state->args->algorithm, state->myID, neigh, state->neighbors, &state->current_time, summary);
+            bool updated_context = DA_updateContext(state->args->algorithm, state, state->myID, neigh, state->neighbors, &state->current_time, summary);
 
             schedule |= (updated_context && ( DA_HelloContextUpdate(state->args->algorithm) || DA_HackContextUpdate(state->args->algorithm) ));
 
@@ -2275,6 +2277,12 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
     free(ev);
 
     DF_notifyNeighborhood(state);
+    YggEvent* x = NULL;
+    while( (x = list_remove_head(state->pending_notifications)) ) {
+        deliverEvent(x);
+        YggEvent_freePayload(x);
+        free(x);
+    }
 }
 
 void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
@@ -2357,6 +2365,12 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
     free(ev);
 
     DF_notifyNeighborhood(state);
+    YggEvent* x = NULL;
+    while( (x = list_remove_head(state->pending_notifications)) ) {
+        deliverEvent(x);
+        YggEvent_freePayload(x);
+        free(x);
+    }
 }
 
 void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
@@ -2421,6 +2435,13 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
     free(ev);
 
     DF_notifyNeighborhood(state);
+
+    YggEvent* x = NULL;
+    while( (x = list_remove_head(state->pending_notifications)) ) {
+        deliverEvent(x);
+        YggEvent_freePayload(x);
+        free(x);
+    }
 }
 
 void DF_notifyNeighborhood(discovery_framework_state* state) {
@@ -2465,8 +2486,10 @@ void DF_notifyNeighborhood(discovery_framework_state* state) {
     free(ev);
 }
 
-void DF_notifyGenericEvent(char* type, void* buffer, unsigned int size) {
+void DF_notifyGenericEvent(void* f_state, char* type, void* buffer, unsigned int size) {
     assert(type);
+
+    discovery_framework_state* state = (discovery_framework_state*)f_state;
 
     YggEvent* ev = malloc(sizeof(YggEvent));
     YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
@@ -2485,9 +2508,11 @@ void DF_notifyGenericEvent(char* type, void* buffer, unsigned int size) {
         ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "GENERIC EVENT", str);
     #endif
 
-    deliverEvent(ev);
-    YggEvent_freePayload(ev);
-    free(ev);
+    list_add_item_to_tail(state->pending_notifications, ev);
+
+    //deliverEvent(ev);
+    //YggEvent_freePayload(ev);
+    //free(ev);
 }
 
 
