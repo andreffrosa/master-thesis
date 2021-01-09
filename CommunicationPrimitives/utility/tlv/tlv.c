@@ -30,9 +30,16 @@ TLVMessage* newTLVMessage() {
     return tlv_msg;
 }
 
+static void delete_tlv_msg_custom(hash_table_item* it, void* args) {
+    TLVTuple* tlv = (TLVTuple*)it->value;
+
+    destroyTLVTuple(tlv);
+}
+
 void destroyTLVMessage(TLVMessage* tlv_msg) {
     if(tlv_msg) {
-        // TODO: how to free the tuples? --> tem de ser de acordo com o tipo
+        hash_table_delete_custom(tlv_msg->ht, &delete_tlv_msg_custom, NULL);
+        free(tlv_msg);
     }
 }
 
@@ -74,7 +81,7 @@ TLVTuple* TLVM_next(TLVMessage* tlv_msg, void** iterator) {
 }
 
 unsigned short TLVM_parse(TLVMessage* tlv_msg, byte** buffer) {
-    assert(tlv_msg && buffer == NULL);
+    assert(tlv_msg && *buffer == NULL);
 
     unsigned short size = 0;
     byte* buffer_ = malloc(TLV_MESSAGE_MAX_SIZE*sizeof(byte));
@@ -85,10 +92,12 @@ unsigned short TLVM_parse(TLVMessage* tlv_msg, byte** buffer) {
     while( (tlv = TLVM_next(tlv_msg, &iterator)) ) {
         byte* aux = NULL;
         unsigned int length = TLVT_parse(tlv, &aux);
-        assert(aux);
+        assert(aux != NULL);
 
         memcpy(ptr, aux, length);
         ptr += length;
+
+        size += length;
 
         free(aux);
     }
@@ -128,9 +137,32 @@ TLVTuple* newTLVTuple(TLVType type, void* value) {
     return tlv;
 }
 
+void destroyTLVTuple(TLVTuple* tlv) {
+    if(tlv) {
+        TLVTypeAttrs* attrs = &tlv_type[tlv->type];
+        if(attrs->destroy) {
+            attrs->destroy(tlv->value);
+        } else {
+            free(tlv->value);
+        }
+
+        free(tlv);
+    }
+}
+
+TLVType TLVT_getType(TLVTuple* tlv) {
+    assert(tlv);
+    return tlv->type;
+}
+
+void* TLVT_getValue(TLVTuple* tlv) {
+    assert(tlv);
+    return tlv->value;
+}
+
 unsigned int TLVT_parse(TLVTuple* tlv, byte** buffer) {
 
-    const TLVTypeAttrs* attrs = &tlv_type[tlv->type];
+    TLVTypeAttrs* attrs = &tlv_type[tlv->type];
 
     unsigned int buffer_length = sizeof(byte) + attrs->length_size*sizeof(byte) + (attrs->length_size*(MAX_BYTE_VALUE+1) - 1);
     byte* buffer_ = malloc(buffer_length);
@@ -157,6 +189,7 @@ unsigned int TLVT_parse(TLVTuple* tlv, byte** buffer) {
         ptr += sizeof(unsigned short);
     }
 
+    *buffer = buffer_;
     unsigned int total_length = sizeof(byte) + attrs->length_size*sizeof(byte) + length*sizeof(byte);
     return total_length;
 }
@@ -171,7 +204,7 @@ TLVTuple* TLVT_unparse(byte* buffer, unsigned int* read) {
     ptr += sizeof(byte);
 
     TLVType type = type_;
-    const TLVTypeAttrs* attrs = &tlv_type[type];
+    TLVTypeAttrs* attrs = &tlv_type[type];
 
     assert(attrs->length_size > 0 && attrs->length_size <= 2);
 

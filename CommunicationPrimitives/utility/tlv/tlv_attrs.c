@@ -19,7 +19,7 @@
 
 #include <assert.h>
 
-const TLVTypeAttrs tlv_type[TLV_COUNT];
+
 
 static unsigned int TLV_ID_parse(TLVTuple* tlv, byte* buffer) {
     assert(tlv && buffer);
@@ -35,4 +35,6 @@ static TLVTuple* TLV_ID_unparse(byte* buffer, unsigned int length) {
     return newTLVTuple(TLV_SENDER_ID, new_id(buffer));
 }
 
-tlv_type[TLV_SENDER_ID] = {1, &TLV_ID_parse, &TLV_ID_unparse};
+TLVTypeAttrs tlv_type[TLV_COUNT] = {
+    {.length_size = 1, .parse  = &TLV_ID_parse, .unparse = &TLV_ID_unparse, .destroy = NULL} //TLV_SENDER_ID
+};

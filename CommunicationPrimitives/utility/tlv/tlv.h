@@ -14,14 +14,14 @@
 #ifndef _UTILITY_TLV_H_
 #define _UTILITY_TLV_H_
 
-#include "byte.h"
+#include "utility/byte.h"
 
 #define TLV_MESSAGE_MAX_SIZE 1500
 
 typedef enum {
-    TLV_SENDER_ID,
-    TLV_APP_PAYLOAD,
-    TLV_BROADCAST_MSG_ID,
+    TLV_SENDER_ID = 0,
+    //TLV_APP_PAYLOAD,
+    //TLV_BROADCAST_MSG_ID,
     TLV_COUNT
 } TLVType;
 
@@ -45,6 +45,12 @@ unsigned short TLVM_parse(TLVMessage* tlv_msg, byte** buffer);
 TLVMessage* TLVM_unparse(byte* buffer, unsigned short size);
 
 TLVTuple* newTLVTuple(TLVType type, void* value);
+
+void destroyTLVTuple(TLVTuple* tlv);
+
+TLVType TLVT_getType(TLVTuple* tlv);
+
+void* TLVT_getValue(TLVTuple* tlv);
 
 unsigned int TLVT_parse(TLVTuple* tlv, byte** buffer);
 

@@ -20,12 +20,15 @@ typedef unsigned int (*TLVT_parse_)(TLVTuple* tlv, byte* buffer);
 
 typedef TLVTuple* (*TLVT_unparse_)(byte* buffer, unsigned int length);
 
+typedef TLVTuple* (*TLVT_destroy_)(void* value);
+
 typedef struct TLVTypeAtrrs_ {
     int length_size;
     TLVT_parse_ parse;
     TLVT_unparse_ unparse;
+    TLVT_destroy_ destroy;
 } TLVTypeAttrs;
 
-extern const TLVTypeAttrs tlv_type[TLV_COUNT];
+extern TLVTypeAttrs tlv_type[];
 
 #endif /*_UTILITY_TLV_ATTRS_H_*/

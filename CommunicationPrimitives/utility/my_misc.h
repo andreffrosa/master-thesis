@@ -21,8 +21,7 @@
 #define INT_STR_LEN 12
 #define LONG_STR_LEN 21
 
-/*
-typedef struct _Tuple {
+/*typedef struct _Tuple {
     unsigned int size;
     void** entries;
 } Tuple;
@@ -46,11 +45,7 @@ void pushMessageType(YggMessage* msg, unsigned char type);
 
 unsigned char popMessageType(YggMessage* msg);
 
-// TODO: temp
-typedef struct _edge_label {
-    double quality;
-    bool pending;
-} edge_label;
+
 
 /*list* get_bidirectional_stable_neighbors(graph* neighborhood, unsigned char* id);
 
@@ -68,5 +63,9 @@ typedef struct ModuleState_ {
 } ModuleState;
 
 bool is_unicast_message(YggMessage* msg);
+
+unsigned char* new_id(unsigned char* id);
+
+double* new_double(double d);
 
 #endif /* MY_MISC_H_ */
