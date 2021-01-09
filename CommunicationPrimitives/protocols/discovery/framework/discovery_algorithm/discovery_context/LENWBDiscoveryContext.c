@@ -27,7 +27,7 @@ typedef struct LENWBDiscoveryState_ {
     hash_table* strict_two_hop_neighbors_neighbors;
 } LENWBDiscoveryState;
 
-static void notify(LENWBDiscoveryState* state);
+static void notify(void* f_state, LENWBDiscoveryState* state);
 
 static void LENWBDiscovery_createMessage(ModuleState* m_state, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
@@ -156,14 +156,14 @@ static bool LENWBDiscovery_processMessage(ModuleState* m_state, void* f_state, u
 
     // Notify
     if( changed ) {
-        notify(state);
+        notify(f_state, state);
         return true;
     }
 
     return false;
 }
 
-static bool LENWBDiscovery_updateContext(ModuleState* m_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
+static bool LENWBDiscovery_updateContext(ModuleState* m_state, void* f_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
 
     LENWBDiscoveryState* state = (LENWBDiscoveryState*)m_state->vars;
 
@@ -205,7 +205,7 @@ static bool LENWBDiscovery_updateContext(ModuleState* m_state, unsigned char* my
         }
 
         if( changed ) {
-            notify(state);
+            notify(f_state, state);
             return true;
         }
         /* if( !changed && !one_hop_change && two_hop_change ) {
@@ -239,7 +239,7 @@ DiscoveryContext* LENWBDiscoveryContext() {
         &LENWBDiscovery_destructor);
     }
 
-    static void notify(LENWBDiscoveryState* state) {
+    static void notify(void* f_state, LENWBDiscoveryState* state) {
         unsigned int size = sizeof(unsigned int) + state->strict_two_hop_neighbors_neighbors->n_items*(sizeof(uuid_t) + sizeof(byte));
 
         byte buffer[size];
@@ -261,5 +261,5 @@ DiscoveryContext* LENWBDiscoveryContext() {
             ptr += sizeof(byte);
         }
 
-        DF_notifyGenericEvent("LENWB_NEIGHS", buffer, size);
+        DF_notifyGenericEvent(f_state, "LENWB_NEIGHS", buffer, size);
     }

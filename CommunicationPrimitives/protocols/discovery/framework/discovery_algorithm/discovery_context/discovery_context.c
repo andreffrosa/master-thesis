@@ -53,11 +53,11 @@ bool DC_process(DiscoveryContext* d_ctx, void* f_state, unsigned char* myID, Nei
     return d_ctx->process_message(&d_ctx->state, f_state, myID, neighbors, current_time, piggybacked, mac_addr, buffer, size, msg_summary);
 }
 
-bool DC_update(DiscoveryContext* d_ctx, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
+bool DC_update(DiscoveryContext* d_ctx, void* f_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
     assert(d_ctx);
 
     if( d_ctx->update_context ) {
-        return d_ctx->update_context(&d_ctx->state, myID, neighbor, neighbors, current_time, summary);
+        return d_ctx->update_context(&d_ctx->state, f_state, myID, neighbor, neighbors, current_time, summary);
     } else {
         return false;
     }

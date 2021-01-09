@@ -16,6 +16,10 @@ target_link_libraries(connect_test utility yggprotos yggcore ygginterfaces yggda
 add_executable(dijkstra_test ${PROJECT_SOURCE_DIR}/aux/dijkstra_test.c)
 target_link_libraries(dijkstra_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
 
+add_executable(tlv_test ${PROJECT_SOURCE_DIR}/aux/tlv_test.c)
+target_link_libraries(tlv_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
+
 # DISCOVERY
 
 link_directories(${PROJECT_SOURCE_DIR}/discovery/)
