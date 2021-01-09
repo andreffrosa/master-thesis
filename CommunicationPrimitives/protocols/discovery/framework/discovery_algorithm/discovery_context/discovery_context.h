@@ -24,7 +24,7 @@ void DC_create(DiscoveryContext* d_ctx, unsigned char* myID, NeighborsTable* nei
 
 bool DC_process(DiscoveryContext* d_ctx, void* f_state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary);
 
-bool DC_update(DiscoveryContext* d_ctx, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary);
+bool DC_update(DiscoveryContext* d_ctx, void* f_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary);
 
 void* DC_createAttrs(DiscoveryContext* d_ctx);
 

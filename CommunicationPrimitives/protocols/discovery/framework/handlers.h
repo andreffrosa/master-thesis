@@ -60,6 +60,8 @@ typedef struct discovery_framework_state_ {
     struct timespec next_reactive_hello_time;
     struct timespec next_reactive_hack_time;
 
+    list* pending_notifications;
+
     uuid_t discovery_environment_timer_id;                    //
 
     discovery_stats stats;       	            // Framework's stats

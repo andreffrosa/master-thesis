@@ -108,7 +108,7 @@ void DA_createMessage(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborsTab
 
 bool DA_processMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary);
 
-bool DA_updateContext(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary);
+bool DA_updateContext(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary);
 
 void* DA_createContextAttributes(DiscoveryAlgorithm* alg);
 

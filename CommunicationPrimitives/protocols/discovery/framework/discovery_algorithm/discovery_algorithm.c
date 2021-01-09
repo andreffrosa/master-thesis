@@ -265,10 +265,10 @@ bool DA_processMessage(DiscoveryAlgorithm* alg, void* f_state, unsigned char* my
     return DC_process(alg->d_context, f_state, myID, neighbors, current_time, piggybacked, mac_addr, buffer, size, msg_summary);
 }
 
-bool DA_updateContext(DiscoveryAlgorithm* alg, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
+bool DA_updateContext(DiscoveryAlgorithm* alg, void* f_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
     assert(alg != NULL);
 
-    return DC_update(alg->d_context, myID, neighbor, neighbors, current_time, summary);
+    return DC_update(alg->d_context, f_state, myID, neighbor, neighbors, current_time, summary);
 }
 
 void* DA_createContextAttributes(DiscoveryAlgorithm* alg) {
