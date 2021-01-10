@@ -91,6 +91,9 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
 
     switch(ev->notification_id) {
         case NEW_NEIGHBOR: {
+            unsigned short length = 0;
+            ptr = YggEvent_readPayload(ev, ptr, &length, sizeof(unsigned short));
+
             uuid_t id;
             ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
 
@@ -117,6 +120,9 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
         }
         break;
         case UPDATE_NEIGHBOR: {
+            unsigned short length = 0;
+            ptr = YggEvent_readPayload(ev, ptr, &length, sizeof(unsigned short));
+
             uuid_t id;
             ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
 
@@ -144,6 +150,9 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
         }
         break;
         case LOST_NEIGHBOR: {
+            unsigned short length = 0;
+            ptr = YggEvent_readPayload(ev, ptr, &length, sizeof(unsigned short));
+            
             uuid_t id;
             ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
 

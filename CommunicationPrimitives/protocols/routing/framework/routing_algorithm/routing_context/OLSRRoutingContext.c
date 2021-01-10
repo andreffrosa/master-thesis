@@ -329,53 +329,84 @@ static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* n
 static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
     assert(ev);
 
-    //printf("XE\n");
+    unsigned short ev_id = ev->notification_id;
 
-    if(ev->notification_id == GENERIC_DISCOVERY_EVENT) {
+    bool process = ev_id == NEW_NEIGHBOR || ev_id == UPDATE_NEIGHBOR || ev_id == LOST_NEIGHBOR;
 
-        unsigned int str_len = 0;
-        void* ptr = NULL;
-        ptr = YggEvent_readPayload(ev, ptr, &str_len, sizeof(unsigned int));
+    if(process) {
+        unsigned short read = 0;
+        unsigned char* ptr = ev->payload;
 
-        char type[str_len+1];
-        ptr = YggEvent_readPayload(ev, ptr, type, str_len*sizeof(char));
-        type[str_len] = '\0';
+        unsigned short length = 0;
+        memcpy(&length, ptr, sizeof(unsigned short));
+        ptr += sizeof(unsigned short);
+        read += sizeof(unsigned short);
+        ptr += length;
+        read += length;
 
-        if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
-            unsigned int amount = 0;
-            ptr = YggEvent_readPayload(ev, ptr, &amount, sizeof(unsigned int));
+        memcpy(&length, ptr, sizeof(unsigned short));
+        ptr += sizeof(unsigned short);
+        read += sizeof(unsigned short);
+        ptr += length;
+        read += length;
 
-            // Skip Flooding
-            ptr += amount*sizeof(uuid_t);
+        if(read < ev->length) {
+            memcpy(&length, ptr, sizeof(unsigned short));
+            ptr += sizeof(unsigned short);
+            read += sizeof(unsigned short);
 
-            amount = 0;
-            ptr = YggEvent_readPayload(ev, ptr, &amount, sizeof(unsigned int));
+            YggEvent gen_ev = {0};
+            YggEvent_init(&gen_ev, DISCOVERY_FRAMEWORK_PROTO_ID, 0);
+            YggEvent_addPayload(&gen_ev, ptr, length);
+            ptr += length;
+            read += length;
 
-            list* l = list_init();
+            {
+                unsigned int str_len = 0;
+                void* ptr = NULL;
+                ptr = YggEvent_readPayload(&gen_ev, ptr, &str_len, sizeof(unsigned int));
 
-            for(int i = 0; i < amount; i++) {
-                //uuid_t id;
-                unsigned char* id = malloc(sizeof(uuid_t));
-                ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+                char type[str_len+1];
+                ptr = YggEvent_readPayload(&gen_ev, ptr, type, str_len*sizeof(char));
+                type[str_len] = '\0';
 
-                list_add_item_to_tail(l, id);
+                if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
+                    unsigned int amount = 0;
+                    ptr = YggEvent_readPayload(&gen_ev, ptr, &amount, sizeof(unsigned int));
 
-                /*
-                char id_str[UUID_STR_LEN+1];
-                id_str[UUID_STR_LEN] = '\0';
-                uuid_unparse(id, id_str);
-                printf("%s\n", id_str);
-                */
-            }
+                    // Skip Flooding
+                    ptr += amount*sizeof(uuid_t);
 
-            if( strcmp(type, "MPRS") == 0  ) {
-                list_delete(state->mprs);
-                state->mprs = l;
-            } else if( strcmp(type, "MPR SELECTORS") == 0 ) {
-                list_delete(state->mpr_selectors);
-                state->mpr_selectors = l;
+                    amount = 0;
+                    ptr = YggEvent_readPayload(&gen_ev, ptr, &amount, sizeof(unsigned int));
 
-                state->dirty = true;
+                    list* l = list_init();
+
+                    for(int i = 0; i < amount; i++) {
+                        //uuid_t id;
+                        unsigned char* id = malloc(sizeof(uuid_t));
+                        ptr = YggEvent_readPayload(&gen_ev, ptr, id, sizeof(uuid_t));
+
+                        list_add_item_to_tail(l, id);
+
+                        /*
+                        char id_str[UUID_STR_LEN+1];
+                        id_str[UUID_STR_LEN] = '\0';
+                        uuid_unparse(id, id_str);
+                        printf("%s\n", id_str);
+                        */
+                    }
+
+                    if( strcmp(type, "MPRS") == 0  ) {
+                        list_delete(state->mprs);
+                        state->mprs = l;
+                    } else if( strcmp(type, "MPR SELECTORS") == 0 ) {
+                        list_delete(state->mpr_selectors);
+                        state->mpr_selectors = l;
+
+                        state->dirty = true;
+                    }
+                }
             }
         }
     }
