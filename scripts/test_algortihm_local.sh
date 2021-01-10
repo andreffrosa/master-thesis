@@ -100,8 +100,10 @@ echo "Killing Test ..."
 #    PIDS=( $(ps ax | grep "sudo $EXE" | grep -v "grep" | awk '{print $1}') )
 #done
 
-sudo kill -9 $(ps ax | grep "$EXE" | grep -v "grep" | awk '{print $1}' ) > /dev/null 2>&1
-ps ax | grep "$EXE" | grep -v "grep" | awk '{print $1}'
+#sudo kill -9 $(ps ax | grep "$EXE" | grep -v "grep" | awk '{print $1}' ) > /dev/null 2>&1
+#ps ax | grep "$EXE" | grep -v "grep" | awk '{print $1}'
+
+./kill_test.sh "$EXE"
 
 # Kill virtual network
 #sudo ./kill_virtual_network.sh
