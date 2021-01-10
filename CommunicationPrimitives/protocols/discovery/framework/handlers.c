@@ -2377,6 +2377,13 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
 void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
     assert(neigh);
 
+    YggEvent* x = NULL;
+    while( (x = list_remove_head(state->pending_notifications)) ) {
+        deliverEvent(x);
+        YggEvent_freePayload(x);
+        free(x);
+    }
+
     YggEvent* ev = malloc(sizeof(YggEvent));
     YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
 
@@ -2437,12 +2444,7 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
 
     DF_notifyNeighborhood(state);
 
-    YggEvent* x = NULL;
-    while( (x = list_remove_head(state->pending_notifications)) ) {
-        deliverEvent(x);
-        YggEvent_freePayload(x);
-        free(x);
-    }
+
 }
 
 void DF_notifyNeighborhood(discovery_framework_state* state) {
