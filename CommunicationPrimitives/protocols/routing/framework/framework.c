@@ -41,8 +41,8 @@ proto_def* routing_framework_init(void* arg) {
     proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
     proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
     proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
-    proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
-    proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
+    //proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
+    //proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
     proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
 
     // Update current time

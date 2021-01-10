@@ -87,81 +87,93 @@ void RF_uponAnnounceTimer(routing_framework_state* state) {
 
 void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
 
-    void* ptr = NULL;
+    unsigned short ev_id = ev->notification_id;
 
-    switch(ev->notification_id) {
-        case NEW_NEIGHBOR: {
+    bool process = ev_id == NEW_NEIGHBOR || ev_id == UPDATE_NEIGHBOR || ev_id == LOST_NEIGHBOR;
+    if(process) {
+            unsigned short read = 0;
+            unsigned char* ptr = ev->payload;
+
             unsigned short length = 0;
-            ptr = YggEvent_readPayload(ev, ptr, &length, sizeof(unsigned short));
+            memcpy(&length, ptr, sizeof(unsigned short));
+            ptr += sizeof(unsigned short);
+            read += sizeof(unsigned short);
 
-            uuid_t id;
-            ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+            YggEvent main_ev = {0};
+            YggEvent_init(&main_ev, DISCOVERY_FRAMEWORK_PROTO_ID, 0);
+            YggEvent_addPayload(&main_ev, ptr, length);
+            ptr += length;
+            read += length;
 
-            WLANAddr addr;
-            ptr = YggEvent_readPayload(ev, ptr, addr.data, WLAN_ADDR_LEN);
+            unsigned char* ptr2 = NULL;
 
-            double rx_lq = 0.0, tx_lq = 0.0;
-            ptr = YggEvent_readPayload(ev, ptr, &rx_lq, sizeof(double));
-            ptr = YggEvent_readPayload(ev, ptr, &tx_lq, sizeof(double));
+            switch(ev_id) {
+                case NEW_NEIGHBOR: {
+                    uuid_t id;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, id, sizeof(uuid_t));
 
-            double traffic = 0.0;
-            ptr = YggEvent_readPayload(ev, ptr, &traffic, sizeof(double));
+                    WLANAddr addr;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, addr.data, WLAN_ADDR_LEN);
 
-            byte is_bi = false;
-            ptr = YggEvent_readPayload(ev, ptr, &is_bi, sizeof(byte));
+                    double rx_lq = 0.0, tx_lq = 0.0;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, &rx_lq, sizeof(double));
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, &tx_lq, sizeof(double));
 
-            // Compute Cost
-            double cost = RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, NULL); // TODO: pass found time?
+                    double traffic = 0.0;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, &traffic, sizeof(double));
 
-            assert(RN_getNeighbor(state->neighbors, id) == NULL);
+                    byte is_bi = false;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, &is_bi, sizeof(byte));
 
-            RoutingNeighborsEntry* neigh = newRoutingNeighborsEntry(id, &addr, cost, is_bi);
-            RN_addNeighbor(state->neighbors, neigh);
-        }
-        break;
-        case UPDATE_NEIGHBOR: {
-            unsigned short length = 0;
-            ptr = YggEvent_readPayload(ev, ptr, &length, sizeof(unsigned short));
+                    // Compute Cost
+                    double cost = RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, NULL); // TODO: pass found time?
 
-            uuid_t id;
-            ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+                    assert(RN_getNeighbor(state->neighbors, id) == NULL);
 
-            WLANAddr addr;
-            ptr = YggEvent_readPayload(ev, ptr, addr.data, WLAN_ADDR_LEN);
+                    RoutingNeighborsEntry* neigh = newRoutingNeighborsEntry(id, &addr, cost, is_bi);
+                    RN_addNeighbor(state->neighbors, neigh);
+                }
+                break;
+                case UPDATE_NEIGHBOR: {
+                    uuid_t id;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, id, sizeof(uuid_t));
 
-            double rx_lq = 0.0, tx_lq = 0.0;
-            ptr = YggEvent_readPayload(ev, ptr, &rx_lq, sizeof(double));
-            ptr = YggEvent_readPayload(ev, ptr, &tx_lq, sizeof(double));
+                    WLANAddr addr;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, addr.data, WLAN_ADDR_LEN);
 
-            double traffic = 0.0;
-            ptr = YggEvent_readPayload(ev, ptr, &traffic, sizeof(double));
+                    double rx_lq = 0.0, tx_lq = 0.0;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, &rx_lq, sizeof(double));
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, &tx_lq, sizeof(double));
 
-            byte is_bi = false;
-            ptr = YggEvent_readPayload(ev, ptr, &is_bi, sizeof(byte));
+                    double traffic = 0.0;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, &traffic, sizeof(double));
 
-            // Compute Cost
-            double cost = RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, NULL); // TODO: pass found time?
+                    byte is_bi = false;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, &is_bi, sizeof(byte));
 
-            RoutingNeighborsEntry* neigh = RN_getNeighbor(state->neighbors, id);
-            assert(neigh);
+                    // Compute Cost
+                    double cost = RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, NULL); // TODO: pass found time?
 
-            RNE_setCost(neigh, cost);
-            RNE_setBi(neigh, is_bi);
-        }
-        break;
-        case LOST_NEIGHBOR: {
-            unsigned short length = 0;
-            ptr = YggEvent_readPayload(ev, ptr, &length, sizeof(unsigned short));
-            
-            uuid_t id;
-            ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+                    RoutingNeighborsEntry* neigh = RN_getNeighbor(state->neighbors, id);
+                    assert(neigh);
 
-            RoutingNeighborsEntry* neigh = RN_removeNeighbor(state->neighbors, id);
-            assert(neigh);
+                    RNE_setCost(neigh, cost);
+                    RNE_setBi(neigh, is_bi);
+                }
+                break;
+                case LOST_NEIGHBOR: {
+                    uuid_t id;
+                    ptr2 = YggEvent_readPayload(&main_ev, ptr2, id, sizeof(uuid_t));
 
-            free(neigh);
-        }
-        break;
+                    RoutingNeighborsEntry* neigh = RN_removeNeighbor(state->neighbors, id);
+                    assert(neigh);
+
+                    free(neigh);
+                }
+                break;
+            }
+
+            YggEvent_freePayload(&main_ev);
     }
 
     RF_triggerEvent(state, RTE_NEIGHBORS_CHANGE, ev);

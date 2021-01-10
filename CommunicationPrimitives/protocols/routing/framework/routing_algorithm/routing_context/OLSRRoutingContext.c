@@ -332,7 +332,6 @@ static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* 
     unsigned short ev_id = ev->notification_id;
 
     bool process = ev_id == NEW_NEIGHBOR || ev_id == UPDATE_NEIGHBOR || ev_id == LOST_NEIGHBOR;
-
     if(process) {
         unsigned short read = 0;
         unsigned char* ptr = ev->payload;
