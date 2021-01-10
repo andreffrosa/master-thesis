@@ -349,7 +349,7 @@ static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* 
         ptr += length;
         read += length;
 
-        if(read < ev->length) {
+        while(read < ev->length) {
             memcpy(&length, ptr, sizeof(unsigned short));
             ptr += sizeof(unsigned short);
             read += sizeof(unsigned short);
@@ -370,6 +370,10 @@ static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* 
                 type[str_len] = '\0';
 
                 if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
+
+                    printf("discovery update: %s\n", type);
+                    fflush(stdout);
+
                     unsigned int amount = 0;
                     ptr = YggEvent_readPayload(&gen_ev, ptr, &amount, sizeof(unsigned int));
 
@@ -407,6 +411,8 @@ static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* 
                     }
                 }
             }
+
+            YggEvent_freePayload(&gen_ev);
         }
     }
 
