@@ -51,7 +51,7 @@ static void LENWBContextEvent(ModuleState* context_state, queue_t_elem* elem, un
                 ptr += length;
                 read += length;
 
-                if(read < ev->length) {
+                while(read < ev->length) {
                     memcpy(&length, ptr, sizeof(unsigned short));
                 	ptr += sizeof(unsigned short);
                     read += sizeof(unsigned short);
