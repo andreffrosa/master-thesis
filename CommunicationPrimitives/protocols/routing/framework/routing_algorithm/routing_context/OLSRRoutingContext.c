@@ -375,5 +375,5 @@ static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* 
     // Recompute routing table
     RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
 
-    return false;
+    return state->dirty;
 }
