@@ -83,7 +83,7 @@ static void OLSRRoutingContextCreateMsg(ModuleState* m_state, unsigned short seq
     byte amount = state->mpr_selectors->size;
     YggMessage_addPayload(msg, (char*)&amount, sizeof(byte));
 
-    printf("MPR SELECTORS IN MY TC:\n");
+    printf("MPR SELECTORS IN MY TC:\n"); 
     fflush(stdout);
 
     for(list_item* it = state->mpr_selectors->head; it; it = it->next) {
