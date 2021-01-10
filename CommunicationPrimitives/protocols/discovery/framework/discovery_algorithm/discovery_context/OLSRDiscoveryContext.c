@@ -65,7 +65,8 @@ static NeighMPRType getMPRType(bool flooding_mpr, bool routing_mpr);
 static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors);
 static void notify(void* f_state, char* type, list* flooding_set, list* routing_set);
 
-static bool update(void* f_state, OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change);
+static bool update_mprs(void* f_state, OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change);
+static bool update_mpr_selectors(void* f_state, OLSRState* state, unsigned char* myID, NeighborEntry* neighbor, struct timespec* current_time, NeighborsTable* neighbors, bool lost_neighbor);
 
 static void OLSR_createMessage(ModuleState* m_state, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
@@ -198,7 +199,7 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
         notify(f_state, "MPR SELECTORS", state->flooding_mpr_selectors, state->routing_mpr_selectors);
     }
 
-    bool changed_mprs = update(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
+    bool changed_mprs = update_mprs(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
 
     return changed_mpr_selectors || changed_mprs;
 }
@@ -241,36 +242,36 @@ DiscoveryContext* OLSRDiscoveryContext() {
 
 static bool update_mpr_selectors(void* f_state, OLSRState* state, unsigned char* myID, NeighborEntry* neighbor, struct timespec* current_time, NeighborsTable* neighbors, bool lost_neighbor) {
 
-    OLSRAttrs* neigh_attrs = NE_getContextAttributes(neigh);
+    OLSRAttrs* neigh_attrs = NE_getContextAttributes(neighbor);
 
     if(lost_neighbor) {
-        bool changed = false;
+        bool changed_mpr_selectors = false;
 
-        if( list_find_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neigh)) != NULL ) {
+        if( list_find_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neighbor)) != NULL ) {
             neigh_attrs->flooding_mpr_selector = false;
 
-            void* aux = list_remove_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neigh));
+            void* aux = list_remove_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neighbor));
             if(aux) {
                 free(aux);
             }
 
-            changed = true;
+            changed_mpr_selectors = true;
         }
 
-        if( list_find_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(neigh)) != NULL ) {
+        if( list_find_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(neighbor)) != NULL ) {
             neigh_attrs->routing_mpr_selector = false;
 
-            void* aux = list_remove_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(neigh));
+            void* aux = list_remove_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(neighbor));
             if(aux) {
                 free(aux);
             }
 
-            changed = true;
+            changed_mpr_selectors = true;
         }
 
         // Notify
-        if( changed ) {
-            notify(f_state, "MPR SELECTORS", state->flooding_mprs, state->routing_mprs);
+        if( changed_mpr_selectors ) {
+            notify(f_state, "MPR SELECTORS", state->flooding_mpr_selectors, state->routing_mpr_selectors);
         }
     }
 
