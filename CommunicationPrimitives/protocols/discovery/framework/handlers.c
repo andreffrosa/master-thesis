@@ -569,6 +569,8 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
     copy_timespec(&last_neighbor_timer, NE_getLastNeighborTimer(neigh));
     NE_setLastNeighborTimer(neigh, &state->current_time);
 
+    unsigned long next_timer_ms = ULONG_MAX;
+
     // If neighbor is Lost
     if( NE_isLost(neigh) ) {
         // Check if
@@ -589,19 +591,22 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
             neigh = NULL;
 
             summary->removed = true;
+        } else {
+            struct timespec aux = {0};
+            subtract_timespec(&aux, removal_time, &state->current_time);
+            next_timer_ms = ulMin(next_timer_ms, timespec_to_milli(&aux));
         }
     }
 
     // If neigh was not removed
     if( !summary->removed ) {
-        unsigned long next_timer_ms = ULONG_MAX;
+
 
         unsigned int hello_misses = state->args->hello_misses;
         unsigned int hack_misses = state->args->hack_misses;
 
         unsigned int missed_hellos = 0;
         unsigned int missed_hacks = 0;
-
 
         // Check if rx expired
         struct timespec* rx_exp_time = NE_getNeighborRxExpTime(neigh);
@@ -761,42 +766,42 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
 
         // Log
         #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
+        if(summary->missed_hellos > 0 || summary->missed_hacks > 0 || summary->deleted_2hop > 0) {
+            char id_str[UUID_STR_LEN+1];
+            id_str[UUID_STR_LEN] = '\0';
+            uuid_unparse(NE_getNeighborID(neigh), id_str);
 
-        char id_str[UUID_STR_LEN+1];
-        id_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(NE_getNeighborID(neigh), id_str);
-
-        char hellos_str[20];
-        if( compare_timespec(rx_exp_time, &state->current_time) > 0 ) {
-            if(summary->missed_hellos > 0) {
-                sprintf(hellos_str, "%u/%u(+1)", missed_hellos, hello_misses);
+            char hellos_str[20];
+            if( compare_timespec(rx_exp_time, &state->current_time) > 0 ) {
+                if(summary->missed_hellos > 0) {
+                    sprintf(hellos_str, "%u/%u(+1)", missed_hellos, hello_misses);
+                } else {
+                    sprintf(hellos_str, "%u/%u", missed_hellos, hello_misses);
+                }
             } else {
-                sprintf(hellos_str, "%u/%u", missed_hellos, hello_misses);
+                sprintf(hellos_str, "expired%s", (summary->missed_hellos > 0?"(+1)":""));
             }
-        } else {
-            sprintf(hellos_str, "expired%s", (summary->missed_hellos > 0?"(+1)":""));
-        }
 
-        char hacks_str[20];
-        if(compare_timespec(tx_exp_time, &state->current_time) > 0) {
-            if(summary->missed_hacks > 0) {
-                sprintf(hacks_str, "%u/%u(+1)", missed_hacks, hack_misses);
+            char hacks_str[20];
+            if(compare_timespec(tx_exp_time, &state->current_time) > 0) {
+                if(summary->missed_hacks > 0) {
+                    sprintf(hacks_str, "%u/%u(+1)", missed_hacks, hack_misses);
+                } else {
+                    sprintf(hacks_str, "%u/%u", missed_hacks, hack_misses);
+                }
             } else {
-                sprintf(hacks_str, "%u/%u", missed_hacks, hack_misses);
+                //if() {
+                //    sprintf(hacks_str, "lost bi");
+                //} else {
+                //    sprintf(hacks_str, "expired");
+                //}
+                sprintf(hacks_str, "expired%s", (summary->missed_hacks > 0?"(+1)":""));
             }
-        } else {
-            //if() {
-            //    sprintf(hacks_str, "lost bi");
-            //} else {
-            //    sprintf(hacks_str, "expired");
-            //}
-            sprintf(hacks_str, "expired%s", (summary->missed_hacks > 0?"(+1)":""));
+
+            char str[200];
+            sprintf(str, "%s  missed hellos: %s  missed hacks: %s  lost 2-hop neighs: %u", id_str, hellos_str, hacks_str, summary->deleted_2hop);
+            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
         }
-
-        char str[200];
-        sprintf(str, "%s  missed hellos: %s  missed hacks: %s  lost 2-hop neighs: %u", id_str, hellos_str, hacks_str, summary->deleted_2hop);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
-
         #endif
 
         bool changed = false;
@@ -1574,8 +1579,6 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
             milli_to_timespec(&removal_time, state->args->neigh_hold_time_s*1000);
             add_timespec(&removal_time, &removal_time,  &state->current_time);
             NE_setNeighborRemovalTime(neigh, &removal_time);
-
-
         } else {
             assert(false); // Error
         }

@@ -53,6 +53,89 @@ static void* OLSR_createAttrs(ModuleState* state) {
     return attrs;
 }
 
+
+static void Invariant(OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time) {
+
+    // All mprs must be neighbors and bi
+    for(list_item* it = state->flooding_mprs->head; it; it = it->next) {
+        unsigned char* neigh_id = (unsigned char*)it->data;
+
+        NeighborEntry* neigh = NT_getNeighbor(neighbors, neigh_id);
+        assert(neigh);
+
+        OLSRAttrs* neigh_attrs = NE_getContextAttributes(neigh);
+        assert(neigh_attrs->flooding_mpr);
+
+        assert(NE_getNeighborType(neigh, current_time) == BI_NEIGH);
+    }
+    for(list_item* it = state->routing_mprs->head; it; it = it->next) {
+        unsigned char* neigh_id = (unsigned char*)it->data;
+
+        NeighborEntry* neigh = NT_getNeighbor(neighbors, neigh_id);
+        assert(neigh);
+
+        OLSRAttrs* neigh_attrs = NE_getContextAttributes(neigh);
+        assert(neigh_attrs->routing_mpr);
+
+        assert(NE_getNeighborType(neigh, current_time) == BI_NEIGH);
+    }
+
+    // All mpr_selectors must be neighbors and bi
+    for(list_item* it = state->flooding_mpr_selectors->head; it; it = it->next) {
+        unsigned char* neigh_id = (unsigned char*)it->data;
+
+        NeighborEntry* neigh = NT_getNeighbor(neighbors, neigh_id);
+        assert(neigh);
+
+        OLSRAttrs* neigh_attrs = NE_getContextAttributes(neigh);
+        assert(neigh_attrs->flooding_mpr_selector);
+
+        assert(NE_getNeighborType(neigh, current_time) == BI_NEIGH);
+    }
+    for(list_item* it = state->routing_mpr_selectors->head; it; it = it->next) {
+        unsigned char* neigh_id = (unsigned char*)it->data;
+
+        NeighborEntry* neigh = NT_getNeighbor(neighbors, neigh_id);
+        assert(neigh);
+
+        OLSRAttrs* neigh_attrs = NE_getContextAttributes(neigh);
+        assert(neigh_attrs->routing_mpr_selector);
+
+        assert(NE_getNeighborType(neigh, current_time) == BI_NEIGH);
+    }
+
+    void* iterator = NULL;
+    NeighborEntry* current_neigh = NULL;
+    OLSRAttrs* neigh_attrs = NULL;
+    while( (current_neigh = NT_nextNeighbor(neighbors, &iterator)) ) {
+        neigh_attrs = NE_getContextAttributes(current_neigh);
+
+        if(list_find_item(state->flooding_mprs, &equalID, NE_getNeighborID(current_neigh)) != NULL) {
+            assert(neigh_attrs->flooding_mpr);
+        } else {
+            assert(!neigh_attrs->flooding_mpr);
+        }
+
+        if(list_find_item(state->routing_mprs, &equalID, NE_getNeighborID(current_neigh)) != NULL) {
+            assert(neigh_attrs->routing_mpr);
+        } else {
+            assert(!neigh_attrs->routing_mpr);
+        }
+
+        if(list_find_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(current_neigh)) != NULL) {
+            assert(neigh_attrs->flooding_mpr_selector);
+        } else {
+            assert(!neigh_attrs->flooding_mpr_selector);
+        }
+
+        if(list_find_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(current_neigh)) != NULL) {
+            assert(neigh_attrs->routing_mpr_selector);
+        } else {
+            assert(!neigh_attrs->routing_mpr_selector);
+        }
+    }
+}
+
 /*
 static void OLSR_destroyAttrs(ModuleState* state, void* d_msg_attrs) {
 
@@ -64,15 +147,19 @@ static list* compute_broadcast_mprs(NeighborsTable* neighbors, unsigned char* my
 static list* compute_routing_mprs(NeighborsTable* neighbors, unsigned char* myID, struct timespec* current_time, list* old_mprs);
 static NeighMPRType getMPRType(bool flooding_mpr, bool routing_mpr);
 static bool recompute_mprs(OLSRState* state, unsigned char* myID, struct timespec* current_time, NeighborsTable* neighbors);
+
 static void notify(void* f_state, char* type, list* flooding_set, list* routing_set);
 
 static bool update_mprs(void* f_state, OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change);
-static bool update_mpr_selectors(void* f_state, OLSRState* state, unsigned char* myID, NeighborEntry* neighbor, struct timespec* current_time, NeighborsTable* neighbors, bool lost_neighbor);
+
+static bool update_mpr_selectors(void* f_state, OLSRState* state, unsigned char* myID, NeighborEntry* neighbor, struct timespec* current_time, NeighborsTable* neighbors, bool lost_neighbor, bool lost_bi);
 
 static void OLSR_createMessage(ModuleState* m_state, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
 
-    //OLSRState* state = (OLSRState*)m_state->vars;
+    OLSRState* state = (OLSRState*)m_state->vars;
+
+    Invariant(state, myID, neighbors, current_time);
 
     // Serialize Message
 
@@ -104,11 +191,15 @@ static void OLSR_createMessage(ModuleState* m_state, unsigned char* myID, Neighb
         *size += sizeof(aux);
     }
 
+    Invariant(state, myID, neighbors, current_time);
+
 }
 
 static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool piggybacked, WLANAddr* mac_addr, byte* buffer, unsigned short size, MessageSummary* msg_summary) {
 
     OLSRState* state = (OLSRState*)m_state->vars;
+
+    Invariant(state, myID, neighbors, current_time);
 
     bool one_hop_change = false;
     bool two_hop_change = false;
@@ -121,14 +212,15 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
     ptr += sizeof(HelloMessage);
 
     HelloDeliverSummary* summary = deliverHello(f_state, &hello, mac_addr, msg_summary);
-    one_hop_change |= summary->new_neighbor || summary->updated_neighbor;
+    one_hop_change |= summary->new_neighbor || summary->updated_neighbor || summary->lost_neighbor;
+
+    bool changed_mpr_selectors = update_mpr_selectors(f_state, state, myID, summary->neigh, current_time, neighbors, summary->lost_neighbor, false);
+
     free(summary);
 
     // Deserialize Hacks
     byte n_hacks = ptr[0];
     ptr += 1;
-
-    bool changed_mpr_selectors = false;
 
     if( n_hacks > 0 ) {
         HackMessage hacks[n_hacks];
@@ -202,11 +294,15 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
 
     bool changed_mprs = update_mprs(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
 
+    Invariant(state, myID, neighbors, current_time);
+
     return changed_mpr_selectors || changed_mprs;
 }
 
 static bool OLSRDiscovery_updateContext(ModuleState* m_state, void* f_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
     OLSRState* state = (OLSRState*)m_state->vars;
+
+    //Invariant(state, myID, neighbors, current_time);
 
     // Recompute mprs if necessary
     bool one_hop_change = /*summary->new_neighbor ||*/ summary->updated_neighbor || summary->lost_neighbor;
@@ -214,7 +310,9 @@ static bool OLSRDiscovery_updateContext(ModuleState* m_state, void* f_state, uns
 
     bool aux1 = update_mprs(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
 
-    bool aux2 = update_mpr_selectors(f_state, state, myID, neighbor, current_time, neighbors, summary->lost_neighbor);
+    bool aux2 = update_mpr_selectors(f_state, state, myID, neighbor, current_time, neighbors, summary->lost_neighbor, summary->lost_bi);
+
+    Invariant(state, myID, neighbors, current_time);
 
     return aux1 || aux2;
 }
@@ -241,11 +339,11 @@ DiscoveryContext* OLSRDiscoveryContext() {
     return newDiscoveryContext(NULL, state, &OLSR_createMessage, &OLSR_processMessage, &OLSRDiscovery_updateContext, &OLSR_createAttrs, NULL, &OLSR_destructor);
 }
 
-static bool update_mpr_selectors(void* f_state, OLSRState* state, unsigned char* myID, NeighborEntry* neighbor, struct timespec* current_time, NeighborsTable* neighbors, bool lost_neighbor) {
+static bool update_mpr_selectors(void* f_state, OLSRState* state, unsigned char* myID, NeighborEntry* neighbor, struct timespec* current_time, NeighborsTable* neighbors, bool lost_neighbor, bool lost_bi) {
 
     OLSRAttrs* neigh_attrs = NE_getContextAttributes(neighbor);
 
-    if(lost_neighbor) {
+    if(lost_neighbor || lost_bi) {
         bool changed_mpr_selectors = false;
 
         if( list_find_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neighbor)) != NULL ) {
@@ -445,8 +543,6 @@ static list* compute_mprs(bool broadcast, NeighborsTable* neighbors, unsigned ch
                 uuid_unparse(THNE_getID(current_2hop_neigh), id_str2);
                 printf("    %s is_bi=%s is_not_me=%s is_not_in_n2_yet=%s\n", id_str2, (is_bi?"T":"F"), (is_not_me?"T":"F"), (is_not_in_n2_yet?"T":"F"));
                 */
-
-
 
                 if( is_bi && is_not_me ) {
                     if( is_not_in_n2_yet ) {
