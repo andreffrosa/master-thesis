@@ -86,7 +86,7 @@ static void MPRContextEvent(ModuleState* context_state, queue_t_elem* elem, unsi
                 ptr += length;
                 read += length;
 
-                if(read < ev->length) {
+                while(read < ev->length) {
                     memcpy(&length, ptr, sizeof(unsigned short));
                     ptr += sizeof(unsigned short);
                     read += sizeof(unsigned short);
