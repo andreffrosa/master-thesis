@@ -142,7 +142,7 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
 
 void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neigh);
 
-void DF_notifyNeighborhood(discovery_framework_state* state);
+YggEvent* DF_notifyNeighborhood(discovery_framework_state* state);
 
 
 //void changeAlgorithm(discovery_framework_state* state, DiscoveryAlgorithm* new_alg);
