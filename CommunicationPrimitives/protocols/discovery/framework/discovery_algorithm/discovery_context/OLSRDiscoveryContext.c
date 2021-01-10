@@ -207,11 +207,14 @@ static bool OLSRDiscovery_updateContext(ModuleState* m_state, void* f_state, uns
     OLSRState* state = (OLSRState*)m_state->vars;
 
     // Recompute mprs if necessary
-
     bool one_hop_change = /*summary->new_neighbor ||*/ summary->updated_neighbor || summary->lost_neighbor;
     bool two_hop_change = /*summary->updated_2hop_neighbor || summary->added_2hop_neighbor ||*/ summary->lost_2hop_neighbor;
 
-    return  update(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
+    bool aux1 = update_mprs(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
+
+    bool aux2 = update_mpr_selectors(f_state, state, myID, neighbor, current_time, neighbors, summary->lost_neighbor);
+
+    return aux1 || aux2;
 }
 
 
@@ -236,7 +239,45 @@ DiscoveryContext* OLSRDiscoveryContext() {
     return newDiscoveryContext(NULL, state, &OLSR_createMessage, &OLSR_processMessage, &OLSRDiscovery_updateContext, &OLSR_createAttrs, NULL, &OLSR_destructor);
 }
 
-static bool update(void* f_state, OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change) {
+static bool update_mpr_selectors(void* f_state, OLSRState* state, unsigned char* myID, NeighborEntry* neighbor, struct timespec* current_time, NeighborsTable* neighbors, bool lost_neighbor) {
+
+    OLSRAttrs* neigh_attrs = NE_getContextAttributes(neigh);
+
+    if(lost_neighbor) {
+        bool changed = false;
+
+        if( list_find_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neigh)) != NULL ) {
+            neigh_attrs->flooding_mpr_selector = false;
+
+            void* aux = list_remove_item(state->flooding_mpr_selectors, &equalID, NE_getNeighborID(neigh));
+            if(aux) {
+                free(aux);
+            }
+
+            changed = true;
+        }
+
+        if( list_find_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(neigh)) != NULL ) {
+            neigh_attrs->routing_mpr_selector = false;
+
+            void* aux = list_remove_item(state->routing_mpr_selectors, &equalID, NE_getNeighborID(neigh));
+            if(aux) {
+                free(aux);
+            }
+
+            changed = true;
+        }
+
+        // Notify
+        if( changed ) {
+            notify(f_state, "MPR SELECTORS", state->flooding_mprs, state->routing_mprs);
+        }
+    }
+
+    return false;
+}
+
+static bool update_mprs(void* f_state, OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time, bool one_hop_change, bool two_hop_change) {
 
     if( one_hop_change || two_hop_change ) {
         bool changed = recompute_mprs(state, myID, current_time, neighbors);
