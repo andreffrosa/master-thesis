@@ -138,6 +138,8 @@ static void MPRContextEvent(ModuleState* context_state, queue_t_elem* elem, unsi
                             // Ignore Routing MPR SELECTORS
                         }
                     }
+
+                    YggEvent_freePayload(&gen_ev);
                 }
             }
         }

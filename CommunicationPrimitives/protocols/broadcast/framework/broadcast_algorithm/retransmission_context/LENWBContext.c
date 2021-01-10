@@ -90,6 +90,8 @@ static void LENWBContextEvent(ModuleState* context_state, queue_t_elem* elem, un
                             }
                         }
                     }
+
+                    YggEvent_freePayload(&gen_ev);
                 }
             }
         }
