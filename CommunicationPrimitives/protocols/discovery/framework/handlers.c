@@ -2203,28 +2203,28 @@ void DF_notifyDiscoveryEnvironment(discovery_framework_state* state) {
 void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
     assert(neigh);
 
-    YggEvent* ev = malloc(sizeof(YggEvent));
-    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
+    YggEvent ev = {0};
+    YggEvent_init(&ev, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
 
     // Append Neighbor ID
-    YggEvent_addPayload(ev, NE_getNeighborID(neigh), sizeof(uuid_t));
+    YggEvent_addPayload(&ev, NE_getNeighborID(neigh), sizeof(uuid_t));
 
     // Append MAC addr
-    YggEvent_addPayload(ev, NE_getNeighborMAC(neigh)->data, WLAN_ADDR_LEN);
+    YggEvent_addPayload(&ev, NE_getNeighborMAC(neigh)->data, WLAN_ADDR_LEN);
 
     // Append LQs
     double rx_lq = NE_getRxLinkQuality(neigh);
-    YggEvent_addPayload(ev, &rx_lq, sizeof(double));
+    YggEvent_addPayload(&ev, &rx_lq, sizeof(double));
     double tx_lq = NE_getRxLinkQuality(neigh);
-    YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+    YggEvent_addPayload(&ev, &tx_lq, sizeof(double));
 
     // Append Traffic
     double traffic = NE_getOutTraffic(neigh);
-    YggEvent_addPayload(ev, &traffic, sizeof(double));
+    YggEvent_addPayload(&ev, &traffic, sizeof(double));
 
     // Append Neighbor Type
     byte is_bi = NE_getNeighborType(neigh, &state->current_time) == BI_NEIGH;
-    YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+    YggEvent_addPayload(&ev, &is_bi, sizeof(byte));
 
     assert(!NE_isPending(neigh));
 
@@ -2241,7 +2241,7 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
         }
     }
 
-    YggEvent_addPayload(ev, &n, sizeof(byte));
+    YggEvent_addPayload(&ev, &n, sizeof(byte));
 
     iterator = NULL;
     hit = NULL;
@@ -2250,21 +2250,21 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
 
         if(!THNE_isLost(nn)) {
             // Append Neigh ID
-            YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+            YggEvent_addPayload(&ev, THNE_getID(nn), sizeof(uuid_t));
 
             // Append Neigh LQ
             rx_lq = THNE_getRxLinkQuality(nn);
-            YggEvent_addPayload(ev, &rx_lq, sizeof(double));
+            YggEvent_addPayload(&ev, &rx_lq, sizeof(double));
             tx_lq = THNE_getTxLinkQuality(nn);
-            YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+            YggEvent_addPayload(&ev, &tx_lq, sizeof(double));
 
             // Append Traffic
             traffic = THNE_getTraffic(nn);
-            YggEvent_addPayload(ev, &traffic, sizeof(double));
+            YggEvent_addPayload(&ev, &traffic, sizeof(double));
 
             // Append Neigh Type
             is_bi = THNE_isBi(nn);
-            YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+            YggEvent_addPayload(&ev, &is_bi, sizeof(byte));
         }
     }
 
@@ -2275,44 +2275,56 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
         ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEW NEIGHBOR", id_str);
     #endif
 
-    deliverEvent(ev);
-    YggEvent_freePayload(ev);
-    free(ev);
+    YggEvent packet = {0};
+    YggEvent_init(&packet, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
 
-    DF_notifyNeighborhood(state);
+    YggEvent_addPayload(&packet, &ev.length, sizeof(unsigned short));
+    YggEvent_addPayload(&packet, ev.payload, ev.length);
+    YggEvent_freePayload(&ev);
+
+    YggEvent* neighborhood = DF_notifyNeighborhood(state);
+    YggEvent_addPayload(&packet, &neighborhood->length, sizeof(unsigned short));
+    YggEvent_addPayload(&packet, neighborhood->payload, neighborhood->length);
+    YggEvent_freePayload(neighborhood);
+    free(neighborhood);
+
     YggEvent* x = NULL;
     while( (x = list_remove_head(state->pending_notifications)) ) {
-        deliverEvent(x);
+        YggEvent_addPayload(&packet, &x->length, sizeof(unsigned short));
+        YggEvent_addPayload(&packet, x->payload, x->length);
         YggEvent_freePayload(x);
         free(x);
     }
+
+    deliverEvent(&packet);
+    YggEvent_freePayload(&packet);
 }
 
 void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
     assert(neigh);
 
-    YggEvent* ev = malloc(sizeof(YggEvent));
-    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
+    YggEvent ev = {0};
+    YggEvent_init(&ev, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
 
     // Append Neighbor ID
-    YggEvent_addPayload(ev, NE_getNeighborID(neigh), sizeof(uuid_t));
+    YggEvent_addPayload(&ev, NE_getNeighborID(neigh), sizeof(uuid_t));
 
     // Append MAC addr
-    YggEvent_addPayload(ev, NE_getNeighborMAC(neigh)->data, WLAN_ADDR_LEN);
+    YggEvent_addPayload(&ev, NE_getNeighborMAC(neigh)->data, WLAN_ADDR_LEN);
 
     // Append LQs
     double rx_lq = NE_getRxLinkQuality(neigh);
-    YggEvent_addPayload(ev, &rx_lq, sizeof(double));
+    YggEvent_addPayload(&ev, &rx_lq, sizeof(double));
     double tx_lq = NE_getRxLinkQuality(neigh);
-    YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+    YggEvent_addPayload(&ev, &tx_lq, sizeof(double));
 
     // Append Traffic
     double traffic = NE_getOutTraffic(neigh);
-    YggEvent_addPayload(ev, &traffic, sizeof(double));
+    YggEvent_addPayload(&ev, &traffic, sizeof(double));
 
     // Append Neighbor Type
     byte is_bi = NE_getNeighborType(neigh, &state->current_time) == BI_NEIGH;
-    YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+    YggEvent_addPayload(&ev, &is_bi, sizeof(byte));
 
     assert(!NE_isPending(neigh));
 
@@ -2329,7 +2341,7 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
         }
     }
 
-    YggEvent_addPayload(ev, &n, sizeof(byte));
+    YggEvent_addPayload(&ev, &n, sizeof(byte));
 
     iterator = NULL;
     hit = NULL;
@@ -2338,21 +2350,21 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
 
         if(!THNE_isLost(nn)) {
             // Append Neigh ID
-            YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+            YggEvent_addPayload(&ev, THNE_getID(nn), sizeof(uuid_t));
 
             // Append Neigh LQ
             rx_lq = THNE_getRxLinkQuality(nn);
-            YggEvent_addPayload(ev, &rx_lq, sizeof(double));
+            YggEvent_addPayload(&ev, &rx_lq, sizeof(double));
             tx_lq = THNE_getTxLinkQuality(nn);
-            YggEvent_addPayload(ev, &tx_lq, sizeof(double));
+            YggEvent_addPayload(&ev, &tx_lq, sizeof(double));
 
             // Append Traffic
             traffic = THNE_getTraffic(nn);
-            YggEvent_addPayload(ev, &traffic, sizeof(double));
+            YggEvent_addPayload(&ev, &traffic, sizeof(double));
 
             // Append Neigh Type
             is_bi = THNE_isBi(nn);
-            YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+            YggEvent_addPayload(&ev, &is_bi, sizeof(byte));
         }
     }
 
@@ -2363,41 +2375,46 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
         ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "UPDATE NEIGHBOR", id_str);
     #endif
 
-    deliverEvent(ev);
-    YggEvent_freePayload(ev);
-    free(ev);
+    YggEvent packet = {0};
+    YggEvent_init(&packet, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
 
-    DF_notifyNeighborhood(state);
+    YggEvent_addPayload(&packet, &ev.length, sizeof(unsigned short));
+    YggEvent_addPayload(&packet, ev.payload, ev.length);
+    YggEvent_freePayload(&ev);
+
+    YggEvent* neighborhood = DF_notifyNeighborhood(state);
+    YggEvent_addPayload(&packet, &neighborhood->length, sizeof(unsigned short));
+    YggEvent_addPayload(&packet, neighborhood->payload, neighborhood->length);
+    YggEvent_freePayload(neighborhood);
+    free(neighborhood);
+
     YggEvent* x = NULL;
     while( (x = list_remove_head(state->pending_notifications)) ) {
-        deliverEvent(x);
+        YggEvent_addPayload(&packet, &x->length, sizeof(unsigned short));
+        YggEvent_addPayload(&packet, x->payload, x->length);
         YggEvent_freePayload(x);
         free(x);
     }
+
+    deliverEvent(&packet);
+    YggEvent_freePayload(&packet);
 }
 
 void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
     assert(neigh);
 
-    YggEvent* x = NULL;
-    while( (x = list_remove_head(state->pending_notifications)) ) {
-        deliverEvent(x);
-        YggEvent_freePayload(x);
-        free(x);
-    }
-
-    YggEvent* ev = malloc(sizeof(YggEvent));
-    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
+    YggEvent ev = {0};
+    YggEvent_init(&ev, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
 
     // Append Neighbor ID
-    YggEvent_addPayload(ev, NE_getNeighborID(neigh), sizeof(uuid_t));
+    YggEvent_addPayload(&ev, NE_getNeighborID(neigh), sizeof(uuid_t));
 
     // Append Neighbor Type
     struct timespec aux;
     copy_timespec(&aux, &state->current_time);
     aux.tv_sec--;
     byte is_bi = NE_getNeighborType(neigh, &aux) == BI_NEIGH;
-    YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+    YggEvent_addPayload(&ev, &is_bi, sizeof(byte));
 
     assert(!NE_isPending(neigh));
 
@@ -2416,7 +2433,7 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
         }
     }
 
-    YggEvent_addPayload(ev, &n, sizeof(byte));
+    YggEvent_addPayload(&ev, &n, sizeof(byte));
 
     iterator = NULL;
     hit = NULL;
@@ -2425,11 +2442,11 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
 
         if(!THNE_isLost(nn)) {
             // Append Neigh ID
-            YggEvent_addPayload(ev, THNE_getID(nn), sizeof(uuid_t));
+            YggEvent_addPayload(&ev, THNE_getID(nn), sizeof(uuid_t));
 
             // Append Neigh Type
             is_bi = THNE_isBi(nn);
-            YggEvent_addPayload(ev, &is_bi, sizeof(byte));
+            YggEvent_addPayload(&ev, &is_bi, sizeof(byte));
         }
     }
 
@@ -2440,19 +2457,35 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
         ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST NEIGHBOR", id_str);
     #endif
 
-    deliverEvent(ev);
-    YggEvent_freePayload(ev);
-    free(ev);
+    YggEvent packet = {0};
+    YggEvent_init(&packet, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
 
-    DF_notifyNeighborhood(state);
+    YggEvent_addPayload(&packet, &ev.length, sizeof(unsigned short));
+    YggEvent_addPayload(&packet, ev.payload, ev.length);
+    YggEvent_freePayload(&ev);
 
+    YggEvent* neighborhood = DF_notifyNeighborhood(state);
+    YggEvent_addPayload(&packet, &neighborhood->length, sizeof(unsigned short));
+    YggEvent_addPayload(&packet, neighborhood->payload, neighborhood->length);
+    YggEvent_freePayload(neighborhood);
+    free(neighborhood);
 
+    YggEvent* x = NULL;
+    while( (x = list_remove_head(state->pending_notifications)) ) {
+        YggEvent_addPayload(&packet, &x->length, sizeof(unsigned short));
+        YggEvent_addPayload(&packet, x->payload, x->length);
+        YggEvent_freePayload(x);
+        free(x);
+    }
+
+    deliverEvent(&packet);
+    YggEvent_freePayload(&packet);
 }
 
-void DF_notifyNeighborhood(discovery_framework_state* state) {
+YggEvent* DF_notifyNeighborhood(discovery_framework_state* state) {
 
     YggEvent* ev = malloc(sizeof(YggEvent));
-    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
+    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, 0);
 
     // Append Neighborhood
     unsigned int size = 0;
@@ -2486,9 +2519,10 @@ void DF_notifyNeighborhood(discovery_framework_state* state) {
     free(str2);
     #endif
 
-    deliverEvent(ev);
+    /*deliverEvent(ev);
     YggEvent_freePayload(ev);
-    free(ev);
+    free(ev);*/
+    return ev;
 }
 
 void DF_notifyGenericEvent(void* f_state, char* type, void* buffer, unsigned int size) {
@@ -2497,7 +2531,7 @@ void DF_notifyGenericEvent(void* f_state, char* type, void* buffer, unsigned int
     discovery_framework_state* state = (discovery_framework_state*)f_state;
 
     YggEvent* ev = malloc(sizeof(YggEvent));
-    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
+    YggEvent_init(ev, DISCOVERY_FRAMEWORK_PROTO_ID, 0);
 
     // Append type
     unsigned int str_len = strlen(type);
