@@ -135,6 +135,6 @@ HelloDeliverSummary* deliverHello(void* f_state, HelloMessage* hello, WLANAddr* 
 
 HackDeliverSummary* deliverHack(void* f_state, HackMessage* hack, MessageSummary* msg_summary);
 
-void DF_notifyGenericEvent(char* type, void* buffer, unsigned int size);
+void DF_notifyGenericEvent(void* f_state, char* type, void* buffer, unsigned int size);
 
 #endif /* _DISCOVERY_DELIVERY_H_ */

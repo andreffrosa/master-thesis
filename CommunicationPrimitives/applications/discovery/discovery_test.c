@@ -104,9 +104,9 @@ int main(int argc, char* argv[]) {
     app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
-    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
+    //app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
 	app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
-    app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
+    //app_def_add_consumed_events(myApp, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
 
     queue_t* inBox = registerApp(myApp);
 
@@ -208,47 +208,86 @@ static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_ar
     if(!app_args->verbose)
         return;
 
-    char id[UUID_STR_LEN+1];
-    id[UUID_STR_LEN] = '\0';
-	unsigned char* ptr = notification->payload;
+    unsigned short read = 0;
+    unsigned char* ptr = notification->payload;
 
-	if(notification->notification_id == NEW_NEIGHBOR) {
-        uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "NEW NEIGHBOR", id);
+    unsigned short length = 0;
+    memcpy(&length, ptr, sizeof(unsigned short));
+	ptr += sizeof(unsigned short);
+    read += sizeof(unsigned short);
 
-	} else if(notification->notification_id == UPDATE_NEIGHBOR) {
-        uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "UPDATE NEIGHBOR", id);
+    YggEvent main = {0};
+    YggEvent_init(&main, DISCOVERY_FRAMEWORK_PROTO_ID, notification->notification_id);
+    YggEvent_addPayload(&main, ptr, length);
+    ptr += length;
+    read += length;
 
-	} else if(notification->notification_id == LOST_NEIGHBOR) {
-        uuid_unparse(ptr, id);
-		ygg_log(APP_NAME, "LOST NEIGHBOR", id);
-	} else if(notification->notification_id == NEIGHBORHOOD) {
-        ygg_log(APP_NAME, "NEIGHBORHOOD", "");
-	} else if(notification->notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
-        ygg_log(APP_NAME, "DISCOVERY ENVIRONMENT UPDATE", "");
-	}
-    else if(notification->notification_id == GENERIC_DISCOVERY_EVENT) {
+    {
+        char id[UUID_STR_LEN];
+        unsigned char* ptr2 = main.payload;
+        if(notification->notification_id == NEW_NEIGHBOR) {
+            uuid_unparse(ptr2, id);
+    		ygg_log(APP_NAME, "NEW NEIGHBOR", id);
 
-        unsigned int str_len = 0;
-        void* ptr = NULL;
-        ptr = YggEvent_readPayload(notification, ptr, &str_len, sizeof(unsigned int));
+    	} else if(notification->notification_id == UPDATE_NEIGHBOR) {
+            uuid_unparse(ptr2, id);
+    		ygg_log(APP_NAME, "UPDATE NEIGHBOR", id);
 
-        char type[str_len+1];
-        ptr = YggEvent_readPayload(notification, ptr, type, str_len*sizeof(char));
-        type[str_len] = '\0';
+    	} else if(notification->notification_id == LOST_NEIGHBOR) {
+            uuid_unparse(ptr2, id);
+    		ygg_log(APP_NAME, "LOST NEIGHBOR", id);
+    	}
+    }
 
-        printf("TYPE: %s\n", type);
+    YggEvent_freePayload(&main);
 
-        if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
+    memcpy(&length, ptr, sizeof(unsigned short));
+	ptr += sizeof(unsigned short);
+    read += sizeof(unsigned short);
+
+    YggEvent neighborhood = {0};
+    YggEvent_init(&neighborhood, DISCOVERY_FRAMEWORK_PROTO_ID, 0);
+    YggEvent_addPayload(&neighborhood, ptr, length);
+    ptr += length;
+    read += length;
+
+    {
+        //if(notification->notification_id == NEIGHBORHOOD) {
+            ygg_log(APP_NAME, "NEIGHBORHOOD", "");
+    	//}
+    }
+    YggEvent_freePayload(&neighborhood);
+
+    while( read < notification->length ) {
+        memcpy(&length, ptr, sizeof(unsigned short));
+    	ptr += sizeof(unsigned short);
+        read += sizeof(unsigned short);
+
+        YggEvent ev = {0};
+        YggEvent_init(&ev, DISCOVERY_FRAMEWORK_PROTO_ID, 0);
+        YggEvent_addPayload(&ev, ptr, length);
+        ptr += length;
+        read += length;
+
+        {
+            unsigned int str_len = 0;
+            void* ptr = NULL;
+            ptr = YggEvent_readPayload(&ev, ptr, &str_len, sizeof(unsigned int));
+
+            char type[str_len+1];
+            ptr = YggEvent_readPayload(&ev, ptr, type, str_len*sizeof(char));
+            type[str_len] = '\0';
+
+            printf("TYPE: %s\n", type);
+            if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
 
                 printf("FLOODING\n");
                 unsigned int amount = 0;
-                ptr = YggEvent_readPayload(notification, ptr, &amount, sizeof(unsigned int));
+                ptr = YggEvent_readPayload(&ev, ptr, &amount, sizeof(unsigned int));
 
                 for(int i = 0; i < amount; i++) {
                     uuid_t id;
-                    ptr = YggEvent_readPayload(notification, ptr, id, sizeof(uuid_t));
+                    ptr = YggEvent_readPayload(&ev, ptr, id, sizeof(uuid_t));
 
                     char id_str[UUID_STR_LEN+1];
                     id_str[UUID_STR_LEN] = '\0';
@@ -258,37 +297,40 @@ static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_ar
 
                 printf("ROUTING\n");
                 amount = 0;
-                ptr = YggEvent_readPayload(notification, ptr, &amount, sizeof(unsigned int));
+                ptr = YggEvent_readPayload(&ev, ptr, &amount, sizeof(unsigned int));
 
                 for(int i = 0; i < amount; i++) {
                     uuid_t id;
-                    ptr = YggEvent_readPayload(notification, ptr, id, sizeof(uuid_t));
+                    ptr = YggEvent_readPayload(&ev, ptr, id, sizeof(uuid_t));
 
                     char id_str[UUID_STR_LEN+1];
                     id_str[UUID_STR_LEN] = '\0';
                     uuid_unparse(id, id_str);
                     printf("%s\n", id_str);
                 }
-        }
-        else if( strcmp(type, "LENWB_NEIGHS") == 0 ) {
-            unsigned int amount = 0;
-            ptr = YggEvent_readPayload(notification, ptr, &amount, sizeof(unsigned int));
+            }
+            else if( strcmp(type, "LENWB_NEIGHS") == 0 ) {
+                unsigned int amount = 0;
+                ptr = YggEvent_readPayload(&ev, ptr, &amount, sizeof(unsigned int));
 
-            for(int i = 0; i < amount; i++) {
-                uuid_t id;
-                ptr = YggEvent_readPayload(notification, ptr, id, sizeof(uuid_t));
+                for(int i = 0; i < amount; i++) {
+                    uuid_t id;
+                    ptr = YggEvent_readPayload(&ev, ptr, id, sizeof(uuid_t));
 
-                byte n_neighs = 0;
-                ptr = YggEvent_readPayload(notification, ptr, &n_neighs, sizeof(byte));
+                    byte n_neighs = 0;
+                    ptr = YggEvent_readPayload(&ev, ptr, &n_neighs, sizeof(byte));
 
-                char id_str[UUID_STR_LEN+1];
-                id_str[UUID_STR_LEN] = '\0';
-                uuid_unparse(id, id_str);
-                printf("%s : %u\n", id_str, n_neighs);
+                    char id_str[UUID_STR_LEN+1];
+                    id_str[UUID_STR_LEN] = '\0';
+                    uuid_unparse(id, id_str);
+                    printf("%s : %u\n", id_str, n_neighs);
+                }
             }
         }
 
-	}
+        YggEvent_freePayload(&ev);
+    }
+
 }
 
 static DiscoveryAppArgs* default_discovery_app_args() {

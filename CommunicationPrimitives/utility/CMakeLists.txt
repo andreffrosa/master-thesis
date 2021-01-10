@@ -7,7 +7,7 @@ project(utility)
 
 include_directories(.)
 
-file(GLOB_RECURSE SRC_FILES_UTILITY ./*.c)
+file(GLOB_RECURSE SRC_FILES_UTILITY ${PROJECT_SOURCE_DIR}/*.c)
 
 #list(REMOVE_ITEM SRC_FILES_UTILITY ${PROJECT_SOURCE_DIR}/myUtils.c)
 

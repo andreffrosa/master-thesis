@@ -64,45 +64,81 @@ static void MPRContextEvent(ModuleState* context_state, queue_t_elem* elem, unsi
 
     if( elem->type == YGG_EVENT ) {
         YggEvent* ev = &elem->data.event;
-        if( ev->notification_id == GENERIC_DISCOVERY_EVENT ) {
-            unsigned int str_len = 0;
-            void* ptr = NULL;
-            ptr = YggEvent_readPayload(ev, ptr, &str_len, sizeof(unsigned int));
+        if( ev->proto_origin == DISCOVERY_FRAMEWORK_PROTO_ID ) {
+            unsigned short ev_id = ev->notification_id;
 
-            char type[str_len+1];
-            ptr = YggEvent_readPayload(ev, ptr, type, str_len*sizeof(char));
-            type[str_len] = '\0';
+            bool process = ev_id == NEW_NEIGHBOR || ev_id == UPDATE_NEIGHBOR || ev_id == LOST_NEIGHBOR;
 
-            if( strcmp(type, "MPRS") == 0 ) {
-                list_delete(state->broadcast_mprs);
-                state->broadcast_mprs = list_init();
+            if(process) {
+                unsigned short read = 0;
+                unsigned char* ptr = ev->payload;
 
-                unsigned int amount = 0;
-                ptr = YggEvent_readPayload(ev, ptr, &amount, sizeof(unsigned int));
+                unsigned short length = 0;
+                memcpy(&length, ptr, sizeof(unsigned short));
+            	ptr += sizeof(unsigned short);
+                read += sizeof(unsigned short);
+                ptr += length;
+                read += length;
 
-                for(int i = 0; i < amount; i++) {
-                    unsigned char* id = malloc(sizeof(uuid_t));
-                    ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
+                memcpy(&length, ptr, sizeof(unsigned short));
+            	ptr += sizeof(unsigned short);
+                read += sizeof(unsigned short);
+                ptr += length;
+                read += length;
 
-                    list_add_item_to_tail(state->broadcast_mprs, id);
+                if(read < ev->length) {
+                    memcpy(&length, ptr, sizeof(unsigned short));
+                    ptr += sizeof(unsigned short);
+                    read += sizeof(unsigned short);
+
+                    YggEvent gen_ev = {0};
+                    YggEvent_init(&gen_ev, DISCOVERY_FRAMEWORK_PROTO_ID, 0);
+                    YggEvent_addPayload(&gen_ev, ptr, length);
+                    ptr += length;
+                    read += length;
+
+                    {
+                        unsigned int str_len = 0;
+                        void* ptr = NULL;
+                        ptr = YggEvent_readPayload(&gen_ev, ptr, &str_len, sizeof(unsigned int));
+
+                        char type[str_len+1];
+                        ptr = YggEvent_readPayload(&gen_ev, ptr, type, str_len*sizeof(char));
+                        type[str_len] = '\0';
+
+                        if( strcmp(type, "MPRS") == 0 ) {
+                            list_delete(state->broadcast_mprs);
+                            state->broadcast_mprs = list_init();
+
+                            unsigned int amount = 0;
+                            ptr = YggEvent_readPayload(&gen_ev, ptr, &amount, sizeof(unsigned int));
+
+                            for(int i = 0; i < amount; i++) {
+                                unsigned char* id = malloc(sizeof(uuid_t));
+                                ptr = YggEvent_readPayload(&gen_ev, ptr, id, sizeof(uuid_t));
+
+                                list_add_item_to_tail(state->broadcast_mprs, id);
+                            }
+
+                            // Ignore Routing MPRS
+                        } else if( strcmp(type, "MPR SELECTORS") == 0 ) {
+                            list_delete(state->broadcast_mpr_selectors);
+                            state->broadcast_mpr_selectors = list_init();
+
+                            unsigned int amount = 0;
+                            ptr = YggEvent_readPayload(&gen_ev, ptr, &amount, sizeof(unsigned int));
+
+                            for(int i = 0; i < amount; i++) {
+                                unsigned char* id = malloc(sizeof(uuid_t));
+                                ptr = YggEvent_readPayload(&gen_ev, ptr, id, sizeof(uuid_t));
+
+                                list_add_item_to_tail(state->broadcast_mpr_selectors, id);
+                            }
+
+                            // Ignore Routing MPR SELECTORS
+                        }
+                    }
                 }
-
-                // Ignore Routing MPRS
-            } else if( strcmp(type, "MPR SELECTORS") == 0 ) {
-                list_delete(state->broadcast_mpr_selectors);
-                state->broadcast_mpr_selectors = list_init();
-
-                unsigned int amount = 0;
-                ptr = YggEvent_readPayload(ev, ptr, &amount, sizeof(unsigned int));
-
-                for(int i = 0; i < amount; i++) {
-                    unsigned char* id = malloc(sizeof(uuid_t));
-                    ptr = YggEvent_readPayload(ev, ptr, id, sizeof(uuid_t));
-
-                    list_add_item_to_tail(state->broadcast_mpr_selectors, id);
-                }
-
-                // Ignore Routing MPR SELECTORS
             }
         }
     }

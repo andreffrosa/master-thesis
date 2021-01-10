@@ -61,6 +61,8 @@ typedef struct discovery_framework_state_ {
     struct timespec next_reactive_hello_time;
     struct timespec next_reactive_hack_time;
 
+    list* pending_notifications;
+
     uuid_t discovery_environment_timer_id;                    //
 
     discovery_stats stats;       	            // Framework's stats
@@ -141,7 +143,7 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
 
 void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neigh);
 
-void DF_notifyNeighborhood(discovery_framework_state* state);
+YggEvent* DF_notifyNeighborhood(discovery_framework_state* state);
 
 
 //void changeAlgorithm(discovery_framework_state* state, DiscoveryAlgorithm* new_alg);

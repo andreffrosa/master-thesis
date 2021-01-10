@@ -302,15 +302,14 @@ DiscoveryNeighborType NE_getNeighborType(NeighborEntry* neigh, struct timespec* 
         assert(!neigh->accepted);
         return PENDING_NEIGH;
     } else {
-        // neigh timer could have not expired yet so neigh is not (notified as) lost yet
-        if(compare_timespec(&neigh->rx_exp_time, current_time) >= 0 && !NE_isLost(neigh)) {
-            if(compare_timespec(&neigh->tx_exp_time, current_time) >= 0) {
+        if(NE_isLost(neigh)) {
+            return LOST_NEIGH;
+        } else {
+            if(compare_timespec(&neigh->rx_exp_time, current_time) > 0 && compare_timespec(&neigh->tx_exp_time, current_time) > 0) {
                 return BI_NEIGH;
             } else {
-                return UNI_NEIGH;
+                return UNI_NEIGH; // neigh timer could have not expired yet so neigh is not (notified as) lost yet
             }
-        } else {
-            return LOST_NEIGH;
         }
     }
 }

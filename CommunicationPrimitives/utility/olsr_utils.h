@@ -46,4 +46,17 @@ list* compute_multipoint_relays(hash_table* n1, list* n2, list* initial);
 
 void delete_n1_item(hash_table_item* hit, void* aux);
 
+/////////////////////////////////////////
+
+typedef struct DijkstraTuple_ {
+    uuid_t destination_id;
+    uuid_t next_hop_id;
+    double cost;
+    unsigned int hops;
+} DijkstraTuple;
+
+DijkstraTuple* newDijkstraTuple(unsigned char* dest_id, unsigned char* next_hop_id, double cost, unsigned int hops);
+
+hash_table* Dijkstra(graph* g, unsigned char* source_id);
+
 #endif /* _OLSR_UTILS_H_ */
