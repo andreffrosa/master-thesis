@@ -48,26 +48,30 @@ static void LabelNeighsContextInit(ModuleState* context_state, proto_def* protoc
 */
 
 static void LabelNeighsContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, hash_table* contexts) {
-
 	LabelNeighsContextState* state = (LabelNeighsContextState*)(context_state->vars);
 
 	if(elem->type == YGG_EVENT) {
         YggEvent* ev = &elem->data.event;
-        //if( ev->notification_id == NEIGHBOR_FOUND /*|| ev->notification_id == NEIGHBOR_UPDATE*/ || ev->notification_id == NEIGHBOR_LOST ) {
-        if( ev->notification_id == NEIGHBORHOOD ) {
 
-            RetransmissionContext* neighbors_context = hash_table_find_value(contexts, "NeighborsContext");
-            assert(neighbors_context);
+        if( ev->proto_origin == DISCOVERY_FRAMEWORK_PROTO_ID ) {
+            unsigned short ev_id = ev->notification_id;
 
-            // Recompute Labels
-            graph* neighborhood = NULL;
-            if(!RC_query(neighbors_context, "neighborhood", &neighborhood, NULL, myID, contexts))
-                assert(false);
+            bool process = ev_id == NEW_NEIGHBOR || ev_id == UPDATE_NEIGHBOR || ev_id == LOST_NEIGHBOR;
 
-            hash_table_delete(state->labels);
-            state->labels = compute_labels(neighborhood, myID);
+            if(process) {
+                RetransmissionContext* neighbors_context = hash_table_find_value(contexts, "NeighborsContext");
+                assert(neighbors_context);
 
-            graph_delete(neighborhood);
+                // Recompute Labels
+                graph* neighborhood = NULL;
+                if(!RC_query(neighbors_context, "neighborhood", &neighborhood, NULL, myID, contexts))
+                    assert(false);
+
+                hash_table_delete(state->labels);
+                state->labels = compute_labels(neighborhood, myID);
+
+                graph_delete(neighborhood);
+            }
         }
 	}
 }

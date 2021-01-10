@@ -53,8 +53,8 @@ static void NeighborsContextInit(ModuleState* context_state, proto_def* protocol
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, LOST_NEIGHBOR);
-    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
-    proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
+    //proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBORHOOD);
+    //proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, GENERIC_DISCOVERY_EVENT);
     proto_def_add_consumed_event(protocol_definition, DISCOVERY_FRAMEWORK_PROTO_ID, DISCOVERY_ENVIRONMENT_UPDATE);
 
     NeighborsContextState* state = (NeighborsContextState*) (context_state->vars);
@@ -69,14 +69,41 @@ static void NeighborsContextEvent(ModuleState* context_state, queue_t_elem* elem
 
     if(elem->type == YGG_EVENT) {
         YggEvent* ev = &elem->data.event;
-        unsigned short nid = ev->notification_id;
-		if(nid == NEIGHBORHOOD) {
-            graph_delete(state->neighborhood);
-            state->neighborhood = extractNeighborhood(ev);
-		/*} else if(elem->data.event.notification_id == GENERIC_DISCOVERY_EVENT) {
-		*/
-        } else if(elem->data.event.notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
-            updateEnvironment(state, ev);
+
+        if( ev->proto_origin == DISCOVERY_FRAMEWORK_PROTO_ID ) {
+            unsigned short ev_id = ev->notification_id;
+
+            bool process = ev_id == NEW_NEIGHBOR || ev_id == UPDATE_NEIGHBOR || ev_id == LOST_NEIGHBOR;
+            if(process) {
+                unsigned short read = 0;
+                unsigned char* ptr = ev->payload;
+
+                unsigned short length = 0;
+                memcpy(&length, ptr, sizeof(unsigned short));
+            	ptr += sizeof(unsigned short);
+                read += sizeof(unsigned short);
+                ptr += length;
+                read += length;
+
+                memcpy(&length, ptr, sizeof(unsigned short));
+            	ptr += sizeof(unsigned short);
+                read += sizeof(unsigned short);
+
+                YggEvent neighborhood_ev = {0};
+                YggEvent_init(&neighborhood_ev, DISCOVERY_FRAMEWORK_PROTO_ID, 0);
+                YggEvent_addPayload(&neighborhood_ev, ptr, length);
+                ptr += length;
+                read += length;
+
+                {
+                    graph_delete(state->neighborhood);
+                    state->neighborhood = extractNeighborhood(&neighborhood_ev);
+                }
+
+                YggEvent_freePayload(&neighborhood_ev);
+            } else if(elem->data.event.notification_id == DISCOVERY_ENVIRONMENT_UPDATE) {
+                updateEnvironment(state, ev);
+            }
         }
 	}
 }
