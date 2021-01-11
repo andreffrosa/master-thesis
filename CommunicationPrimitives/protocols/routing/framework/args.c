@@ -27,6 +27,7 @@ routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, 
     args->gc_interval_s = gc_interval_s;
 
     args->announce_misses = announce_misses;
+    args->min_announce_interval_ms = min_announce_interval_ms;
 
     args->ignore_zero_seq = ignore_zero_seq;
 
@@ -53,7 +54,7 @@ routing_framework_args* default_routing_framework_args() {
         500,
         500,
         3,
-        500,
+        1000,
         true
     );
 }

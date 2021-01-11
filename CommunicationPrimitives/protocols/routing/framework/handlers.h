@@ -49,6 +49,7 @@ typedef struct routing_framework_state_ {
     struct timespec last_announce_time;
     struct timespec next_announce_time;
     bool announce_timer_active;
+    bool jitter_timer_active;
 
 	routing_stats stats;       		// Framework's stats
 

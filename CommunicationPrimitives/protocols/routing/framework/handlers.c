@@ -28,7 +28,7 @@ void RF_init(routing_framework_state* state) {
 
     getmyId(state->myID);
     memcpy(state->myAddr.data, getMyWLANAddr()->data, WLAN_ADDR_LEN);
-    state->my_seq = 0;
+    state->my_seq = 1;
 
     state->routing_table = newRoutingTable();
 
@@ -48,7 +48,9 @@ void RF_init(routing_framework_state* state) {
 
     genUUID(state->announce_timer_id);
     copy_timespec(&state->last_announce_time, &zero_timespec);
+    copy_timespec(&state->next_announce_time, &zero_timespec);
     state->announce_timer_active = false;
+    state->jitter_timer_active = false;
     scheduleAnnounceTimer(state, true);
 }
 
@@ -63,7 +65,7 @@ void scheduleAnnounceTimer(routing_framework_state* state, bool now) {
             unsigned long jitter = (unsigned long)(randomProb()*state->args->max_jitter_ms);
             unsigned long t = now ? jitter : period_s*1000 - state->args->period_margin_ms - jitter;
 
-            //printf("NEXT TIMER: %lu ms\n", t);
+            printf("NEXT ANNOUNCE TIMER: %lu ms\n", t);
 
             struct timespec t_ = {0};
             milli_to_timespec(&t_, t);
@@ -79,9 +81,9 @@ void RF_uponAnnounceTimer(routing_framework_state* state) {
 
     state->announce_timer_active = false;
 
-    scheduleAnnounceTimer(state, false);
-
     RF_triggerEvent(state, RTE_ANNOUNCE_TIMER, NULL);
+
+    scheduleAnnounceTimer(state, false);
 }
 
 void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id) {
@@ -234,10 +236,6 @@ bool computeNextAnnounceTimer(unsigned long max_jitter_ms, unsigned long min_int
                 add_timespec(t, &remaining, &jitter);
                 return true;
             } else {
-                struct timespec close = {0};
-                milli_to_timespec(&close, max_jitter_ms);
-                add_timespec(&close, current_time, &close);
-
                 copy_timespec(t, &jitter);
                 return true;
             }
@@ -247,30 +245,53 @@ bool computeNextAnnounceTimer(unsigned long max_jitter_ms, unsigned long min_int
     return false;
 }
 
-
 void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args) {
 
     RoutingContextSendType send_type = RA_triggerEvent(state->args->algorithm, event_type, event_args, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time);
 
-    if(send_type != NO_SEND) {
-        struct timespec t = {0};
-        bool set = false;
+    printf("AXU1\n");
+
+    if(send_type != NO_SEND && !state->jitter_timer_active) {
+
+        printf("AXU2\n");
 
         if( event_type == RTE_ANNOUNCE_TIMER ) {
-            copy_timespec(&t, &zero_timespec);
-            set = true;
+            printf("trigger\n");
+            fflush(stdout);
+            state->jitter_timer_active = true;
+            RF_uponSendTimer(state, send_type);
         } else {
-            set = computeNextAnnounceTimer(state->args->max_jitter_ms, state->args->min_announce_interval_ms, &state->current_time, &state->last_announce_time, &state->next_announce_time, &t);
-        }
+            struct timespec t = {0};
+            bool set = computeNextAnnounceTimer(state->args->max_jitter_ms, state->args->min_announce_interval_ms, &state->current_time, &state->last_announce_time, &state->next_announce_time, &t);
 
-        if( set ) {
-            SetTimerWithPayload(&t, NULL, DISCOVERY_FRAMEWORK_PROTO_ID, TIMER_SEND, (void*)&send_type, sizeof(RoutingContextSendType));
+            if( set ) {
+                state->jitter_timer_active = true;
+
+                struct timespec aux1, aux2;
+                milli_to_timespec(&aux1, state->args->min_announce_interval_ms);
+                add_timespec(&aux1, &aux1, &state->current_time);
+                subtract_timespec(&aux2, &aux1, &state->last_announce_time);
+
+                printf("NEXT JITTER TIMER: %lu ms | diff = %lu ms / %lu ms\n", timespec_to_milli(&t), timespec_to_milli(&aux2), state->args->min_announce_interval_ms);
+
+                assert(timespec_to_milli(&aux2) >= state->args->min_announce_interval_ms );
+
+                SetTimerWithPayload(&t, NULL, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SEND, (void*)&send_type, sizeof(RoutingContextSendType));
+            } else {
+                printf("NO\n");
+            }
         }
     }
+
+    printf("end\n");
 }
 
 void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType send_type) {
-    assert(send_type != NO_SEND);
+    assert(send_type != NO_SEND && state->jitter_timer_active);
+
+    printf("EH EH %d\n", send_type);
+
+    state->jitter_timer_active = false;
 
     unsigned short seq = 0;
 

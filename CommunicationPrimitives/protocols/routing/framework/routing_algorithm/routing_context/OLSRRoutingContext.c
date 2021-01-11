@@ -131,7 +131,7 @@ RoutingContext* OLSRRoutingContext() {
     state->mpr_selectors = list_init();
     //state->router_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
     //state->topology_set = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
-    state->dirty = true;
+    state->dirty = false;
 
     return newRoutingContext(
         NULL,
@@ -369,6 +369,10 @@ static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* 
 
     // Recompute routing table
     RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
+
+    if(state->dirty) {
+        printf("MPR SELECTORS CHANGED; SENDING ANNOUNCE\n");
+    }
 
     return state->dirty;
 }
