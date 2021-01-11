@@ -21,15 +21,15 @@ typedef struct SourceEntry_ SourceEntry;
 
 SourceTable* newSourceTable();
 
-void destroySourceTable(SourceTable* ss);
+void destroySourceTable(SourceTable* st);
 
-void SS_addEntry(SourceTable* ss, SourceEntry* entry);
+void ST_addEntry(SourceTable* st, SourceEntry* entry);
 
-SourceEntry* SS_getEntry(SourceTable* ss, unsigned char* source_id);
+SourceEntry* ST_getEntry(SourceTable* st, unsigned char* source_id);
 
-SourceEntry* SS_removeEntry(SourceTable* ss, unsigned char* source_id);
+SourceEntry* ST_removeEntry(SourceTable* st, unsigned char* source_id);
 
-SourceEntry* SS_nexEntry(SourceTable* ss, void** iterator);
+SourceEntry* ST_nexEntry(SourceTable* st, void** iterator);
 
 SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, struct timespec* exp_time, void* attrs);
 

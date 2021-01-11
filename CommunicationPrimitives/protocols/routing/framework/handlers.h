@@ -60,6 +60,8 @@ void RF_init(routing_framework_state* state);
 void scheduleAnnounceTimer(routing_framework_state* state, bool now);
 void RF_uponAnnounceTimer(routing_framework_state* state);
 
+void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id);
+
 void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev);
 
 void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args);

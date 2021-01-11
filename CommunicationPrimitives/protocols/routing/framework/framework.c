@@ -104,13 +104,13 @@ void* routing_framework_main_loop(main_loop_args* args) {
 
 static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
 
-    printf("QQQ\n");
-
     if(timer->timer_type == TIMER_PERIODIC_ANNOUNCE) {
         if( uuid_compare(timer->id, f_state->announce_timer_id) == 0 ) {
             RF_uponAnnounceTimer(f_state);
             return true;
         }
+    } else if(timer->timer_type == TIMER_SOURCE_ENTRY) {
+        RF_uponSourceTimer(f_state, timer->id);
     } else {
         // Garbage Collector
         if( uuid_compare(timer->id, f_state->gc_id) == 0 ) {

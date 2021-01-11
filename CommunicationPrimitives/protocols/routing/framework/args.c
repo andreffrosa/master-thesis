@@ -18,13 +18,15 @@
 
 #include <assert.h>
 
-routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, bool ignore_zero_seq) {
+routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_misses, bool ignore_zero_seq) {
 
     routing_framework_args* args = malloc(sizeof(routing_framework_args));
 
     args->algorithm = algorithm;
     args->seen_expiration_ms = seen_expiration_ms;
     args->gc_interval_s = gc_interval_s;
+
+    args->announce_misses = announce_misses;
 
     args->ignore_zero_seq = ignore_zero_seq;
 
@@ -50,6 +52,7 @@ routing_framework_args* default_routing_framework_args() {
         60*1000,
         500,
         500,
+        3,
         true
     );
 }
@@ -106,6 +109,8 @@ routing_framework_args* load_routing_framework_args(const char* file_path) {
                 args->max_jitter_ms = strtol(value, NULL, 10);
             } else if( strcmp(key, "period_margin_ms") == 0  ) {
                 args->period_margin_ms = strtol(value, NULL, 10);
+            } else if( strcmp(key, "announce_misses") == 0 ) {
+                args->announce_misses = strtol(value, NULL, 10);
             } else if( strcmp(key, "ignore_zero_seq") == 0  ) {
                 args->ignore_zero_seq = parse_bool(value);
             } else {

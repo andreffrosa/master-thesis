@@ -32,11 +32,11 @@ typedef struct SourceEntry_ {
 } SourceEntry;
 
 SourceTable* newSourceTable() {
-    SourceTable* ss = malloc(sizeof(SourceTable));
+    SourceTable* st = malloc(sizeof(SourceTable));
 
-    ss->ht = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
+    st->ht = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
-    return ss;
+    return st;
 }
 
 static void delete_source_item(hash_table_item* hit, void* aux) {
@@ -44,30 +44,30 @@ static void delete_source_item(hash_table_item* hit, void* aux) {
     free(hit);
 }
 
-void destroySourceTable(SourceTable* ss) {
-    if(ss) {
-        hash_table_delete_custom(ss->ht, &delete_source_item, NULL);
-        free(ss);
+void destroySourceTable(SourceTable* st) {
+    if(st) {
+        hash_table_delete_custom(st->ht, &delete_source_item, NULL);
+        free(st);
     }
 }
 
-void SS_addEntry(SourceTable* ss, SourceEntry* entry) {
-    assert(ss && entry);
+void ST_addEntry(SourceTable* st, SourceEntry* entry) {
+    assert(st && entry);
 
-    void* old = hash_table_insert(ss->ht, entry->source_id, entry);
+    void* old = hash_table_insert(st->ht, entry->source_id, entry);
     assert(old == NULL);
 }
 
-SourceEntry* SS_getEntry(SourceTable* ss, unsigned char* source_id) {
-    assert(ss && source_id);
+SourceEntry* ST_getEntry(SourceTable* st, unsigned char* source_id) {
+    assert(st && source_id);
 
-    return (SourceEntry*)hash_table_find_value(ss->ht, source_id);
+    return (SourceEntry*)hash_table_find_value(st->ht, source_id);
 }
 
-SourceEntry* SS_removeEntry(SourceTable* ss, unsigned char* source_id) {
-    assert(ss && source_id);
+SourceEntry* ST_removeEntry(SourceTable* st, unsigned char* source_id) {
+    assert(st && source_id);
 
-    hash_table_item* it = hash_table_remove_item(ss->ht, source_id);
+    hash_table_item* it = hash_table_remove_item(st->ht, source_id);
     if(it) {
         SourceEntry* entry = (SourceEntry*)it->value;
         free(it);
@@ -77,10 +77,10 @@ SourceEntry* SS_removeEntry(SourceTable* ss, unsigned char* source_id) {
     }
 }
 
-SourceEntry* SS_nexEntry(SourceTable* ss, void** iterator) {
-    assert(ss);
+SourceEntry* ST_nexEntry(SourceTable* st, void** iterator) {
+    assert(st);
 
-    hash_table_item* item = hash_table_iterator_next(ss->ht, iterator);
+    hash_table_item* item = hash_table_iterator_next(st->ht, iterator);
     if(item) {
         return (SourceEntry*)(item->value);
     } else {

@@ -54,6 +54,11 @@ static RoutingContextSendType OLSRRoutingContextTriggerEvent(ModuleState* m_stat
         return ProcessDiscoveryEvent(ev, state, routing_table, neighbors, source_table, myID, current_time);
     }
 
+    else if(event_type == RTE_SOURCE_EXPIRE) {
+        // Recompute routing table
+        RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
+    }
+
     else if(event_type == RTE_ANNOUNCE_TIMER) {
 
         byte amount = state->mpr_selectors->size;
@@ -70,29 +75,14 @@ static RoutingContextSendType OLSRRoutingContextTriggerEvent(ModuleState* m_stat
     return NO_SEND;
 }
 
-static void OLSRRoutingContextCreateMsg(ModuleState* m_state, unsigned short seq, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     OLSRState* state = (OLSRState*)m_state->vars;
-
-    YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
-
-    YggMessage_addPayload(msg, (char*)&seq, sizeof(unsigned short));
-
-    byte period = 5; // TODO: como obter o period?
-    YggMessage_addPayload(msg, (char*)&period, sizeof(byte));
 
     byte amount = state->mpr_selectors->size;
     YggMessage_addPayload(msg, (char*)&amount, sizeof(byte));
 
-    printf("MPR SELECTORS IN MY TC:\n"); 
-    fflush(stdout);
-
     for(list_item* it = state->mpr_selectors->head; it; it = it->next) {
         unsigned char* id = (unsigned char*)it->data;
-
-        char str[UUID_STR_LEN];
-        uuid_unparse(id, str);
-        printf("%s\n", str);
-        fflush(stdout);
 
         RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, id);
         assert(neigh);
@@ -101,77 +91,38 @@ static void OLSRRoutingContextCreateMsg(ModuleState* m_state, unsigned short seq
         YggMessage_addPayload(msg, (char*)id, sizeof(uuid_t));
         YggMessage_addPayload(msg, (char*)&tx_cost, sizeof(double));
     }
-
-    printf("Sending TC msg seq = %hu amount=%d\n", seq, amount);
 }
 
-static void OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+static void OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length) {
     //OLSRState* state = (OLSRState*)m_state->vars;
 
-    void* ptr = NULL;
-
-    uuid_t source_id;
-    ptr = YggMessage_readPayload(msg, ptr, source_id, sizeof(uuid_t));
-
-    unsigned short seq = 0;
-    ptr = YggMessage_readPayload(msg, ptr, &seq, sizeof(unsigned short));
-
-    byte period = 0;
-    ptr = YggMessage_readPayload(msg, ptr, &period, sizeof(byte));
+    void* ptr = payload;
 
     byte amount = 0;
-    ptr = YggMessage_readPayload(msg, ptr, &amount, sizeof(byte));
+    memcpy(&amount, ptr, sizeof(byte));
+    ptr += sizeof(byte);
 
     list* links = list_init();
     for(int i = 0; i < amount; i++) {
         LinkEntry* link = malloc(sizeof(LinkEntry));
-        ptr = YggMessage_readPayload(msg, ptr, link->to, sizeof(uuid_t));
-        ptr = YggMessage_readPayload(msg, ptr, &link->tx_cost, sizeof(double));
+
+        memcpy(link->to, ptr, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
+        memcpy(&link->tx_cost, ptr, sizeof(double));
+        ptr += sizeof(double);
+
         list_add_item_to_tail(links, link);
     }
 
-    char id_str[UUID_STR_LEN+1];
-    id_str[UUID_STR_LEN] = '\0';
-    uuid_unparse(source_id, id_str);
-    printf("Received TC message from %s with seq %hu\n", id_str, seq);
-    fflush(stdout);
+    list_delete(SE_getAttrs(source_entry));
+    SE_setAttrs(source_entry, links);
 
-    if( uuid_compare(source_id, myID) == 0 ) {
-        return; // discard
-    }
-
-    unsigned int misses = 3; // TODO:
-
-    struct timespec exp_time = {0};
-    milli_to_timespec(&exp_time, period*misses*1000);
-    add_timespec(&exp_time, &exp_time, current_time);
-
-    SourceEntry* entry = SS_getEntry(source_table, source_id);
-    if(entry == NULL) {
-        entry = newSourceEntry(source_id, seq, &exp_time, links);
-
-        SS_addEntry(source_table, entry);
-
-        // Recompute routing table
-        RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
-    } else {
-        if( seq > SE_getSEQ(entry) ) {
-            SE_setSEQ(entry, seq);
-
-            list_delete(SE_getAttrs(entry));
-            SE_setAttrs(entry, links);
-
-            // Recompute routing table
-            RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
-        } else {
-            list_delete(links);
-        }
-    }
-
+    // Recompute routing table
+    RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
 }
 
 //typedef void (*rc_destroy)(ModuleState* m_state);
-
 
 RoutingContext* OLSRRoutingContext() {
 
@@ -219,7 +170,7 @@ static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* n
 
     iterator = NULL;
     SourceEntry* entry = NULL;
-    while( (entry = SS_nexEntry(source_table, &iterator)) ) {
+    while( (entry = ST_nexEntry(source_table, &iterator)) ) {
 
         list* links = SE_getAttrs(entry);
 

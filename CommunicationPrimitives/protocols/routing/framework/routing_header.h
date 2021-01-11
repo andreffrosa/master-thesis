@@ -16,6 +16,8 @@
 
 #include "Yggdrasil.h"
 
+#include "utility/byte.h"
+
 #pragma pack(1)
 typedef struct RoutingHeader_ {
 	uuid_t source_id;
@@ -29,8 +31,19 @@ typedef struct RoutingHeader_ {
 } RoutingHeader;
 #pragma pack()
 
+#pragma pack(1)
+typedef struct RoutingControlHeader_ {
+	uuid_t source_id;
+	unsigned short seq;
+    byte announce_period;
+    //unsigned short ttl; // (?)
+} RoutingControlHeader;
+#pragma pack()
+
 // #define ROUTING_HEADER_LENGTH sizeof(RoutingHeader)
 
 void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned char* prev_hop_id, unsigned char* next_hop_id, unsigned char* destination_id, unsigned char* msg_id, unsigned short ttl, unsigned short dest_proto);
+
+void initRoutingControlHeader(RoutingControlHeader* header, unsigned char* source_id, unsigned short seq, byte announce_period);
 
 #endif /* _ROUTING_HEADER_H_ */

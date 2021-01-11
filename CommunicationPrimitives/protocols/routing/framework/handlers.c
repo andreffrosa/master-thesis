@@ -85,6 +85,31 @@ void RF_uponAnnounceTimer(routing_framework_state* state) {
     scheduleAnnounceTimer(state, false);
 }
 
+void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id) {
+
+    SourceEntry* entry = ST_getEntry(state->source_table, source_id);
+    assert(entry);
+
+    if( compare_timespec(SE_getExpTime(entry), &state->current_time) > 0 ) {
+        struct timespec remaining = {0};
+        subtract_timespec(&remaining, SE_getExpTime(entry), &state->current_time);
+        SetTimer(&remaining, source_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SOURCE_ENTRY);
+    } else {
+        #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, ADVANCED_DEBUG)
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(source_id, id_str);
+
+        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SOURCE EXP", id_str);
+        #endif
+
+        ST_removeEntry(state->source_table, source_id);
+
+        RF_triggerEvent(state, RTE_SOURCE_EXPIRE, entry);
+
+        destroySourceEntry(entry);
+    }
+}
+
 void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
 
     unsigned short ev_id = ev->notification_id;
@@ -196,21 +221,33 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
         YggMessage msg = {0};
         YggMessage_initBcast(&msg, ROUTING_FRAMEWORK_PROTO_ID);
 
-        // Insert src_proto
-        /*unsigned short src_proto = ROUTING_FRAMEWORK_PROTO_ID;
-        int add_result = YggMessage_addPayload(&msg, (char*)&src_proto, sizeof(src_proto));
-        assert(add_result != FAILED);*/
-
         // Insert Message Type
         byte msg_type = MSG_CONTROL_MESSAGE;
         int add_result = YggMessage_addPayload(&msg, (char*) &msg_type, sizeof(byte));
         assert(add_result != FAILED);
 
-        RA_createControlMsg(state->args->algorithm, seq, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg);
+        // Insert Header
+        RoutingControlHeader header = {0};
+        byte period_s = RA_getAnnouncePeriod(state->args->algorithm);
+        initRoutingControlHeader(&header, state->myID, seq, period_s);
+
+        add_result = YggMessage_addPayload(&msg, (char*) &header, sizeof(RoutingControlHeader));
+        assert(add_result != FAILED);
+
+
+        RA_createControlMsg(state->args->algorithm, &header, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg);
+
+        #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(header.source_id, id_str);
+
+        char str[100];
+        sprintf(str, "seq %hu\n", header.seq);
+
+        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SEND CONTROL", str);
+        #endif
 
         copy_timespec(&state->last_announce_time, &state->current_time);
-
-        //pushMessageType(&msg, MSG_CONTROL_MESSAGE);
 
         RA_disseminateControlMessage(state->args->algorithm, &msg);
     }
@@ -218,7 +255,65 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
 
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message) {
 
-    RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, message);
+    // Read header
+    RoutingControlHeader header = {0};
+    void* ptr = YggMessage_readPayload(message, NULL, &header, sizeof(RoutingControlHeader));
+
+    // Read Payload
+    unsigned short length = message->dataLen - sizeof(RoutingControlHeader);
+    byte payload[length];
+    ptr = YggMessage_readPayload(message, ptr, payload, length);
+
+    //
+    if(uuid_compare(header.source_id, state->myID) != 0) {
+
+        bool process = false;
+
+        struct timespec exp_time = {0}, t = {0};
+        milli_to_timespec(&t, header.announce_period*state->args->announce_misses*1000);
+        add_timespec(&exp_time, &t, &state->current_time);
+
+        SourceEntry* entry = ST_getEntry(state->source_table, header.source_id);
+        if(entry == NULL) {
+            entry = newSourceEntry(header.source_id, header.seq, &exp_time, NULL);
+            ST_addEntry(state->source_table, entry);
+
+            // Set timer
+            SetTimer(&t, header.source_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SOURCE_ENTRY);
+
+            process = true;
+        } else {
+            if( header.seq > SE_getSEQ(entry) ) {
+                process = true;
+            }
+
+            if( header.seq >= SE_getSEQ(entry) ) {
+                SE_setSEQ(entry, header.seq);
+
+                // Update timer
+                if( compare_timespec(SE_getExpTime(entry), &exp_time) < 0) {
+                    CancelTimer(header.source_id, ROUTING_FRAMEWORK_PROTO_ID);
+                    SetTimer(&t, header.source_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SOURCE_ENTRY);
+                }
+
+                SE_setExpTime(entry, &exp_time);
+            }
+        }
+
+        if(process) {
+            #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, ADVANCED_DEBUG)
+            char id_str[UUID_STR_LEN];
+            uuid_unparse(header.source_id, id_str);
+
+            char str[100];
+            sprintf(str, "from %s with seq %hu\n", id_str, header.seq);
+
+            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "RCV CONTROL", str);
+            #endif
+
+            RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length);
+        }
+    }
 }
 
 void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, struct timespec* current_time) {

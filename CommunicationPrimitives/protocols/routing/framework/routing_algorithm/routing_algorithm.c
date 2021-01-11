@@ -113,14 +113,14 @@ RoutingContextSendType RA_triggerEvent(RoutingAlgorithm* alg, RoutingEventType e
     return RCtx_triggerEvent(alg->r_context, event_type, args, routing_table, neighbors, source_table, myID, current_time);
 }
 
-void RA_createControlMsg(RoutingAlgorithm* alg, unsigned short seq, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+void RA_createControlMsg(RoutingAlgorithm* alg, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
     assert(alg);
 
-    RCtx_createMsg(alg->r_context, seq, routing_table, neighbors, source_table, myID, current_time, msg);
+    RCtx_createMsg(alg->r_context, header, routing_table, neighbors, source_table, myID, current_time, msg);
 }
 
-void RA_processControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+void RA_processControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length) {
     assert(alg);
 
-    RCtx_processMsg(alg->r_context, routing_table, neighbors, source_table, myID, current_time, msg);
+    RCtx_processMsg(alg->r_context, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length);
 }

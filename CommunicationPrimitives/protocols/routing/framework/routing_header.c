@@ -26,3 +26,11 @@ void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned
     header->ttl = ttl;
     header->dest_proto = dest_proto;
 }
+
+void initRoutingControlHeader(RoutingControlHeader* header, unsigned char* source_id, unsigned short seq, byte announce_period) {
+    assert(header);
+
+    uuid_copy(header->source_id, source_id);
+    header->seq = seq;
+    header->announce_period = announce_period;
+}
