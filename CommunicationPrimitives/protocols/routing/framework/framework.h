@@ -37,6 +37,7 @@ typedef struct _routing_framework_args {
     unsigned long period_margin_ms;
 
     unsigned int announce_misses;
+    unsigned long min_announce_interval_ms;
 
     bool ignore_zero_seq;
 
@@ -48,7 +49,7 @@ typedef struct _routing_framework_args {
 proto_def* routing_framework_init(void* arg);
 void* routing_framework_main_loop(main_loop_args* args);
 
-routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_misses, bool ignore_zero_seq);
+routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_misses, unsigned long min_announce_interval_ms, bool ignore_zero_seq);
 
 routing_framework_args* default_routing_framework_args();
 
@@ -66,6 +67,7 @@ typedef enum {
 typedef enum {
 	TIMER_PERIODIC_ANNOUNCE = 0,
     TIMER_SOURCE_ENTRY,
+    TIMER_SEND,
     TIMER_RETRY,
 	ROUTING_TIMER_TYPE_COUNT
 } RoutingTimerType;

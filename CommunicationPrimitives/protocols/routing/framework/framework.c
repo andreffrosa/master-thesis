@@ -111,6 +111,9 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
         }
     } else if(timer->timer_type == TIMER_SOURCE_ENTRY) {
         RF_uponSourceTimer(f_state, timer->id);
+    } else if(timer->timer_type == TIMER_SEND) {
+        assert(timer->payload);
+        RF_uponSendTimer(f_state, *((RoutingContextSendType*)timer->payload));
     } else {
         // Garbage Collector
         if( uuid_compare(timer->id, f_state->gc_id) == 0 ) {

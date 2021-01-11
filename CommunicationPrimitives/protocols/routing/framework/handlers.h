@@ -47,6 +47,7 @@ typedef struct routing_framework_state_ {
 
     uuid_t announce_timer_id;       // Periodic Announce timer id
     struct timespec last_announce_time;
+    struct timespec next_announce_time;
     bool announce_timer_active;
 
 	routing_stats stats;       		// Framework's stats
@@ -61,6 +62,8 @@ void scheduleAnnounceTimer(routing_framework_state* state, bool now);
 void RF_uponAnnounceTimer(routing_framework_state* state);
 
 void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id);
+
+void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType send_type);
 
 void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev);
 
