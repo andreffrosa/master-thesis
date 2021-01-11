@@ -190,22 +190,25 @@ DiscoveryInternalEventResult* DP_triggerEvent(DiscoveryPattern* dp, DiscoveryInt
             unsigned char* neigh_id = (unsigned char*)event_args;
             assert(neigh_id);
             NeighborEntry* neigh = NT_getNeighbor(neighbors, neigh_id);
-            assert(neigh);
 
-            bool* new_neighbor = (bool*)(event_args + sizeof(uuid_t));
+            if(neigh) {
+                bool* new_neighbor = (bool*)(event_args + sizeof(uuid_t));
 
-            HackReplyType reply_type = HACK_replyToHellos(dp->hack_sh);
-            assert(reply_type != NO_HACK_REPLY);
+                HackReplyType reply_type = HACK_replyToHellos(dp->hack_sh);
+                assert(reply_type != NO_HACK_REPLY);
 
-            // Piggyback Hello
-            PiggybackType hello_piggyback_type = HELLO_evalPiggybackFilter(dp->hello_sh, msg, new_neighbor);
-            assert(reply_type != UNICAST_HACK_REPLY || hello_piggyback_type == NO_PIGGYBACK );
+                // Piggyback Hello
+                PiggybackType hello_piggyback_type = HELLO_evalPiggybackFilter(dp->hello_sh, msg, new_neighbor);
+                assert(reply_type != UNICAST_HACK_REPLY || hello_piggyback_type == NO_PIGGYBACK );
 
-            WLANAddr* addr = reply_type == UNICAST_HACK_REPLY ? NE_getNeighborMAC(neigh) : NULL;
+                WLANAddr* addr = reply_type == UNICAST_HACK_REPLY ? NE_getNeighborMAC(neigh) : NULL;
 
-            DiscoveryInternalEventResult* result = newDiscoveryInternalEventResult(hello_piggyback_type != NO_PIGGYBACK, false, true, neigh, addr);
+                DiscoveryInternalEventResult* result = newDiscoveryInternalEventResult(hello_piggyback_type != NO_PIGGYBACK, false, true, neigh, addr);
 
-            return result;
+                return result;
+            } else {
+                return NULL;
+            }
         }
 
         case DPE_NEIGHBORHOOD_CHANGE_TIMER: {
