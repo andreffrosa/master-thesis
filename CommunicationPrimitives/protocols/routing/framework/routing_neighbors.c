@@ -31,8 +31,10 @@ typedef struct RoutingNeighbors_ {
 typedef struct RoutingNeighborsEntry_ {
     uuid_t id;
     WLANAddr addr;
-    double cost;
+    double rx_cost;
+    double tx_cost;
     bool is_bi;
+    struct timespec found_time;
 } RoutingNeighborsEntry;
 
 RoutingNeighbors* newRoutingNeighbors() {
@@ -95,14 +97,16 @@ RoutingNeighborsEntry* RN_nextNeigh(RoutingNeighbors* neighbors, void** iterator
     }
 }
 
-RoutingNeighborsEntry* newRoutingNeighborsEntry(unsigned char* id, WLANAddr* addr, double cost, bool is_bi) {
+RoutingNeighborsEntry* newRoutingNeighborsEntry(unsigned char* id, WLANAddr* addr, double rx_cost, double tx_cost, bool is_bi, struct timespec* found_time) {
 
     RoutingNeighborsEntry* entry = malloc(sizeof(RoutingNeighborsEntry));
 
     uuid_copy(entry->id, id);
     memcpy(entry->addr.data, addr->data, WLAN_ADDR_LEN);
-    entry->cost = cost;
+    entry->rx_cost = rx_cost;
+    entry->tx_cost = tx_cost;
     entry->is_bi = is_bi;
+    copy_timespec(&entry->found_time, found_time);
 
     return entry;
 }
@@ -117,9 +121,14 @@ WLANAddr* RNE_getAddr(RoutingNeighborsEntry* neigh) {
     return &neigh->addr;
 }
 
-double RNE_getCost(RoutingNeighborsEntry* neigh) {
+double RNE_getRxCost(RoutingNeighborsEntry* neigh) {
     assert(neigh);
-    return neigh->cost;
+    return neigh->rx_cost;
+}
+
+double RNE_getTxCost(RoutingNeighborsEntry* neigh) {
+    assert(neigh);
+    return neigh->tx_cost;
 }
 
 bool RNE_isBi(RoutingNeighborsEntry* neigh) {
@@ -127,14 +136,24 @@ bool RNE_isBi(RoutingNeighborsEntry* neigh) {
     return neigh->is_bi;
 }
 
+struct timespec* RNE_getFoundTime(RoutingNeighborsEntry* neigh) {
+    assert(neigh);
+    return &neigh->found_time;
+}
+
 void RNE_setAddr(RoutingNeighborsEntry* neigh, WLANAddr* new_addr) {
     assert(neigh && new_addr);
     memcpy(neigh->addr.data, new_addr->data, WLAN_ADDR_LEN);
 }
 
-void RNE_setCost(RoutingNeighborsEntry* neigh, double new_cost) {
+void RNE_setRxCost(RoutingNeighborsEntry* neigh, double new_rx_cost) {
     assert(neigh);
-    neigh->cost = new_cost;
+    neigh->rx_cost = new_rx_cost;
+}
+
+void RNE_setTxCost(RoutingNeighborsEntry* neigh, double new_tx_cost) {
+    assert(neigh);
+    neigh->tx_cost = new_tx_cost;
 }
 
 void RNE_setBi(RoutingNeighborsEntry* neigh, bool is_bi) {

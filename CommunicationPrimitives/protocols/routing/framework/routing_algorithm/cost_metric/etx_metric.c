@@ -15,8 +15,10 @@
 
 #include <assert.h>
 
-static double ETX_f(ModuleState* m_state, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time) {
-    return 1.0/(rx_lq * tx_lq);
+static void ETX_f(ModuleState* m_state, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time, double* rx_cost, double* tx_cost) {
+    double cost = 1.0/(rx_lq * tx_lq);
+    *rx_cost = cost;
+    *tx_cost = cost;
 }
 
 CostMetric* ETXMetric() {

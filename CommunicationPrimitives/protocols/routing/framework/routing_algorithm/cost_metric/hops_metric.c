@@ -15,8 +15,9 @@
 
 #include <assert.h>
 
-static double Hops_f(ModuleState* m_state, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time) {
-    return 1.0;
+static void Hops_f(ModuleState* m_state, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time, double* rx_cost, double* tx_cost) {
+    *rx_cost = 1.0;
+    *tx_cost = 1.0;
 }
 
 CostMetric* HopsMetric() {

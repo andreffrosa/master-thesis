@@ -33,19 +33,25 @@ RoutingNeighborsEntry* RN_removeNeighbor(RoutingNeighbors* neighbors, unsigned c
 
 RoutingNeighborsEntry* RN_nextNeigh(RoutingNeighbors* neighbors, void** iterator);
 
-RoutingNeighborsEntry* newRoutingNeighborsEntry(unsigned char* id, WLANAddr* addr, double cost, bool is_bi);
+RoutingNeighborsEntry* newRoutingNeighborsEntry(unsigned char* id, WLANAddr* addr, double rx_cost, double tx_cost, bool is_bi, struct timespec* found_time);
 
 unsigned char* RNE_getID(RoutingNeighborsEntry* neigh);
 
 WLANAddr* RNE_getAddr(RoutingNeighborsEntry* neigh);
 
-double RNE_getCost(RoutingNeighborsEntry* neigh);
+double RNE_getRxCost(RoutingNeighborsEntry* neigh);
+
+double RNE_getTxCost(RoutingNeighborsEntry* neigh);
 
 bool RNE_isBi(RoutingNeighborsEntry* neigh);
 
+struct timespec* RNE_getFoundTime(RoutingNeighborsEntry* neigh);
+
 void RNE_setAddr(RoutingNeighborsEntry* neigh, WLANAddr* new_addr);
 
-void RNE_setCost(RoutingNeighborsEntry* neigh, double new_cost);
+void RNE_setRxCost(RoutingNeighborsEntry* neigh, double new_rx_cost);
+
+void RNE_setTxCost(RoutingNeighborsEntry* neigh, double new_tx_cost);
 
 void RNE_setBi(RoutingNeighborsEntry* neigh, bool is_bi);
 

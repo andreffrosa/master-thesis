@@ -86,7 +86,7 @@ static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
 
         RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, id);
         assert(neigh);
-        double tx_cost = RNE_getCost(neigh);
+        double tx_cost = RNE_getTxCost(neigh);
 
         YggMessage_addPayload(msg, (char*)id, sizeof(uuid_t));
         YggMessage_addPayload(msg, (char*)&tx_cost, sizeof(double));
@@ -156,8 +156,8 @@ static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* n
         assert(graph_find_node(g, neigh_id) == NULL);
         graph_insert_node(g, new_id(neigh_id), NULL);
 
-        graph_insert_edge(g, myID, neigh_id, new_double(RNE_getCost(neigh)));
-        graph_insert_edge(g, neigh_id, myID, new_double(RNE_getCost(neigh)));
+        graph_insert_edge(g, myID, neigh_id, new_double(RNE_getTxCost(neigh)));
+        graph_insert_edge(g, neigh_id, myID, new_double(RNE_getRxCost(neigh)));
 
         /*
         char str[UUID_STR_LEN];
@@ -209,7 +209,7 @@ static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* n
     //printf("graph:\n");
 
     // Temp
-    for(list_item* it = g->edges->head; it; it = it->next) {
+    /*for(list_item* it = g->edges->head; it; it = it->next) {
         graph_edge* edge = (graph_edge*)it->data;
 
         char from_str[UUID_STR_LEN];
@@ -222,7 +222,7 @@ static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* n
         assert(cost);
 
         //printf("%s -> %s : %f\n", from_str, to_str, *cost);
-    }
+    }*/
 
     hash_table* routes = Dijkstra(g, myID);
 

@@ -152,11 +152,12 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
                     ptr2 = YggEvent_readPayload(&main_ev, ptr2, &is_bi, sizeof(byte));
 
                     // Compute Cost
-                    double cost = RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, NULL); // TODO: pass found time?
+                    double rx_cost = 0.0, tx_cost = 0.0;
+                    RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, &state->current_time, &rx_cost, &tx_cost);
 
                     assert(RN_getNeighbor(state->neighbors, id) == NULL);
 
-                    RoutingNeighborsEntry* neigh = newRoutingNeighborsEntry(id, &addr, cost, is_bi);
+                    RoutingNeighborsEntry* neigh = newRoutingNeighborsEntry(id, &addr, rx_cost, tx_cost, is_bi, &state->current_time);
                     RN_addNeighbor(state->neighbors, neigh);
                 }
                 break;
@@ -177,13 +178,15 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
                     byte is_bi = false;
                     ptr2 = YggEvent_readPayload(&main_ev, ptr2, &is_bi, sizeof(byte));
 
-                    // Compute Cost
-                    double cost = RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, NULL); // TODO: pass found time?
-
                     RoutingNeighborsEntry* neigh = RN_getNeighbor(state->neighbors, id);
                     assert(neigh);
 
-                    RNE_setCost(neigh, cost);
+                    // Compute Cost
+                    double rx_cost = 0.0, tx_cost = 0.0;
+                    RA_computeCost(state->args->algorithm, is_bi,rx_lq, tx_lq, RNE_getFoundTime(neigh), &rx_cost, &tx_cost);
+
+                    RNE_setRxCost(neigh, rx_cost);
+                    RNE_setTxCost(neigh, tx_cost);
                     RNE_setBi(neigh, is_bi);
                 }
                 break;

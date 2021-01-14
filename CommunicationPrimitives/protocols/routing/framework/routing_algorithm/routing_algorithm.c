@@ -89,10 +89,10 @@ void RA_init(RoutingAlgorithm* alg, proto_def* protocol_definition, unsigned cha
     RCtx_init(alg->r_context, protocol_definition, myID, r_table, current_time);
 }
 
-double RA_computeCost(RoutingAlgorithm* alg, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time) {
+void RA_computeCost(RoutingAlgorithm* alg, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time, double* rx_cost, double* tx_cost) {
     assert(alg);
 
-    return CM_compute(alg->cost_metric, is_bi, rx_lq, tx_lq, found_time);
+    CM_compute(alg->cost_metric, is_bi, rx_lq, tx_lq, found_time, rx_cost, tx_cost);
 }
 
 unsigned int RA_getAnnouncePeriod(RoutingAlgorithm* alg) {

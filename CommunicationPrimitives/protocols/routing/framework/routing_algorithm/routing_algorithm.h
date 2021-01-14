@@ -44,7 +44,7 @@ bool RA_getNextHop(RoutingAlgorithm* alg, RoutingTable* routing_table, unsigned 
 
 void RA_init(RoutingAlgorithm* alg, proto_def* protocol_definition, unsigned char* myID, RoutingTable* r_table, struct timespec* current_time);
 
-double RA_computeCost(RoutingAlgorithm* alg, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time);
+void RA_computeCost(RoutingAlgorithm* alg, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time, double* rx_cost, double* tx_cost);
 
 unsigned int RA_getAnnouncePeriod(RoutingAlgorithm* alg);
 

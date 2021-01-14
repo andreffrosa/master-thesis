@@ -20,7 +20,7 @@ typedef struct CostMetric_ CostMetric;
 
 void destroyCostMetric(CostMetric* cm);
 
-double CM_compute(CostMetric* cm, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time);
+void CM_compute(CostMetric* cm, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time, double* rx_cost, double* tx_cost);
 
 ///////////////////////////////////////////////////
 

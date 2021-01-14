@@ -37,7 +37,7 @@ void destroyCostMetric(CostMetric* cm) {
     }
 }
 
-double CM_compute(CostMetric* cm, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time) {
+void CM_compute(CostMetric* cm, bool is_bi, double rx_lq, double tx_lq, struct timespec* found_time, double* rx_cost, double* tx_cost) {
     assert(cm);
-    return cm->f(&cm->state, is_bi, rx_lq, tx_lq, found_time);
+    cm->f(&cm->state, is_bi, rx_lq, tx_lq, found_time, rx_cost, tx_cost);
 }

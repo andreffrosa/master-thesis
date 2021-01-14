@@ -16,7 +16,7 @@
 
 #include "../common.h"
 
-typedef double (*cost_function)(ModuleState*, bool, double, double, struct timespec*);
+typedef void (*cost_function)(ModuleState*, bool, double, double, struct timespec*, double* rx_cost, double* tx_cost);
 
 typedef void (*cm_destroy)(ModuleState*);
 
