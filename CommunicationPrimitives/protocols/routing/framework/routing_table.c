@@ -358,7 +358,8 @@ char* RT_toString(RoutingTable* rt, char** str, struct timespec* current_time) {
         */
 
         char cost_str[6];
-        sprintf(cost_str, "%0.3f", RTE_getCost(current_route));
+        sprintf(cost_str, "%0.2f", RTE_getCost(current_route));
+        align_str(cost_str, cost_str, 5, "R");
 
         char hops_str[6];
         sprintf(hops_str, "%u", RTE_getHops(current_route));
