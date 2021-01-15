@@ -114,7 +114,7 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
         return true;
     } else if(timer->timer_type == TIMER_SEND) {
         assert(timer->payload);
-        RF_uponSendTimer(f_state, *((RoutingContextSendType*)timer->payload));
+        RF_uponSendTimer(f_state, *((RoutingContextSendType*)timer->payload), NULL);
         return true;
     } else {
         // Garbage Collector
@@ -145,17 +145,20 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
         unsigned short payload_size = 0;
         ptr = YggMessage_readPayload(message, ptr, &payload_size, sizeof(unsigned short));
 
-        // ptr = YggMessage_readPayload(message, ptr, &src_proto, sizeof(unsigned short));
+        ptr = YggMessage_readPayload(message, ptr, &type, sizeof(byte));
+        printf("TYPE: %d\n", type);
 
-        ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
-        type = aux;
+        byte payload[payload_size];
+        ptr = YggMessage_readPayload(message, ptr, payload, payload_size - sizeof(byte));
+        YggMessage_addPayload(&msg, (char*)payload, payload_size - sizeof(byte));
+
+        // copy and deliver metadata
+        unsigned short meta_length = message->dataLen - (unsigned short)((char*)ptr - message->data);
+        byte meta_data[meta_length];
+        ptr = YggMessage_readPayload(message, ptr, meta_data, meta_length);
 
         if(type == MSG_CONTROL_MESSAGE) {
-            YggMessage_addPayload(&msg, ptr, payload_size - sizeof(byte));
-
-            // TODO: copy and deliver metadata
-
-            RF_uponNewControlMessage(f_state, &msg);
+            RF_uponNewControlMessage(f_state, &msg, meta_data, meta_length);
             return true;
         }
     } else if( src_proto == ROUTING_FRAMEWORK_PROTO_ID ) {

@@ -162,6 +162,8 @@ static RoutingContext* parse_r_context(char* value, bool nested) {
         return StaticRoutingContext();
     } else if(strcmp(token, (name = "OLSR")) == 0 || strcmp(token, (name = "OLSRRoutingContext")) == 0) {
         return OLSRRoutingContext();
+    } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVRoutingContext")) == 0) {
+        return AODVRoutingContext();
     } else {
         printf("Unrecognized Routing Context! \n");
         exit(-1);

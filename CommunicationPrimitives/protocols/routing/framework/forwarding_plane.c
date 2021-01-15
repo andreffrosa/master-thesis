@@ -68,8 +68,6 @@ void RF_DeliverMessage(routing_framework_state* state, RoutingHeader* header, Yg
 void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
     state->stats.messages_requested++;
 
-    printf("XE\n");
-
     // Deserialize request
     void* ptr = NULL;
     uuid_t destination_id;
@@ -130,7 +128,7 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
     //bool im_next_hop = memcmp(msg->destAddr.data, state->myAddr.data, WLAN_ADDR_LEN) == 0;
     bool im_next_hop = uuid_compare(header.next_hop_id, state->myID) == 0;
 
-    printf("im_next_hop: %s\n", (im_next_hop?"T":"F"));
+    //printf("im_next_hop: %s\n", (im_next_hop?"T":"F"));
 
     /*if(!im_next_hop) {
         WLANAddr* bcast_addr = getBroadcastAddr();
@@ -161,7 +159,6 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
             }
             #endif
 
-            printf("JJJ\n");
 
             RF_processMessage(state, &header, &toDeliver);
         } else {
@@ -223,18 +220,31 @@ void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, un
         #endif
     } else {
 
-        // TODO: RREQ
+        bool print = true;
 
-        //#ifdef DEBUG_ROUTING
-        {
-            char id_str[UUID_STR_LEN+1];
-            id_str[UUID_STR_LEN] = '\0';
+        // RREQ ?
+        if( uuid_compare(header->source_id, state->myID) == 0 ) {
+            RoutingContextSendType send_type = RF_triggerEvent(state, RTE_ROUTE_NOT_FOUND, header->destination_id);
+            if(send_type != NO_SEND) {
+                state->jitter_timer_active = true;
+                RF_uponSendTimer(state, send_type, header->destination_id);
+                print = false;
+
+                /// TODO: put in buffer
+            }
+        }
+
+        if( print ) {
+            #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+            char id_str[UUID_STR_LEN];
             uuid_unparse(header->msg_id, id_str);
+
             char str[UUID_STR_LEN+4];
             sprintf(str, "[%s]", id_str);
+
             ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ROUTE NOT KNOWN", str);
+            #endif
         }
-        //#endif
     }
 }
 

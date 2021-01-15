@@ -75,7 +75,7 @@ static RoutingContextSendType OLSRRoutingContextTriggerEvent(ModuleState* m_stat
     return NO_SEND;
 }
 
-static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg) {
+static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, void* info) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     byte amount = state->mpr_selectors->size;
@@ -93,7 +93,7 @@ static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
     }
 }
 
-static void OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length) {
+static void OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length) {
     //OLSRState* state = (OLSRState*)m_state->vars;
 
     void* ptr = payload;

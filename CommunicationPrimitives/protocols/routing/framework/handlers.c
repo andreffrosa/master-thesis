@@ -51,6 +51,7 @@ void RF_init(routing_framework_state* state) {
     copy_timespec(&state->next_announce_time, &zero_timespec);
     state->announce_timer_active = false;
     state->jitter_timer_active = false;
+    state->send_type = NO_SEND;
     scheduleAnnounceTimer(state, true);
 }
 
@@ -81,7 +82,13 @@ void RF_uponAnnounceTimer(routing_framework_state* state) {
 
     state->announce_timer_active = false;
 
-    RF_triggerEvent(state, RTE_ANNOUNCE_TIMER, NULL);
+    RoutingContextSendType send_type = RF_triggerEvent(state, RTE_ANNOUNCE_TIMER, NULL);
+
+    if(send_type != NO_SEND) {
+        state->jitter_timer_active = true;
+
+        RF_uponSendTimer(state, send_type, NULL);
+    }
 
     scheduleAnnounceTimer(state, false);
 }
@@ -105,7 +112,10 @@ void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id
 
         ST_removeEntry(state->source_table, source_id);
 
-        RF_triggerEvent(state, RTE_SOURCE_EXPIRE, entry);
+        RoutingContextSendType send_type =RF_triggerEvent(state, RTE_SOURCE_EXPIRE, entry);
+        if(send_type != NO_SEND) {
+            RF_scheduleJitter(state, RTE_SOURCE_EXPIRE, entry, send_type);
+        }
 
         destroySourceEntry(entry);
     }
@@ -205,7 +215,10 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
             YggEvent_freePayload(&main_ev);
     }
 
-    RF_triggerEvent(state, RTE_NEIGHBORS_CHANGE, ev);
+    RoutingContextSendType send_type = RF_triggerEvent(state, RTE_NEIGHBORS_CHANGE, ev);
+    if(send_type != NO_SEND) {
+        RF_scheduleJitter(state, RTE_NEIGHBORS_CHANGE, ev, send_type);
+    }
 }
 
 bool computeNextAnnounceTimer(unsigned long max_jitter_ms, unsigned long min_interval_ms, struct timespec* current_time, struct timespec* last_timer, struct timespec* next_timer, struct timespec* t) {
@@ -248,27 +261,25 @@ bool computeNextAnnounceTimer(unsigned long max_jitter_ms, unsigned long min_int
     return false;
 }
 
-void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args) {
+RoutingContextSendType RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args) {
 
     RoutingContextSendType send_type = RA_triggerEvent(state->args->algorithm, event_type, event_args, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time);
 
-    printf("AXU1\n");
+    return send_type;
+}
 
-    if(send_type != NO_SEND && !state->jitter_timer_active) {
+void RF_scheduleJitter(routing_framework_state* state, RoutingEventType event_type, void* event_args, RoutingContextSendType send_type) {
+    assert(event_type != RTE_ANNOUNCE_TIMER);
 
-        printf("AXU2\n");
-
-        if( event_type == RTE_ANNOUNCE_TIMER ) {
-            printf("trigger\n");
-            fflush(stdout);
-            state->jitter_timer_active = true;
-            RF_uponSendTimer(state, send_type);
-        } else {
+    if(send_type != NO_SEND) {
+        if(!state->jitter_timer_active) {
             struct timespec t = {0};
             bool set = computeNextAnnounceTimer(state->args->max_jitter_ms, state->args->min_announce_interval_ms, &state->current_time, &state->last_announce_time, &state->next_announce_time, &t);
 
             if( set ) {
                 state->jitter_timer_active = true;
+
+                state->send_type = send_type;
 
                 struct timespec aux1, aux2;
                 milli_to_timespec(&aux1, state->args->min_announce_interval_ms);
@@ -280,19 +291,17 @@ void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type
                 assert(timespec_to_milli(&aux2) >= state->args->min_announce_interval_ms );
 
                 SetTimerWithPayload(&t, NULL, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SEND, (void*)&send_type, sizeof(RoutingContextSendType));
-            } else {
-                printf("NO\n");
+            }
+        } else {
+            if( send_type == SEND_INC ) {
+                state->send_type = SEND_INC;
             }
         }
     }
-
-    printf("end\n");
 }
 
-void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType send_type) {
+void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType send_type, void* info) {
     assert(send_type != NO_SEND && state->jitter_timer_active);
-
-    printf("EH EH %d\n", send_type);
 
     state->jitter_timer_active = false;
 
@@ -323,7 +332,7 @@ void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType sen
         assert(add_result != FAILED);
 
 
-        RA_createControlMsg(state->args->algorithm, &header, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg);
+        RA_createControlMsg(state->args->algorithm, &header, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg, info);
 
         #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
         char id_str[UUID_STR_LEN];
@@ -341,7 +350,7 @@ void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType sen
     }
 }
 
-void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message) {
+void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message, byte* meta_data, unsigned int meta_length) {
 
     // Read header
     RoutingControlHeader header = {0};
@@ -399,7 +408,7 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
             ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "RCV CONTROL", str);
             #endif
 
-            RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length);
+            RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, meta_data, meta_length);
         }
     }
 }

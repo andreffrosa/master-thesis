@@ -80,5 +80,7 @@ RetransmissionContext* HopCountAwareRADExtensionContext(unsigned long delta_t);
 
 RetransmissionContext* LatencyContext();
 
+RetransmissionContext* BiFloodingContext();
+
 
 #endif /* _RETRANSMISSION_CONTEXT_H_ */

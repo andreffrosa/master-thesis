@@ -50,6 +50,7 @@ typedef struct routing_framework_state_ {
     struct timespec next_announce_time;
     bool announce_timer_active;
     bool jitter_timer_active;
+    RoutingContextSendType send_type;
 
 	routing_stats stats;       		// Framework's stats
 
@@ -64,13 +65,14 @@ void RF_uponAnnounceTimer(routing_framework_state* state);
 
 void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id);
 
-void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType send_type);
-
 void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev);
 
-void RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args);
+RoutingContextSendType RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args);
+void RF_scheduleJitter(routing_framework_state* state, RoutingEventType event_type, void* event_args, RoutingContextSendType send_type);
+void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType send_type, void* info);
 
-void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* msg);
+
+void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* msg, byte* meta_data, unsigned int meta_length);
 
 void RF_runGarbageCollector(routing_framework_state* state);
 

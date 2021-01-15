@@ -149,3 +149,7 @@ BroadcastAlgorithm* RADExtension(unsigned long delta_t, unsigned int c) {
 BroadcastAlgorithm* HopCountAwareRADExtension(unsigned long delta_t, unsigned int c) {
     return newBroadcastAlgorithm(new_list(1, HopCountAwareRADExtensionContext(delta_t)), HopCountAwareRADExtensionDelay(delta_t), CountPolicy(c), 1);
 }
+
+BroadcastAlgorithm* BiFlooding(unsigned long t) {
+	return newBroadcastAlgorithm(new_list(1, BiFloodingContext()), RandomDelay(t), TruePolicy(), 1);
+}

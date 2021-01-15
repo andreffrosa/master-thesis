@@ -44,4 +44,6 @@ BroadcastAlgorithm* LENWB(unsigned long t);
 BroadcastAlgorithm* MPR(unsigned long t);
 BroadcastAlgorithm* AHBP(unsigned long t, unsigned int route_max_len, bool mobility_extension);
 
+BroadcastAlgorithm* BiFlooding(unsigned long t);
+
 #endif /* _BCAST_ALGORITHMS_H_ */
