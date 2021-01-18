@@ -19,12 +19,16 @@
 
 static void disseminate(ModuleState* m_state, YggMessage* msg, RoutingEventType event_type) {
 
-    unsigned int radius = -1; // Infinite
+    if( event_type == RTE_REPLY ) {
+        BroadcastMessage(msg->Proto_id, 1, (byte*)msg->data, msg->dataLen);
+    } else {
+        unsigned int radius = -1; // Infinite
+        BroadcastMessage(msg->Proto_id, radius, (byte*)msg->data, msg->dataLen);
+    }
 
-    BroadcastMessage(msg->Proto_id, radius, (byte*)msg->data, msg->dataLen);
 }
 
-DisseminationStrategy* BroadcastDissemination() {
+DisseminationStrategy* AODVDissemination() {
     return newDisseminationStrategy(
         NULL,
         NULL,

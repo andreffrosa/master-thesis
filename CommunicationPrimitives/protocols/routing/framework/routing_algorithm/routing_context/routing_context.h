@@ -30,9 +30,9 @@ void RCtx_init(RoutingContext* context, proto_def* protocol_definition, unsigned
 
 RoutingContextSendType RCtx_triggerEvent(RoutingContext* context, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time);
 
-void RCtx_createMsg(RoutingContext* context, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, void* info);
+void RCtx_createMsg(RoutingContext* context, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info);
 
-void RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length);
+RoutingContextSendType RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward);
 
 ///////////////////////////////////////////////////////////////////
 

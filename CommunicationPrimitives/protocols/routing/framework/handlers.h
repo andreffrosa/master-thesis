@@ -69,7 +69,9 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev);
 
 RoutingContextSendType RF_triggerEvent(routing_framework_state* state, RoutingEventType event_type, void* event_args);
 void RF_scheduleJitter(routing_framework_state* state, RoutingEventType event_type, void* event_args, RoutingContextSendType send_type);
-void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType send_type, void* info);
+void RF_uponJitterTimer(routing_framework_state* state, RoutingContextSendType send_type, RoutingEventType event_type, void* info);
+
+void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendType send_type, RoutingEventType event_type, void* info, RoutingControlHeader* neigh_header);
 
 
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* msg, byte* meta_data, unsigned int meta_length);

@@ -17,7 +17,7 @@
 
 #include <assert.h>
 
-static void disseminate(ModuleState* m_state, YggMessage* msg) {
+static void disseminate(ModuleState* m_state, YggMessage* msg, RoutingEventType event_type) {
 
     unsigned int radius = 1;
 

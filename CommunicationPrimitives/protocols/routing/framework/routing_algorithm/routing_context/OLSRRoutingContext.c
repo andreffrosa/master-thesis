@@ -40,7 +40,7 @@ typedef struct LinkEntry_ {
 
 static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* neighbors, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time);
 
-static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time);
+static RoutingContextSendType ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time);
 
 /*static void OLSRRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
 
@@ -75,7 +75,7 @@ static RoutingContextSendType OLSRRoutingContextTriggerEvent(ModuleState* m_stat
     return NO_SEND;
 }
 
-static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, void* info) {
+static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     byte amount = state->mpr_selectors->size;
@@ -93,7 +93,7 @@ static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
     }
 }
 
-static void OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length) {
+static RoutingContextSendType OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward) {
     //OLSRState* state = (OLSRState*)m_state->vars;
 
     void* ptr = payload;
@@ -120,6 +120,8 @@ static void OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* rou
 
     // Recompute routing table
     RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time);
+
+    return NO_SEND;
 }
 
 //typedef void (*rc_destroy)(ModuleState* m_state);
@@ -277,7 +279,7 @@ static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* n
     RF_updateRoutingTable(routing_table, to_update, to_remove, current_time);
 }
 
-static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
+static RoutingContextSendType ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
     assert(ev);
 
     unsigned short ev_id = ev->notification_id;
@@ -374,5 +376,5 @@ static bool ProcessDiscoveryEvent(YggEvent* ev, OLSRState* state, RoutingTable* 
         printf("MPR SELECTORS CHANGED; SENDING ANNOUNCE\n");
     }
 
-    return state->dirty;
+    return state->dirty ? SEND_INC : NO_SEND;
 }

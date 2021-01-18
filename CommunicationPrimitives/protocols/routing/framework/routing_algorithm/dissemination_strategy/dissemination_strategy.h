@@ -20,7 +20,7 @@ typedef struct DisseminationStrategy_ DisseminationStrategy;
 
 void destroyDisseminationStrategy(DisseminationStrategy* ds);
 
-void DS_disseminate(DisseminationStrategy* ds, YggMessage* msg);
+void DS_disseminate(DisseminationStrategy* ds, YggMessage* msg, RoutingEventType event_type);
 
 ///////////////////////////////////////////7
 

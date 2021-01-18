@@ -38,8 +38,8 @@ void destroyDisseminationStrategy(DisseminationStrategy* ds) {
     }
 }
 
-void DS_disseminate(DisseminationStrategy* ds, YggMessage* msg) {
+void DS_disseminate(DisseminationStrategy* ds, YggMessage* msg, RoutingEventType event_type) {
     assert(ds);
 
-    ds->disseminate(&ds->state, msg);
+    ds->disseminate(&ds->state, msg, event_type);
 }

@@ -114,7 +114,11 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
         return true;
     } else if(timer->timer_type == TIMER_SEND) {
         assert(timer->payload);
-        RF_uponSendTimer(f_state, *((RoutingContextSendType*)timer->payload), NULL);
+
+        RoutingContextSendType* send_type = (RoutingContextSendType*)timer->payload;
+        RoutingEventType* event_type = (RoutingEventType*)(timer->payload + sizeof(RoutingContextSendType));
+
+        RF_uponJitterTimer(f_state, *send_type, *event_type, NULL);
         return true;
     } else {
         // Garbage Collector

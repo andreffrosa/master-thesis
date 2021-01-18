@@ -48,12 +48,12 @@ void RA_computeCost(RoutingAlgorithm* alg, bool is_bi, double rx_lq, double tx_l
 
 unsigned int RA_getAnnouncePeriod(RoutingAlgorithm* alg);
 
-void RA_disseminateControlMessage(RoutingAlgorithm* alg, YggMessage* msg);
+void RA_disseminateControlMessage(RoutingAlgorithm* alg, YggMessage* msg, RoutingEventType event_type);
 
 RoutingContextSendType RA_triggerEvent(RoutingAlgorithm* alg, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time);
 
-void RA_createControlMsg(RoutingAlgorithm* alg, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, void* info);
+void RA_createControlMsg(RoutingAlgorithm* alg, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info);
 
-void RA_processControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length);
+RoutingContextSendType RA_processControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward);
 
 #endif /* _ROUTING_ALGORITHM_H_ */

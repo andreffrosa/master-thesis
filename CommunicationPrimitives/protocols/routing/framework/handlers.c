@@ -85,9 +85,9 @@ void RF_uponAnnounceTimer(routing_framework_state* state) {
     RoutingContextSendType send_type = RF_triggerEvent(state, RTE_ANNOUNCE_TIMER, NULL);
 
     if(send_type != NO_SEND) {
-        state->jitter_timer_active = true;
+        //state->jitter_timer_active = true;
 
-        RF_uponSendTimer(state, send_type, NULL);
+        RF_sendControlMessage(state, send_type, RTE_ANNOUNCE_TIMER, NULL, NULL);
     }
 
     scheduleAnnounceTimer(state, false);
@@ -290,7 +290,11 @@ void RF_scheduleJitter(routing_framework_state* state, RoutingEventType event_ty
 
                 assert(timespec_to_milli(&aux2) >= state->args->min_announce_interval_ms );
 
-                SetTimerWithPayload(&t, NULL, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SEND, (void*)&send_type, sizeof(RoutingContextSendType));
+                byte buffer[sizeof(RoutingContextSendType)+sizeof(RoutingEventType)];
+                memcpy(buffer, &send_type, sizeof(RoutingContextSendType));
+                memcpy(buffer + sizeof(RoutingContextSendType), &event_type, sizeof(RoutingEventType));
+
+                SetTimerWithPayload(&t, NULL, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SEND, (void*)buffer, sizeof(RoutingContextSendType)+sizeof(RoutingEventType));
             }
         } else {
             if( send_type == SEND_INC ) {
@@ -300,58 +304,69 @@ void RF_scheduleJitter(routing_framework_state* state, RoutingEventType event_ty
     }
 }
 
-void RF_uponSendTimer(routing_framework_state* state, RoutingContextSendType send_type, void* info) {
+void RF_uponJitterTimer(routing_framework_state* state, RoutingContextSendType send_type, RoutingEventType event_type, void* info) {
     assert(send_type != NO_SEND && state->jitter_timer_active);
 
     state->jitter_timer_active = false;
 
-    unsigned short seq = 0;
+    RF_sendControlMessage(state, send_type, event_type, info, NULL);
+}
 
-    if( send_type == SEND_INC ) {
-        // Compute new SEQ
-        state->my_seq = inc_seq(state->my_seq, state->args->ignore_zero_seq);
-    }
-    seq = state->my_seq;
+void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendType send_type, RoutingEventType event_type, void* info, RoutingControlHeader* neigh_header) {
+    assert(send_type != NO_SEND);
 
-    if( send_type == SEND_INC || send_type == SEND_NO_INC  ) {
-        // Trigger context
-        YggMessage msg = {0};
-        YggMessage_initBcast(&msg, ROUTING_FRAMEWORK_PROTO_ID);
+    RoutingControlHeader control_header = {0};
 
-        // Insert Message Type
-        byte msg_type = MSG_CONTROL_MESSAGE;
-        int add_result = YggMessage_addPayload(&msg, (char*) &msg_type, sizeof(byte));
-        assert(add_result != FAILED);
+    if( neigh_header ) {
+        assert(send_type == SEND_NO_INC);
 
-        // Insert Header
-        RoutingControlHeader header = {0};
+        memcpy(&control_header, neigh_header, sizeof(RoutingControlHeader));
+
+        // TODO: decrement ttl?
+    } else {
+        // Create header
+        unsigned short seq = 0;
+
+        if( send_type == SEND_INC ) {
+            // Compute new SEQ
+            state->my_seq = inc_seq(state->my_seq, state->args->ignore_zero_seq);
+        }
+        seq = state->my_seq;
+
         byte period_s = RA_getAnnouncePeriod(state->args->algorithm);
-        initRoutingControlHeader(&header, state->myID, seq, period_s);
-
-        add_result = YggMessage_addPayload(&msg, (char*) &header, sizeof(RoutingControlHeader));
-        assert(add_result != FAILED);
-
-
-        RA_createControlMsg(state->args->algorithm, &header, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg, info);
-
-        #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
-        char id_str[UUID_STR_LEN];
-        uuid_unparse(header.source_id, id_str);
-
-        char str[100];
-        sprintf(str, "seq %hu\n", header.seq);
-
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SEND CONTROL", str);
-        #endif
-
-        copy_timespec(&state->last_announce_time, &state->current_time);
-
-        RA_disseminateControlMessage(state->args->algorithm, &msg);
+        initRoutingControlHeader(&control_header, state->myID, seq, period_s);
     }
+
+    YggMessage msg = {0};
+    YggMessage_initBcast(&msg, ROUTING_FRAMEWORK_PROTO_ID);
+
+    // Insert Message Type
+    byte msg_type = MSG_CONTROL_MESSAGE;
+    int add_result = YggMessage_addPayload(&msg, (char*) &msg_type, sizeof(byte));
+    assert(add_result != FAILED);
+
+    // Insert Header
+    add_result = YggMessage_addPayload(&msg, (char*) &control_header, sizeof(RoutingControlHeader));
+    assert(add_result != FAILED);
+
+    RA_createControlMsg(state->args->algorithm, &control_header, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg, event_type, info);
+
+    #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+    char id_str[UUID_STR_LEN];
+    uuid_unparse(control_header.source_id, id_str);
+
+    char str[100];
+    sprintf(str, "seq %hu\n", control_header.seq);
+
+    ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SEND CONTROL", str);
+    #endif
+
+    copy_timespec(&state->last_announce_time, &state->current_time);
+
+    RA_disseminateControlMessage(state->args->algorithm, &msg, event_type);
 }
 
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message, byte* meta_data, unsigned int meta_length) {
-
     // Read header
     RoutingControlHeader header = {0};
     void* ptr = YggMessage_readPayload(message, NULL, &header, sizeof(RoutingControlHeader));
@@ -408,7 +423,19 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
             ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "RCV CONTROL", str);
             #endif
 
-            RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, meta_data, meta_length);
+            bool forward = false;
+            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, meta_data, meta_length, &forward);
+
+            if(send_type != NO_SEND) {
+                //RF_scheduleJitter(state, RTE_REPLY, NULL, send_type);
+                //state->jitter_timer_active = true;
+
+                RoutingControlHeader* neigh_header = forward ? &header : NULL;
+
+                void* info = (void*[]){entry, payload, &length};
+
+                RF_sendControlMessage(state, send_type, RTE_CONTROL_MESSAGE, info, neigh_header);
+            }
         }
     }
 }

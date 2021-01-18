@@ -22,7 +22,7 @@ typedef struct BroadcastDSArgs_ {
     unsigned int phase_radius;
 } BroadcastDSArgs;
 
-static void disseminate(ModuleState* m_state, YggMessage* msg) {
+static void disseminate(ModuleState* m_state, YggMessage* msg, RoutingEventType event_type) {
 
     BroadcastDSArgs* args = (BroadcastDSArgs*)m_state->args;
     unsigned int* current_phase = (unsigned int*)m_state->vars;

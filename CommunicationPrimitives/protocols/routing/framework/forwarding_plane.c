@@ -227,7 +227,7 @@ void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, un
             RoutingContextSendType send_type = RF_triggerEvent(state, RTE_ROUTE_NOT_FOUND, header->destination_id);
             if(send_type != NO_SEND) {
                 state->jitter_timer_active = true;
-                RF_uponSendTimer(state, send_type, header->destination_id);
+                RF_sendControlMessage(state, send_type, RTE_ROUTE_NOT_FOUND, header, NULL);
                 print = false;
 
                 /// TODO: put in buffer

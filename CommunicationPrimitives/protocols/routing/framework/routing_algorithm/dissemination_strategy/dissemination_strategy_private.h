@@ -16,7 +16,7 @@
 
 #include "dissemination_strategy.h"
 
-typedef void (*ds_disseminate)(ModuleState*, YggMessage*);
+typedef void (*ds_disseminate)(ModuleState*, YggMessage*, RoutingEventType);
 
 typedef void (*ds_destroy)(ModuleState*);
 

@@ -57,18 +57,19 @@ RoutingContextSendType RCtx_triggerEvent(RoutingContext* context, RoutingEventTy
     }
 }
 
-void RCtx_createMsg(RoutingContext* context, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, void* info) {
+void RCtx_createMsg(RoutingContext* context, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
     assert(context);
 
     if(context->create_msg) {
-        context->create_msg(&context->state, header, routing_table, neighbors, source_table, myID, current_time, msg, info);
+        context->create_msg(&context->state, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
     }
 }
 
-void RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length) {
+RoutingContextSendType RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward) {
     assert(context);
 
     if(context->process_msg) {
-        context->process_msg(&context->state, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, meta_data, meta_length);
+        return context->process_msg(&context->state, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, meta_data, meta_length, forward);
     }
+    return NO_SEND;
 }
