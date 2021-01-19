@@ -101,6 +101,7 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
             byte type = AODV_RREP;
             YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
 
+            /*
             uuid_t destination_id;
             double route_cost = 0.0;
             byte route_hops = 0;
@@ -130,8 +131,13 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
 
             YggMessage_addPayload(msg, (char*)&route_cost, sizeof(double));
             YggMessage_addPayload(msg, (char*)&route_hops, sizeof(byte));
+*/
+        } else {
+            assert(false);
+        }
 
-        } else if(msg_type == AODV_RERR) {
+
+        /*else if(msg_type == AODV_RERR) {
             byte type = AODV_RERR;
 
             YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
@@ -154,7 +160,7 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
             assert(rt_entry);
 
             YggMessage_addPayload(msg, (char*)RTE_getNextHopID(rt_entry), sizeof(uuid_t));
-        }
+        }*/
     }
 }
 
