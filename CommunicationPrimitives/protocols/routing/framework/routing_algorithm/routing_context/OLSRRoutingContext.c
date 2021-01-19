@@ -93,7 +93,7 @@ static void OLSRRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
     }
 }
 
-static RoutingContextSendType OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward) {
+static RoutingContextSendType OLSRRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool* forward) {
     //OLSRState* state = (OLSRState*)m_state->vars;
 
     void* ptr = payload;

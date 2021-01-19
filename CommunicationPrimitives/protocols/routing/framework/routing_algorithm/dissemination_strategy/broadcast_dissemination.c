@@ -17,7 +17,7 @@
 
 #include <assert.h>
 
-static void disseminate(ModuleState* m_state, YggMessage* msg, RoutingEventType event_type) {
+static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* msg, RoutingEventType event_type, void* info) {
 
     unsigned int radius = -1; // Infinite
 

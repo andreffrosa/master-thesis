@@ -56,7 +56,7 @@ routing_framework_args* default_routing_framework_args();
 routing_framework_args* load_routing_framework_args(const char* file_path);
 
 
-void RouteMessage(unsigned char* destination_id, short protocol_id, unsigned short ttl, unsigned char* data, unsigned int size);
+void RouteMessage(unsigned char* destination_id, short protocol_id, unsigned short ttl, bool hop_delivery, unsigned char* data, unsigned int size);
 
 typedef enum {
     REQ_ROUTE_MESSAGE = 0,

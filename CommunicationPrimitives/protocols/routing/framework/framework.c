@@ -131,7 +131,7 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
     return false;
 }
 
-static bool processMessage(routing_framework_state* f_state, YggMessage* message) {
+/*static*/ bool processMessage(routing_framework_state* f_state, YggMessage* message) {
 
     unsigned short src_proto = 0;
     byte aux = 0;
@@ -161,8 +161,12 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
         byte meta_data[meta_length];
         ptr = YggMessage_readPayload(message, ptr, meta_data, meta_length);
 
+        uuid_t source_id;
+        memcpy(source_id, meta_data, sizeof(uuid_t));
+
         if(type == MSG_CONTROL_MESSAGE) {
-            RF_uponNewControlMessage(f_state, &msg, meta_data, meta_length);
+            printf("RECEIVED CONTROL MSG \n");
+            RF_uponNewControlMessage(f_state, &msg, source_id, src_proto, meta_data, meta_length);
             return true;
         }
     } else if( src_proto == ROUTING_FRAMEWORK_PROTO_ID ) {
@@ -172,11 +176,25 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
         printf("RECEIVED MSG \n");
 
         if(type == MSG_ROUTING_MESSAGE) {
-            YggMessage_addPayload(&msg, ptr, message->dataLen - sizeof(unsigned short) - sizeof(byte));
-
             printf("RECEIVED ROUTING MSG \n");
 
+            YggMessage_addPayload(&msg, ptr, message->dataLen - sizeof(unsigned short) - sizeof(byte));
+
             RF_uponNewMessage(f_state, &msg);
+            return true;
+
+        } else if(type == MSG_CONTROL_MESSAGE) {
+            printf("RECEIVED CONTROL MSG \n");
+
+            unsigned short length = message->dataLen - sizeof(unsigned short) - sizeof(byte) - sizeof(RoutingHeader);
+            YggMessage_addPayload(&msg, ptr, length);
+
+            ptr += length;
+
+            RoutingHeader header;
+            ptr = YggMessage_readPayload(message, ptr, &header, sizeof(RoutingHeader));
+
+            RF_uponNewControlMessage(f_state, &msg, header.source_id, src_proto, (byte*)&header, sizeof(RoutingHeader));
             return true;
         }
     }
@@ -240,12 +258,16 @@ static bool processEvent(routing_framework_state* f_state, YggEvent* event) {
     }
 }
 
-void RouteMessage(unsigned char* destination_id, short protocol_id, unsigned short ttl, unsigned char* data, unsigned int size) {
+void RouteMessage(unsigned char* destination_id, short protocol_id, unsigned short ttl, bool hop_delivery, unsigned char* data, unsigned int size) {
     YggRequest framework_route_req;
 	YggRequest_init(&framework_route_req, protocol_id, ROUTING_FRAMEWORK_PROTO_ID, REQUEST, REQ_ROUTE_MESSAGE);
 
     YggRequest_addPayload(&framework_route_req, destination_id, sizeof(uuid_t));
     YggRequest_addPayload(&framework_route_req, &ttl, sizeof(unsigned short));
+
+    byte hop_delivery_ = hop_delivery;
+    YggRequest_addPayload(&framework_route_req, &hop_delivery_, sizeof(byte));
+
     YggRequest_addPayload(&framework_route_req, data, size);
 
     deliverRequest(&framework_route_req);

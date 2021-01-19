@@ -22,7 +22,7 @@ typedef RoutingContextSendType (*rc_triggerEvent)(ModuleState* m_state, RoutingE
 
 typedef void (*rc_createMsg)(ModuleState* m_state, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info);
 
-typedef RoutingContextSendType (*rc_processMsg)(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward);
+typedef RoutingContextSendType (*rc_processMsg)(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool* forward);
 
 typedef void (*rc_destroy)(ModuleState* m_state);
 

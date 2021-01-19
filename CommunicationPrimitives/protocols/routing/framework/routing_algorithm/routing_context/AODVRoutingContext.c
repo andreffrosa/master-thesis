@@ -36,7 +36,7 @@ static void AODVRoutingContextInit(ModuleState* context_state, proto_def* protoc
 static RoutingContextSendType AODVRoutingContextTriggerEvent(ModuleState* m_state, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
 
     if(event_type == RTE_ROUTE_NOT_FOUND) {
-        printf("SENDING RREQ\n");
+        //printf("SENDING RREQ\n");
         return SEND_INC;
     } else if(event_type == RTE_NEIGHBORS_CHANGE) {
         YggEvent* ev = args;
@@ -49,57 +49,116 @@ static RoutingContextSendType AODVRoutingContextTriggerEvent(ModuleState* m_stat
 static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
 
     if( event_type == RTE_ROUTE_NOT_FOUND ) {
-        // TODO: Como distinguir entre rreq e rerr ?
-
-        byte type = AODV_RREQ;
-        YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
-
         assert(info);
         RoutingHeader* header2 = info;
-        YggMessage_addPayload(msg, (char*)header2->destination_id, sizeof(uuid_t));
-    } else if(event_type == RTE_REPLY) {
-        byte type = AODV_RREP;
-        YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
 
+        byte type = 0;
+
+        // Send RREQ
+        if( uuid_compare(header2->source_id, myID) == 0 ) {
+            type = AODV_RREQ;
+
+            YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
+
+            YggMessage_addPayload(msg, (char*)header2->destination_id, sizeof(uuid_t));
+
+            char str[UUID_STR_LEN];
+            uuid_unparse(header2->destination_id, str);
+            printf("GENERATING REQ to %s\n", str);
+        }
+        // Send RERR
+        else {
+            type = AODV_RERR;
+
+            YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
+
+            YggMessage_addPayload(msg, (char*)header2->source_id, sizeof(uuid_t));
+
+            YggMessage_addPayload(msg, (char*)header2->destination_id, sizeof(uuid_t));
+
+            YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
+
+            YggMessage_addPayload(msg, (char*)header2->prev_hop_id, sizeof(uuid_t));
+
+            char str[UUID_STR_LEN];
+            uuid_unparse(header2->destination_id, str);
+            printf("GENERATING RERR to %s\n", str);
+        }
+
+    } else if(event_type == RTE_REPLY) {
         assert(info);
         SourceEntry* entry = ((void**)info)[0];
         byte* payload = ((void**)info)[1];
         //unsigned short length = *((unsigned short*)((void**)info)[2]);
 
-        uuid_t destination_id;
-        double route_cost = 0.0;
-        byte route_hops = 0;
+        byte* ptr = payload;
 
-        // Is reply?
-        if( uuid_compare(myID, header->source_id) == 0 ) {
-            uuid_copy(destination_id, SE_getID(entry));
+        byte msg_type = 0;
+        memcpy(&msg_type, ptr, sizeof(byte));
+        ptr += sizeof(byte);
 
-        } else {
+        if(msg_type == AODV_RREP || msg_type == AODV_RREQ) {
+            byte type = AODV_RREP;
+            YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
+
+            uuid_t destination_id;
+            double route_cost = 0.0;
+            byte route_hops = 0;
+
+            // Is reply?
+            if( uuid_compare(myID, header->source_id) == 0 ) {
+                uuid_copy(destination_id, SE_getID(entry));
+
+            } else {
+                byte* ptr = payload + sizeof(byte);
+
+                memcpy(destination_id, ptr, sizeof(uuid_t));
+                //ptr += sizeof(uuid_t);
+
+                RoutingTableEntry* rt_entry = RT_findEntry(routing_table, SE_getID(entry)); // The source of the rrep
+                route_cost = RTE_getCost(rt_entry);
+                route_hops = RTE_getHops(rt_entry);
+            }
+
+            YggMessage_addPayload(msg, (char*)destination_id, sizeof(uuid_t));
+
+            YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
+
+            RoutingTableEntry* rt_entry = RT_findEntry(routing_table, destination_id); // The source of the rreq
+            assert(rt_entry);
+            YggMessage_addPayload(msg, (char*)RTE_getNextHopID(rt_entry) , sizeof(uuid_t));
+
+            YggMessage_addPayload(msg, (char*)&route_cost, sizeof(double));
+            YggMessage_addPayload(msg, (char*)&route_hops, sizeof(byte));
+
+        } else if(msg_type == AODV_RERR) {
+            byte type = AODV_RERR;
+
+            YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
+
             byte* ptr = payload + sizeof(byte);
-
+            uuid_t destination_id;
             memcpy(destination_id, ptr, sizeof(uuid_t));
-            //ptr += sizeof(uuid_t);
+            ptr += sizeof(uuid_t);
 
-            RoutingTableEntry* rt_entry = RT_findEntry(routing_table, SE_getID(entry)); // The source of the rrep
-            route_cost = RTE_getCost(rt_entry);
-            route_hops = RTE_getHops(rt_entry);
+            YggMessage_addPayload(msg, (char*)destination_id, sizeof(uuid_t));
+
+            uuid_t dest_to_remove_id;
+            memcpy(dest_to_remove_id, ptr, sizeof(uuid_t));
+            ptr += sizeof(uuid_t);
+            YggMessage_addPayload(msg, (char*)dest_to_remove_id, sizeof(uuid_t));
+
+            YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
+
+            RoutingTableEntry* rt_entry = RT_findEntry(routing_table, destination_id);
+            assert(rt_entry);
+
+            YggMessage_addPayload(msg, (char*)RTE_getNextHopID(rt_entry), sizeof(uuid_t));
         }
-
-        YggMessage_addPayload(msg, (char*)destination_id, sizeof(uuid_t));
-
-        YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
-
-        RoutingTableEntry* rt_entry = RT_findEntry(routing_table, destination_id); // The source of the rreq
-        assert(rt_entry);
-        YggMessage_addPayload(msg, (char*)RTE_getNextHopID(rt_entry) , sizeof(uuid_t));
-
-        YggMessage_addPayload(msg, (char*)&route_cost, sizeof(double));
-        YggMessage_addPayload(msg, (char*)&route_hops, sizeof(byte));
     }
-
 }
 
-static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward) {
+static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool* forward) {
 
     void* ptr = payload;
 
@@ -163,6 +222,41 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
                 return SEND_NO_INC;
             }
         }
+    }
+    else if( type == AODV_RERR ) {
+
+
+
+        uuid_t dest_to_remove_id;
+        uuid_t prev_hop_id;
+        uuid_t next_hop_id;
+
+        memcpy(dest_to_remove_id, ptr, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
+        memcpy(prev_hop_id, ptr, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
+        memcpy(next_hop_id, ptr, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
+        char str[UUID_STR_LEN];
+        uuid_unparse(dest_to_remove_id, str);
+        printf("RECEIVED RERR to %s\n", str);
+
+        // Update Routing Table
+        list* to_remove = list_init();
+
+        list_add_item_to_tail(to_remove, new_id(dest_to_remove_id));
+
+        RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
+
+        // Forward
+        if( uuid_compare(myID, next_hop_id) == 0 && uuid_compare(myID, destination_id) != 0 ) {
+            *forward = true;
+            return SEND_NO_INC;
+        }
+
     }
 
     return NO_SEND;
@@ -323,12 +417,23 @@ static void ProcessDiscoveryEvent(YggEvent* ev, void* state, RoutingTable* routi
         uuid_t id;
         ptr2 = YggEvent_readPayload(&main_ev, ptr2, id, sizeof(uuid_t));
 
+        bool remove = false;
+
         if(ev_id == NEW_NEIGHBOR || ev_id == UPDATE_NEIGHBOR) {
             RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, id);
             assert(neigh);
-            double cost = RNE_getTxCost(neigh);
-            RecomputeRoutingTable(id, id, cost, 1, neighbors, routing_table, current_time);
+
+            if( RNE_isBi(neigh) ) {
+                double cost = RNE_getTxCost(neigh);
+                RecomputeRoutingTable(id, id, cost, 1, neighbors, routing_table, current_time);
+            } else {
+                remove = true;
+            }
         } else {
+            remove = true;
+        }
+
+        if(remove) {
             list* to_remove = list_init();
 
             //list_add_item_to_tail(to_remove, new_id(id));

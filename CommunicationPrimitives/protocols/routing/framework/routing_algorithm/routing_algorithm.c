@@ -101,10 +101,10 @@ unsigned int RA_getAnnouncePeriod(RoutingAlgorithm* alg) {
     return AP_get(alg->a_period);
 }
 
-void RA_disseminateControlMessage(RoutingAlgorithm* alg, YggMessage* msg, RoutingEventType event_type) {
+void RA_disseminateControlMessage(RoutingAlgorithm* alg, unsigned char* myID, YggMessage* msg, RoutingEventType event_type, void* info) {
     assert(alg);
 
-    DS_disseminate(alg->d_strategy, msg, event_type);
+    DS_disseminate(alg->d_strategy, myID, msg, event_type, info);
 }
 
 RoutingContextSendType RA_triggerEvent(RoutingAlgorithm* alg, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
@@ -119,8 +119,8 @@ void RA_createControlMsg(RoutingAlgorithm* alg, RoutingControlHeader* header, Ro
     RCtx_createMsg(alg->r_context, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
 }
 
-RoutingContextSendType RA_processControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward) {
+RoutingContextSendType RA_processControlMsg(RoutingAlgorithm* alg, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool* forward) {
     assert(alg);
 
-    return RCtx_processMsg(alg->r_context, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, meta_data, meta_length, forward);
+    return RCtx_processMsg(alg->r_context, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, src_proto, meta_data, meta_length, forward);
 }

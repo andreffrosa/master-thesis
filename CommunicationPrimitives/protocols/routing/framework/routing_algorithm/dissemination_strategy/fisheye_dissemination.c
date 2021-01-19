@@ -22,7 +22,7 @@ typedef struct BroadcastDSArgs_ {
     unsigned int phase_radius;
 } BroadcastDSArgs;
 
-static void disseminate(ModuleState* m_state, YggMessage* msg, RoutingEventType event_type) {
+static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* msg, RoutingEventType event_type, void* info) {
 
     BroadcastDSArgs* args = (BroadcastDSArgs*)m_state->args;
     unsigned int* current_phase = (unsigned int*)m_state->vars;
@@ -41,7 +41,7 @@ DisseminationStrategy* FisheyeDissemination(unsigned int n_phases, unsigned int 
     args->phase_radius = phase_radius;
 
     unsigned int* current_phase = malloc(sizeof(unsigned int));
-    *current_phase = 0;
+    *current_phase = n_phases;
 
     return newDisseminationStrategy(
         args,

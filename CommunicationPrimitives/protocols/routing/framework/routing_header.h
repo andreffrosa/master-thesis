@@ -27,13 +27,14 @@ typedef struct RoutingHeader_ {
 	uuid_t msg_id;
     unsigned short ttl;
 	unsigned short dest_proto;
-	//unsigned short context_length;
+    byte hop_delivery;
+	//unsigned short payload_length;
 } RoutingHeader;
 #pragma pack()
 
 #pragma pack(1)
 typedef struct RoutingControlHeader_ {
-	uuid_t source_id;
+	//uuid_t source_id;
 	unsigned short seq;
     byte announce_period;
     //unsigned short ttl; // (?)
@@ -42,8 +43,8 @@ typedef struct RoutingControlHeader_ {
 
 // #define ROUTING_HEADER_LENGTH sizeof(RoutingHeader)
 
-void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned char* prev_hop_id, unsigned char* next_hop_id, unsigned char* destination_id, unsigned char* msg_id, unsigned short ttl, unsigned short dest_proto);
+void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned char* prev_hop_id, unsigned char* next_hop_id, unsigned char* destination_id, unsigned char* msg_id, unsigned short ttl, unsigned short dest_proto, bool hop_delivery);
 
-void initRoutingControlHeader(RoutingControlHeader* header, unsigned char* source_id, unsigned short seq, byte announce_period);
+void initRoutingControlHeader(RoutingControlHeader* header, /*unsigned char* source_id,*/ unsigned short seq, byte announce_period);
 
 #endif /* _ROUTING_HEADER_H_ */

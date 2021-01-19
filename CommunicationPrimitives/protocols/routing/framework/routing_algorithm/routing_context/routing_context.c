@@ -65,11 +65,11 @@ void RCtx_createMsg(RoutingContext* context, RoutingControlHeader* header, Routi
     }
 }
 
-RoutingContextSendType RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, byte* meta_data, unsigned int meta_length, bool* forward) {
+RoutingContextSendType RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool* forward) {
     assert(context);
 
     if(context->process_msg) {
-        return context->process_msg(&context->state, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, meta_data, meta_length, forward);
+        return context->process_msg(&context->state, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, src_proto, meta_data, meta_length, forward);
     }
     return NO_SEND;
 }

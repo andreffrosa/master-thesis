@@ -74,7 +74,7 @@ void RF_uponJitterTimer(routing_framework_state* state, RoutingContextSendType s
 void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendType send_type, RoutingEventType event_type, void* info, RoutingControlHeader* neigh_header);
 
 
-void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* msg, byte* meta_data, unsigned int meta_length);
+void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* msg, unsigned char* source_id, unsigned short src_proto, byte* meta_data, unsigned int meta_length);
 
 void RF_runGarbageCollector(routing_framework_state* state);
 
