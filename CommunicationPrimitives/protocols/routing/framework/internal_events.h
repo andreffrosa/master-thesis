@@ -19,8 +19,8 @@ typedef enum {
     RTE_NEIGHBORS_CHANGE,
     RTE_CONTROL_MESSAGE,
     RTE_SOURCE_EXPIRE,
-    RTE_ROUTE_NOT_FOUND,
-    RTE_REPLY
+    RTE_ROUTE_NOT_FOUND
+    //RTE_REPLY
 } RoutingEventType;
 
 

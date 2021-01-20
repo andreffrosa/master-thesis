@@ -43,12 +43,12 @@ void RF_DeliverMessage(routing_framework_state* state, RoutingHeader* header, Yg
 
     // Insert src_proto
     unsigned short src_proto = ROUTING_FRAMEWORK_PROTO_ID;
-    add_result = YggMessage_addPayload(&m, (char*)&src_proto, sizeof(src_proto));
+    add_result = YggMessage_addPayload(&m, (char*)&src_proto, sizeof(unsigned short));
     assert(add_result != FAILED);
 
     // Insert payload size
     unsigned short payload_size = toDeliver->dataLen;
-    add_result = YggMessage_addPayload(&m, (char*)&payload_size, sizeof(payload_size));
+    add_result = YggMessage_addPayload(&m, (char*)&payload_size, sizeof(unsigned short));
     assert(add_result != FAILED);
 
     // Insert payload
@@ -60,7 +60,7 @@ void RF_DeliverMessage(routing_framework_state* state, RoutingHeader* header, Yg
     //assert(add_result != FAILED);
 
     add_result = YggMessage_addPayload(&m, (char*)header, sizeof(RoutingHeader));
-    //assert(add_result != FAILED);
+    assert(add_result != FAILED);
 
     deliver(&m);
 	state->stats.messages_delivered++;
@@ -80,7 +80,7 @@ void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
     byte hop_delivery = false;
     ptr = YggRequest_readPayload(req, ptr, &hop_delivery, sizeof(byte));
 
-    unsigned int len = req->length - sizeof(uuid_t) - sizeof(unsigned short);
+    unsigned int len = req->length - sizeof(uuid_t) - sizeof(unsigned short) - sizeof(byte);
     unsigned char data[len];
     ptr = YggRequest_readPayload(req, ptr, data, len);
 
@@ -96,7 +96,7 @@ void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
     }
 
     RoutingHeader header;
-    initRoutingHeader(&header, state->myID, state->myID, state->myID, destination_id, msg_id, ttl, req->proto_origin);
+    initRoutingHeader(&header, state->myID, state->myID, state->myID, destination_id, msg_id, ttl, req->proto_origin, hop_delivery);
 
     #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
     {
@@ -140,7 +140,7 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
         free(bcast_addr);
     }*/
 
-    if( im_next_hop || header->hop_delivery ) {
+    if( im_next_hop || header.hop_delivery ) {
 
         bool send_ack = false; // TODO:
         if(send_ack) {
@@ -166,7 +166,7 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
 
             RF_processMessage(state, &header, &toDeliver);
         } else {
-            // Duplicate message: ignore
+            // Duplicate message: ignore or send ack
             printf("Duplicate message\n");
         }
     } else {
@@ -174,42 +174,45 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
     }
 }
 
-bool processMessage(routing_framework_state* f_state, YggMessage* message);
-
 void RF_processMessage(routing_framework_state* state, RoutingHeader* header, YggMessage* toDeliver) {
 
     SeenMessagesAdd(state->seen_msgs, header->msg_id, &state->current_time);
 
+    bool deliver = uuid_compare(header->destination_id, state->myID) == 0 || header->hop_delivery;
+    bool forward = uuid_compare(header->destination_id, state->myID) != 0;
+
     // Check if message is destined to the local address
-    if(uuid_compare(header->destination_id, state->myID) == 0 || header->hop_delivery) {
+    if(deliver) {
 
         if( toDeliver->Proto_id == ROUTING_FRAMEWORK_PROTO_ID ) {
-            YggMessage m;
-            YggMessage_init(&m, toDeliver->srcAddr.data, toDeliver->Proto_id);
+            if( uuid_compare(header->source_id, state->myID) != 0 ) {
+                void* ptr = NULL;
 
-            // Insert src_proto
-            unsigned short src_proto = ROUTING_FRAMEWORK_PROTO_ID;
-            int add_result = YggMessage_addPayload(&m, (char*)&src_proto, sizeof(src_proto));
-            assert(add_result != FAILED);
+                byte aux = 0;
+                ptr = YggMessage_readPayload(toDeliver, ptr, &aux, sizeof(byte));
+                RoutingMessageType type = aux;
 
-            // Insert payload size
-            unsigned short payload_size = toDeliver->dataLen;
-            add_result = YggMessage_addPayload(&m, (char*)&payload_size, sizeof(payload_size));
-            assert(add_result != FAILED);
+                if(type == MSG_CONTROL_MESSAGE) {
 
-            // Insert payload
-            add_result = YggMessage_addPayload(&m, (char*)toDeliver->data, payload_size);
-            assert(add_result != FAILED);
+                    YggMessage m;
+                    YggMessage_init(&m, toDeliver->srcAddr.data, toDeliver->Proto_id);
 
-            add_result = YggMessage_addPayload(&m, (char*)header, sizeof(RoutingHeader));
+                    unsigned short length = toDeliver->dataLen - sizeof(byte);
+                    YggMessage_addPayload(&m, ptr, length);
 
-            bool aux = processMessage(state, &m);
-            assert(aux);
+                    RF_uponNewControlMessage(state, &m, header->source_id, ROUTING_FRAMEWORK_PROTO_ID, (byte*)header, sizeof(RoutingHeader));
+                } else {
+                    assert(false);
+                }
+            }
+
         } else{
             RF_DeliverMessage(state, header, toDeliver);
         }
 
-    } else {
+    }
+
+    if(forward) {
         unsigned short ttl = header->ttl;
 
         // Decrement TTL
@@ -283,27 +286,57 @@ void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, un
 }
 
 void RF_SendMessage(routing_framework_state* state, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, unsigned short ttl, YggMessage* toDeliver) {
-    YggMessage m;
 
-    if(toDeliver->Proto_id == ROUTING_FRAMEWORK_PROTO_ID) {
-        byte* ptr = (byte*)toDeliver->data + sizeof(unsigned short);
+    YggMessage toForward = {0};
 
-        byte type = 0;
-        memcpy(&type, ptr, sizeof(byte));
-        ptr += sizeof(byte);
+    if(uuid_compare(old_header->source_id, state->myID) != 0 && toDeliver->Proto_id == ROUTING_FRAMEWORK_PROTO_ID) {
+        //if( uuid_compare(old_header->source_id, state->myID) != 0 ) {
 
-        if(type == MSG_CONTROL_MESSAGE) {
-            RoutingControlHeader old_routing_control_header;
-            memcpy(&old_routing_control_header, ptr, sizeof(RoutingControlHeader));
+            void* ptr = NULL;
 
-            // TODO
-            unsigned short length = 0;
-        } else {
-            assert(false);
-        }
+            byte aux = 0;
+            ptr = YggMessage_readPayload(toDeliver, ptr, &aux, sizeof(byte));
+            RoutingMessageType type = aux;
+
+            if(type == MSG_CONTROL_MESSAGE) {
+                RoutingControlHeader old_routing_control_header;
+                ptr = YggMessage_readPayload(toDeliver, ptr, &old_routing_control_header, sizeof(RoutingControlHeader));
+
+                // Read Payload
+                unsigned short length = toDeliver->dataLen - sizeof(byte) - sizeof(RoutingControlHeader);
+                byte payload[length];
+                ptr = YggMessage_readPayload(toDeliver, ptr, payload, length);
+
+                SourceEntry* entry = ST_getEntry(state->source_table, old_header->source_id);
+                assert(entry);
+                assert(length > 0);
+                void* info = (void*[]){entry, payload, &length};
+
+                //YggMessage msg = {0};
+                YggMessage_initBcast(&toForward, ROUTING_FRAMEWORK_PROTO_ID);
+
+                // Insert Message Type
+                byte msg_type = MSG_CONTROL_MESSAGE;
+                int add_result = YggMessage_addPayload(&toForward, (char*) &msg_type, sizeof(byte));
+                assert(add_result != FAILED);
+
+                // Insert Header
+                add_result = YggMessage_addPayload(&toForward, (char*) &old_routing_control_header, sizeof(RoutingControlHeader));
+                assert(add_result != FAILED);
+
+                RA_createControlMsg(state->args->algorithm, &old_routing_control_header, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &toForward, RTE_CONTROL_MESSAGE, info);
+
+            } else {
+                assert(false);
+            }
+        //}
+    } else {
+        memcpy(&toForward, toDeliver, sizeof(YggMessage));
     }
 
-    RF_serializeMessage(state, &m, old_header, next_hop_id, next_hop_addr, ttl, toDeliver);
+    YggMessage m;
+
+    RF_serializeMessage(state, &m, old_header, next_hop_id, next_hop_addr, ttl, &toForward);
 
 	dispatch(&m);
 	state->stats.messages_transmitted++;
@@ -319,7 +352,7 @@ void RF_serializeMessage(routing_framework_state* state, YggMessage* m, RoutingH
 
 	// Initialize Broadcast Message Header
 	RoutingHeader header;
-    initRoutingHeader(&header, old_header->source_id, state->myID, next_hop_id, old_header->destination_id, old_header->msg_id, ttl, old_header->dest_proto);
+    initRoutingHeader(&header, old_header->source_id, state->myID, next_hop_id, old_header->destination_id, old_header->msg_id, ttl, old_header->dest_proto, old_header->hop_delivery);
 
     int msg_size = sizeof(RoutingHeader) + toDeliver->dataLen + sizeof(unsigned short) + sizeof(byte);
     assert( msg_size <= YGG_MESSAGE_PAYLOAD );

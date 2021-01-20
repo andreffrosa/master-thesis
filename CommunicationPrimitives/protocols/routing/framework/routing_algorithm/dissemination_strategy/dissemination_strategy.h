@@ -30,4 +30,6 @@ DisseminationStrategy* FisheyeDissemination(unsigned int n_phases, unsigned int 
 
 DisseminationStrategy* LocalDissemination();
 
+DisseminationStrategy* AODVDissemination();
+
 #endif /*_DISSEMINATION_STRATEGY_H_*/

@@ -164,7 +164,7 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
         uuid_t source_id;
         memcpy(source_id, meta_data, sizeof(uuid_t));
 
-        if(type == MSG_CONTROL_MESSAGE) {
+        if(type == MSG_CONTROL_MESSAGE && uuid_compare(source_id, f_state->myID) != 0) {
             printf("RECEIVED CONTROL MSG \n");
             RF_uponNewControlMessage(f_state, &msg, source_id, src_proto, meta_data, meta_length);
             return true;
@@ -184,7 +184,9 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
             return true;
 
         } else if(type == MSG_CONTROL_MESSAGE) {
-            printf("RECEIVED CONTROL MSG \n");
+            assert(false);
+
+            /*printf("RECEIVED CONTROL MSG \n");
 
             unsigned short length = message->dataLen - sizeof(unsigned short) - sizeof(byte) - sizeof(RoutingHeader);
             YggMessage_addPayload(&msg, ptr, length);
@@ -195,7 +197,7 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
             ptr = YggMessage_readPayload(message, ptr, &header, sizeof(RoutingHeader));
 
             RF_uponNewControlMessage(f_state, &msg, header.source_id, src_proto, (byte*)&header, sizeof(RoutingHeader));
-            return true;
+            return true;*/
         }
     }
 

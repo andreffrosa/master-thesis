@@ -14,6 +14,7 @@
 #include "routing_context_private.h"
 
 #include "protocols/discovery/framework/framework.h"
+#include "protocols/routing/framework/framework.h"
 
 #include <assert.h>
 
@@ -29,9 +30,9 @@ static void ProcessDiscoveryEvent(YggEvent* ev, void* state, RoutingTable* routi
 
 static void RecomputeRoutingTable(unsigned char* source_id, unsigned char* parent_id, double cost, unsigned int hops, RoutingNeighbors* neighbors, RoutingTable* routing_table, struct timespec* current_time);
 
-static void AODVRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
+/*static void AODVRoutingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID, RoutingTable* routing_table, struct timespec* current_time) {
 
-}
+}*/
 
 static RoutingContextSendType AODVRoutingContextTriggerEvent(ModuleState* m_state, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
 
@@ -72,20 +73,22 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
 
             YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
 
-            YggMessage_addPayload(msg, (char*)header2->source_id, sizeof(uuid_t));
+            //YggMessage_addPayload(msg, (char*)header2->source_id, sizeof(uuid_t));
 
             YggMessage_addPayload(msg, (char*)header2->destination_id, sizeof(uuid_t));
 
+            /*
             YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
 
             YggMessage_addPayload(msg, (char*)header2->prev_hop_id, sizeof(uuid_t));
+            */
 
             char str[UUID_STR_LEN];
             uuid_unparse(header2->destination_id, str);
-            printf("GENERATING RERR to %s\n", str);
+            printf("GENERATING RERR to remove %s\n", str);
         }
 
-    } else if(event_type == RTE_REPLY) {
+    } else if(event_type == RTE_CONTROL_MESSAGE) {
         assert(info);
         SourceEntry* entry = ((void**)info)[0];
         byte* payload = ((void**)info)[1];
@@ -100,6 +103,18 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
         if(msg_type == AODV_RREP || msg_type == AODV_RREQ) {
             byte type = AODV_RREP;
             YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
+
+            double route_cost = 0.0;
+            byte route_hops = 0;
+
+            if( msg_type == AODV_RREP ) {
+                RoutingTableEntry* rt_entry = RT_findEntry(routing_table, SE_getID(entry)); // The source of the rrep
+                route_cost = RTE_getCost(rt_entry);
+                route_hops = RTE_getHops(rt_entry);
+            }
+
+            YggMessage_addPayload(msg, (char*)&route_cost, sizeof(double));
+            YggMessage_addPayload(msg, (char*)&route_hops, sizeof(byte));
 
             /*
             uuid_t destination_id;
@@ -132,35 +147,34 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
             YggMessage_addPayload(msg, (char*)&route_cost, sizeof(double));
             YggMessage_addPayload(msg, (char*)&route_hops, sizeof(byte));
 */
-        } else {
-            assert(false);
-        }
-
-
-        /*else if(msg_type == AODV_RERR) {
+        } else if(msg_type == AODV_RERR) {
             byte type = AODV_RERR;
 
             YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
 
             byte* ptr = payload + sizeof(byte);
+
+            /*
             uuid_t destination_id;
             memcpy(destination_id, ptr, sizeof(uuid_t));
             ptr += sizeof(uuid_t);
 
             YggMessage_addPayload(msg, (char*)destination_id, sizeof(uuid_t));
+            */
 
             uuid_t dest_to_remove_id;
             memcpy(dest_to_remove_id, ptr, sizeof(uuid_t));
             ptr += sizeof(uuid_t);
             YggMessage_addPayload(msg, (char*)dest_to_remove_id, sizeof(uuid_t));
 
-            YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
+            /*YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
 
             RoutingTableEntry* rt_entry = RT_findEntry(routing_table, destination_id);
             assert(rt_entry);
 
             YggMessage_addPayload(msg, (char*)RTE_getNextHopID(rt_entry), sizeof(uuid_t));
-        }*/
+            */
+        }
     }
 }
 
@@ -172,11 +186,11 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
     memcpy(&type, ptr, sizeof(byte));
     ptr += sizeof(byte);
 
-    uuid_t destination_id;
-    memcpy(destination_id, ptr, sizeof(uuid_t));
-    ptr += sizeof(uuid_t);
-
     if( type == AODV_RREQ ) {
+        uuid_t destination_id;
+        memcpy(destination_id, ptr, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+
         // TODO: como ir buscar o custo do RREQ no cabeçalho de bcast e as cópias?
         // TODO: adicionar/atualizar rota para a source do RREQ
         uuid_t found_parent = {0};
@@ -189,30 +203,40 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
 
             if( uuid_compare(destination_id, myID) == 0 ) {
 
-                //printf("I'm the wanted destination!\n");
+                printf("I'm the wanted destination! SEND RREP\n");
 
                 return SEND_INC; // SEND RREP
             }
         }
     } else if( type == AODV_RREP ) {
 
+        uuid_t destination_id;
         uuid_t prev_hop_id;
-        uuid_t next_hop_id;
 
-        memcpy(prev_hop_id, ptr, sizeof(uuid_t));
-        ptr += sizeof(uuid_t);
+        if(src_proto == ROUTING_FRAMEWORK_PROTO_ID) {
+            RoutingHeader* header = (RoutingHeader*)meta_data;
 
-        memcpy(next_hop_id, ptr, sizeof(uuid_t));
-        ptr += sizeof(uuid_t);
+            uuid_copy(destination_id, header->destination_id);
+            uuid_copy(prev_hop_id, header->prev_hop_id);
+        } else {
+            assert(false);
+        }
+
+        //uuid_t next_hop_id;
 
         double route_cost = 0.0;
         byte route_hops = 0;
-
+        
         memcpy(&route_cost, ptr, sizeof(double));
         ptr += sizeof(double);
 
         memcpy(&route_hops, ptr, sizeof(byte));
         ptr += sizeof(byte);
+
+
+        char str[UUID_STR_LEN];
+        uuid_unparse(SE_getID(source_entry), str);
+        printf("RECEIVED RREP with route to %s\n", str);
 
         RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, prev_hop_id);
         if(neigh && RNE_isBi(neigh)) {
@@ -222,29 +246,39 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
             // Update routing table
             RecomputeRoutingTable(SE_getID(source_entry), prev_hop_id, route_cost, route_hops, neighbors, routing_table, current_time);
 
+            /*
             // Forward
             if( uuid_compare(myID, next_hop_id) == 0 && uuid_compare(myID, destination_id) != 0 ) {
                 *forward = true;
                 return SEND_NO_INC;
             }
+            */
         }
     }
     else if( type == AODV_RERR ) {
 
-
-
         uuid_t dest_to_remove_id;
         uuid_t prev_hop_id;
-        uuid_t next_hop_id;
+        //uuid_t next_hop_id;
+
+        if(src_proto == ROUTING_FRAMEWORK_PROTO_ID) {
+            RoutingHeader* header = (RoutingHeader*)meta_data;
+
+            uuid_copy(prev_hop_id, header->prev_hop_id);
+        } else {
+            assert(false);
+        }
 
         memcpy(dest_to_remove_id, ptr, sizeof(uuid_t));
         ptr += sizeof(uuid_t);
 
+        /*
         memcpy(prev_hop_id, ptr, sizeof(uuid_t));
         ptr += sizeof(uuid_t);
 
         memcpy(next_hop_id, ptr, sizeof(uuid_t));
         ptr += sizeof(uuid_t);
+        */
 
         char str[UUID_STR_LEN];
         uuid_unparse(dest_to_remove_id, str);
@@ -257,11 +291,13 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
 
         RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
 
+        /*
         // Forward
         if( uuid_compare(myID, next_hop_id) == 0 && uuid_compare(myID, destination_id) != 0 ) {
             *forward = true;
             return SEND_NO_INC;
         }
+        */
 
     }
 
@@ -275,7 +311,7 @@ RoutingContext* AODVRoutingContext() {
     return newRoutingContext(
         NULL,
         NULL,
-        &AODVRoutingContextInit,
+        NULL, // &AODVRoutingContextInit,
         &AODVRoutingContextTriggerEvent,
         &AODVRoutingContextCreateMsg,
         &AODVRoutingContextProcessMsg,

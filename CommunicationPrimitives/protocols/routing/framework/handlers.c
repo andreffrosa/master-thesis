@@ -418,9 +418,10 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
             #endif
 
             bool forward = false;
-            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, meta_data, meta_length, &forward);
+            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, src_proto, meta_data, meta_length, &forward);
 
             if(send_type != NO_SEND) {
+
                 //RF_scheduleJitter(state, RTE_REPLY, NULL, send_type);
                 //state->jitter_timer_active = true;
 
@@ -428,7 +429,7 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
 
                 void* info = (void*[]){entry, payload, &length};
 
-                RF_sendControlMessage(state, send_type, RTE_REPLY, info, NULL/* neigh_header*/);
+                RF_sendControlMessage(state, send_type, RTE_CONTROL_MESSAGE, info, NULL/* neigh_header*/);
             }
         }
     }

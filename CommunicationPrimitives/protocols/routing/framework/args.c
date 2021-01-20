@@ -309,6 +309,8 @@ static DisseminationStrategy* parse_d_strategy(char* value, bool nested) {
         }
     } else if(strcmp(token, (name = "Local")) == 0 || strcmp(token, (name = "LocalDissemination")) == 0) {
         return LocalDissemination();
+    } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVDissemination")) == 0) {
+        return AODVDissemination();
     } else {
         printf("Unrecognized Static Announce Period! \n");
         exit(-1);

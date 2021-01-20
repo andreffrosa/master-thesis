@@ -274,7 +274,7 @@ static void sendMessage(unsigned int last_rep_counter, unsigned int counter, Rou
 
     sprintf(payload, "REQ [%u] %lu %lu", counter, current_time.tv_sec, current_time.tv_nsec);
 
-    RouteMessage(app_args->destination_id, APP_ID, -1, (unsigned char*)payload, strlen(payload)+1);
+    RouteMessage(app_args->destination_id, APP_ID, -1, false, (unsigned char*)payload, strlen(payload)+1);
 }
 
 static void rcvMessage(YggMessage* msg, unsigned int* last_rep_counter, RoutingAppArgs* app_args) {
@@ -312,7 +312,7 @@ static void rcvMessage(YggMessage* msg, unsigned int* last_rep_counter, RoutingA
         //printf("Received REQ, replying with: %s\n", m);
         //fflush(stdout);
 
-        RouteMessage(source_id, APP_ID, -1, (unsigned char*)m, strlen(m)+1);
+        RouteMessage(source_id, APP_ID, -1, false, (unsigned char*)m, strlen(m)+1);
     } else {
 
         *last_rep_counter = counter;
