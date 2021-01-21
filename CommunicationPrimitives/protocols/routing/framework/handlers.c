@@ -103,21 +103,46 @@ void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id
         subtract_timespec(&remaining, SE_getExpTime(entry), &state->current_time);
         SetTimer(&remaining, source_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SOURCE_ENTRY);
     } else {
-        #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, ADVANCED_DEBUG)
-        char id_str[UUID_STR_LEN];
-        uuid_unparse(source_id, id_str);
+        bool destroy = false;
 
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SOURCE EXP", id_str);
-        #endif
+        if( state->args->last_used_source_exp ) {
+            RoutingTableEntry* rt_entry = RT_findEntry(state->routing_table, source_id);
 
-        ST_removeEntry(state->source_table, source_id);
+            if(rt_entry) {
+                struct timespec exp = {0}, delta = {0};
+                struct timespec* last_used = RTE_getLastUsedTime(rt_entry);
+                milli_to_timespec(&delta, SE_getPeriod(entry)*state->args->announce_misses*1000);
+                add_timespec(&exp, last_used, &delta);
 
-        RoutingContextSendType send_type =RF_triggerEvent(state, RTE_SOURCE_EXPIRE, entry);
-        if(send_type != NO_SEND) {
-            RF_scheduleJitter(state, RTE_SOURCE_EXPIRE, entry, send_type);
+                if( compare_timespec(&exp, &state->current_time) <= 0 ) {
+                    destroy = true;
+                } else {
+                    SetTimer(&delta, source_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SOURCE_ENTRY);
+                }
+            } else {
+                destroy = true;
+            }
+        } else {
+            destroy = true;
         }
 
-        destroySourceEntry(entry);
+        if(destroy) {
+            #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, ADVANCED_DEBUG)
+            char id_str[UUID_STR_LEN];
+            uuid_unparse(source_id, id_str);
+
+            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SOURCE EXP", id_str);
+            #endif
+
+            ST_removeEntry(state->source_table, source_id);
+
+            RoutingContextSendType send_type = RF_triggerEvent(state, RTE_SOURCE_EXPIRE, entry);
+            if(send_type != NO_SEND) {
+                RF_scheduleJitter(state, RTE_SOURCE_EXPIRE, entry, send_type);
+            }
+
+            destroySourceEntry(entry);
+        }
     }
 }
 
@@ -381,7 +406,7 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
 
         SourceEntry* entry = ST_getEntry(state->source_table, source_id);
         if(entry == NULL) {
-            entry = newSourceEntry(source_id, header.seq, &exp_time, NULL);
+            entry = newSourceEntry(source_id, header.seq, header.announce_period, &exp_time, NULL);
             ST_addEntry(state->source_table, entry);
 
             // Set timer
@@ -389,12 +414,14 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
 
             process = true;
         } else {
+
             if( header.seq > SE_getSEQ(entry) ) {
                 process = true;
             }
 
             if( header.seq >= SE_getSEQ(entry) ) {
                 SE_setSEQ(entry, header.seq);
+                SE_setPeriod(entry, header.announce_period);
 
                 // Update timer
                 if( compare_timespec(SE_getExpTime(entry), &exp_time) < 0) {

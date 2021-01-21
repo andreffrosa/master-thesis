@@ -18,7 +18,7 @@
 
 #include <assert.h>
 
-routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_misses, unsigned long min_announce_interval_ms, bool ignore_zero_seq) {
+routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_misses, unsigned long min_announce_interval_ms, bool ignore_zero_seq, bool last_used_source_exp) {
 
     routing_framework_args* args = malloc(sizeof(routing_framework_args));
 
@@ -33,6 +33,8 @@ routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, 
 
     args->max_jitter_ms = max_jitter_ms;
     args->period_margin_ms = period_margin_ms;
+
+    args->last_used_source_exp = last_used_source_exp;
 
     return args;
 }
@@ -55,7 +57,8 @@ routing_framework_args* default_routing_framework_args() {
         500,
         3,
         1000,
-        true
+        true,
+        false
     );
 }
 
@@ -117,6 +120,8 @@ routing_framework_args* load_routing_framework_args(const char* file_path) {
                 args->min_announce_interval_ms = strtol(value, NULL, 10);
             } else if( strcmp(key, "ignore_zero_seq") == 0  ) {
                 args->ignore_zero_seq = parse_bool(value);
+            } else if( strcmp(key, "last_used_source_exp") == 0  ) {
+                args->last_used_source_exp = parse_bool(value);
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);

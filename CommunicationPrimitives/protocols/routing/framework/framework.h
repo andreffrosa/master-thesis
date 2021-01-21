@@ -44,12 +44,14 @@ typedef struct _routing_framework_args {
 	unsigned long seen_expiration_ms;
 	unsigned long gc_interval_s;
 
+    bool last_used_source_exp;
+
 } routing_framework_args;
 
 proto_def* routing_framework_init(void* arg);
 void* routing_framework_main_loop(main_loop_args* args);
 
-routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_misses, unsigned long min_announce_interval_ms, bool ignore_zero_seq);
+routing_framework_args* new_routing_framework_args(RoutingAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, unsigned long max_jitter_ms, unsigned long period_margin_ms, unsigned int announce_misses, unsigned long min_announce_interval_ms, bool ignore_zero_seq, bool last_used_source_exp);
 
 routing_framework_args* default_routing_framework_args();
 

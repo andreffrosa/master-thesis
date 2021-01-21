@@ -42,6 +42,14 @@ static RoutingContextSendType AODVRoutingContextTriggerEvent(ModuleState* m_stat
     } else if(event_type == RTE_NEIGHBORS_CHANGE) {
         YggEvent* ev = args;
         ProcessDiscoveryEvent(ev, NULL, routing_table, neighbors, source_table, myID, current_time);
+        //return SEND_INC;
+    } else if(event_type == RTE_SOURCE_EXPIRE) {
+        SourceEntry* entry = (SourceEntry*)args;
+
+        // Remove
+        list* to_remove = list_init();
+        list_add_item_to_tail(to_remove, new_id(SE_getID(entry)));
+        RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
     }
 
     return NO_SEND;
@@ -75,7 +83,15 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
 
             //YggMessage_addPayload(msg, (char*)header2->source_id, sizeof(uuid_t));
 
+            byte amount = 1;
+            YggMessage_addPayload(msg, (char*)&amount, sizeof(byte));
+
             YggMessage_addPayload(msg, (char*)header2->destination_id, sizeof(uuid_t));
+
+            //byte has_seq = false;
+            //YggMessage_addPayload(msg, (char*)&has_seq, sizeof(byte));
+
+            //SourceEntry* entry2 = ST_getEntry(source_table, header2->destination_id);
 
             /*
             YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
@@ -87,6 +103,11 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
             uuid_unparse(header2->destination_id, str);
             printf("GENERATING RERR to remove %s\n", str);
         }
+
+    } else if(event_type == RTE_NEIGHBORS_CHANGE) {
+
+        // TODO: Como saber que neighs morreram ou ficaram uni?
+        // --> é preciso fazer uma queue no estado para guardar esses zés no process e enviar aqui
 
     } else if(event_type == RTE_CONTROL_MESSAGE) {
         assert(info);
@@ -162,10 +183,18 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, RoutingControlHead
             YggMessage_addPayload(msg, (char*)destination_id, sizeof(uuid_t));
             */
 
+            byte amount = 1;
+
+            memcpy(&amount, ptr, sizeof(byte));
+            ptr += sizeof(byte);
+
             uuid_t dest_to_remove_id;
             memcpy(dest_to_remove_id, ptr, sizeof(uuid_t));
             ptr += sizeof(uuid_t);
             YggMessage_addPayload(msg, (char*)dest_to_remove_id, sizeof(uuid_t));
+
+            //byte has_seq = false;
+            //YggMessage_addPayload(msg, (char*)&has_seq, sizeof(byte));
 
             /*YggMessage_addPayload(msg, (char*)myID, sizeof(uuid_t));
 
@@ -226,7 +255,7 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
 
         double route_cost = 0.0;
         byte route_hops = 0;
-        
+
         memcpy(&route_cost, ptr, sizeof(double));
         ptr += sizeof(double);
 
@@ -269,8 +298,44 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
             assert(false);
         }
 
-        memcpy(dest_to_remove_id, ptr, sizeof(uuid_t));
-        ptr += sizeof(uuid_t);
+        byte amount = 0;
+        memcpy(&amount, ptr, sizeof(byte));
+        ptr += sizeof(byte);
+
+        // Update Routing Table
+        list* to_remove = list_init();
+
+        for(int i = 0; i < amount; i++) {
+            memcpy(dest_to_remove_id, ptr, sizeof(uuid_t));
+            ptr += sizeof(uuid_t);
+
+            /*byte has_seq = false;
+            memcpy(&has_seq, ptr, sizeof(byte));
+            ptr += sizeof(byte);*/
+
+
+        /*    unsigned short seq = 0;
+            if(has_seq) {
+                memcpy(&seq, ptr, sizeof(unsigned short));
+                ptr += sizeof(unsigned short);*/
+
+                /*SourceEntry* entry2 = ST_getEntry(source_table, dest_to_remove_id);
+                if( entry2 && compare_seq(unsigned short s1, unsigned short s2, bool ignore_zero)   ) {
+                    list_add_item_to_tail(to_remove, new_id(dest_to_remove_id));
+                }*/
+                /*list_add_item_to_tail(to_remove, new_id(dest_to_remove_id));
+            } else {*/
+                list_add_item_to_tail(to_remove, new_id(dest_to_remove_id));
+            //}
+
+            char str[UUID_STR_LEN];
+            uuid_unparse(dest_to_remove_id, str);
+            printf("RECEIVED RERR to %s\n", str);
+        }
+
+
+
+        RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
 
         /*
         memcpy(prev_hop_id, ptr, sizeof(uuid_t));
@@ -280,16 +345,9 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
         ptr += sizeof(uuid_t);
         */
 
-        char str[UUID_STR_LEN];
-        uuid_unparse(dest_to_remove_id, str);
-        printf("RECEIVED RERR to %s\n", str);
 
-        // Update Routing Table
-        list* to_remove = list_init();
 
-        list_add_item_to_tail(to_remove, new_id(dest_to_remove_id));
 
-        RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
 
         /*
         // Forward

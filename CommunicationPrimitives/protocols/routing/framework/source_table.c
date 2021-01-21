@@ -29,6 +29,7 @@ typedef struct SourceEntry_ {
     unsigned short seq;
     struct timespec exp_time;
     void* attrs;
+    unsigned long period_s;
 } SourceEntry;
 
 SourceTable* newSourceTable() {
@@ -88,7 +89,7 @@ SourceEntry* ST_nexEntry(SourceTable* st, void** iterator) {
     }
 }
 
-SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, struct timespec* exp_time, void* attrs) {
+SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, unsigned long period_s, struct timespec* exp_time, void* attrs) {
     assert(source_id && exp_time);
 
     SourceEntry* se = malloc(sizeof(SourceEntry));
@@ -97,6 +98,7 @@ SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, struct
     se->seq = seq;
     copy_timespec(&se->exp_time, exp_time);
     se->attrs = attrs;
+    se->period_s = period_s;
 
     return se;
 }
@@ -146,4 +148,14 @@ void* SE_setAttrs(SourceEntry* se, void* new_attrs) {
     void* old = se->attrs;
     se->attrs = new_attrs;
     return old;
+}
+
+unsigned long SE_getPeriod(SourceEntry* se) {
+    assert(se);
+    return se->period_s;
+}
+
+void SE_setPeriod(SourceEntry* se, unsigned long new_period_s) {
+    assert(se);
+    se->period_s = new_period_s;
 }
