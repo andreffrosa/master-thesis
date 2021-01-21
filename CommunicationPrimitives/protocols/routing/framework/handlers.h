@@ -80,6 +80,8 @@ void RF_runGarbageCollector(routing_framework_state* state);
 
 void RF_uponStatsRequest(routing_framework_state* state, YggRequest* req);
 
+void RF_notifyCost(routing_framework_state* state);
+
 
 // void RF_disseminateAnnounce(routing_framework_state* state);
 

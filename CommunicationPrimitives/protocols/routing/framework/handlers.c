@@ -114,7 +114,7 @@ void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id
                 milli_to_timespec(&delta, SE_getPeriod(entry)*state->args->announce_misses*1000);
                 add_timespec(&exp, last_used, &delta);
 
-                if( compare_timespec(&exp, &state->current_time) <= 0 ) {
+                if( compare_timespec(&exp, &state->current_time) <= 0 && uuid_compare(RTE_getDestinationID(rt_entry), RTE_getNextHopID(rt_entry)) != 0 ) {
                     destroy = true;
                 } else {
                     SetTimer(&delta, source_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SOURCE_ENTRY);
@@ -238,6 +238,8 @@ void RF_uponDiscoveryEvent(routing_framework_state* state, YggEvent* ev) {
             }
 
             YggEvent_freePayload(&main_ev);
+
+        RF_notifyCost(state);
     }
 
     RoutingContextSendType send_type = RF_triggerEvent(state, RTE_NEIGHBORS_CHANGE, ev);
@@ -527,4 +529,35 @@ void RF_uponStatsRequest(routing_framework_state* state, YggRequest* req) {
 	deliverReply(req);
 
 	YggRequest_freePayload(req);
+}
+
+void RF_notifyCost(routing_framework_state* state) {
+    YggEvent ev = {0};
+    YggEvent_init(&ev, ROUTING_FRAMEWORK_PROTO_ID, EV_ROUTING_NEIGHS);
+
+    byte amount = RN_getSize(state->neighbors);
+    YggEvent_addPayload(&ev, &amount, sizeof(byte));
+
+    void* iterator = NULL;
+    RoutingNeighborsEntry* current_neigh = NULL;
+    while( (current_neigh = RN_nextNeigh(state->neighbors, &iterator)) ) {
+
+        YggEvent_addPayload(&ev, RNE_getID(current_neigh), sizeof(uuid_t));
+
+        YggEvent_addPayload(&ev, RNE_getAddr(current_neigh), WLAN_ADDR_LEN);
+
+        double rx_cost = RNE_getRxCost(current_neigh);
+        YggEvent_addPayload(&ev, &rx_cost, sizeof(double));
+
+        double tx_cost = RNE_getTxCost(current_neigh);
+        YggEvent_addPayload(&ev, &tx_cost, sizeof(double));
+
+        byte is_bi = RNE_isBi(current_neigh);
+        YggEvent_addPayload(&ev, &is_bi, sizeof(byte));
+
+        YggEvent_addPayload(&ev, RNE_getFoundTime(current_neigh), sizeof(struct timespec));
+    }
+
+    deliverEvent(&ev);
+    YggEvent_freePayload(&ev);
 }

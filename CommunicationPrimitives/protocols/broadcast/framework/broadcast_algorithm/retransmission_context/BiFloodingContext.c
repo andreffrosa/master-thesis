@@ -16,12 +16,26 @@
 #include "utility/my_math.h"
 #include "utility/my_string.h"
 
+//#include "protocols/routing/framework/framework.h"
+#define ROUTING_FRAMEWORK_PROTO_ID 161
+#define EV_ROUTING_NEIGHS 0
+
 #include <assert.h>
 
-static void getCost(double_list* copies, byte* hops, double* cost) {
+typedef struct RoutingNeigh_ {
+    double rx_cost;
+    double tx_cost;
+    bool is_bi;
+} RoutingNeigh;
+
+typedef struct BiFloodingState_ {
+    hash_table* neighbors;
+} BiFloodingState;
+
+static bool getCost(BiFloodingState* state, double_list* copies, byte* hops, double* cost) {
     assert(copies && copies->size > 0);
 
-    double min_cost = 0.0; 
+    double min_cost = 0.0;
     unsigned int min_hops = 1;
     bool first = true;
 
@@ -33,28 +47,125 @@ static void getCost(double_list* copies, byte* hops, double* cost) {
         double* cost_ = (double*)hash_table_find_value(headers, "route_cost");
 
         if(hops_ && cost_) {
-            double current_cost = *cost_ + 1.0; // TODO: get neigh tx cost;
-            unsigned int current_hops = *hops_ + 1;
 
-            if(true) { // TODO: neigh is bi
+            RoutingNeigh* n = hash_table_find_value(state->neighbors, getBcastHeader(copy)->sender_id);
+
+            printf("Parent: %s\n", (n?"T":"F"));
+
+            if(n && n->is_bi) {
+                double current_cost = *cost_ + n->tx_cost;
+                unsigned int current_hops = *hops_ + 1;
+
                 if( current_cost < min_cost || (current_cost == min_cost && current_hops < min_hops) || first ) {
                     min_cost = current_cost;
                     min_hops = current_hops;
                     first = false;
                 }
+
             }
         }
     }
 
     *cost = min_cost;
     *hops = min_hops;
+
+    return !first;
+}
+
+
+static void BiFloodingContextInit(ModuleState* context_state, proto_def* protocol_definition, unsigned char* myID) {
+    proto_def_add_consumed_event(protocol_definition, ROUTING_FRAMEWORK_PROTO_ID, EV_ROUTING_NEIGHS);
+}
+
+static void BiFloodingContextEvent(ModuleState* context_state, queue_t_elem* elem, unsigned char* myID, hash_table* contexts) {
+    BiFloodingState* state = (BiFloodingState*) (context_state->vars);
+
+    if(elem->type == YGG_EVENT) {
+        YggEvent* ev = &elem->data.event;
+
+        if( ev->proto_origin == ROUTING_FRAMEWORK_PROTO_ID ) {
+            unsigned short ev_id = ev->notification_id;
+
+            bool process = ev_id == EV_ROUTING_NEIGHS;
+            if(process) {
+
+                printf("EV_ROUTING_NEIGHS\n");
+
+                hash_table_delete(state->neighbors);
+                state->neighbors = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
+
+                unsigned short read = 0;
+                unsigned char* ptr = ev->payload;
+
+                byte amount = 0;
+                memcpy(&amount, ptr, sizeof(byte));
+            	ptr += sizeof(byte);
+                read += sizeof(byte);
+
+                for(int i = 0; i < amount; i++) {
+                    uuid_t id;
+                    memcpy(id, ptr, sizeof(uuid_t));
+                    ptr += sizeof(uuid_t);
+                    read += sizeof(uuid_t);
+
+                    ptr += WLAN_ADDR_LEN;
+                    read += WLAN_ADDR_LEN;
+
+                    double rx_cost = 0.0;
+                    memcpy(&rx_cost, ptr, sizeof(double));
+                    ptr += sizeof(double);
+                    read += sizeof(double);
+
+                    double tx_cost = 0.0;
+                    memcpy(&tx_cost, ptr, sizeof(double));
+                    ptr += sizeof(double);
+                    read += sizeof(double);
+
+                    byte is_bi = false;
+                    memcpy(&is_bi, ptr, sizeof(byte));
+                    ptr += sizeof(byte);
+                    read += sizeof(byte);
+
+                    ptr += sizeof(struct timespec);
+                    read += sizeof(struct timespec);
+
+                    RoutingNeigh* n = malloc(sizeof(RoutingNeigh));
+                    n->rx_cost = rx_cost;
+                    n->tx_cost = tx_cost;
+                    n->is_bi = is_bi;
+                    hash_table_insert(state->neighbors, new_id(id), n);
+                }
+            }
+        }
+    }
+}
+
+static bool BiFloodingContextQuery(ModuleState* context_state, const char* query, void* result, hash_table* query_args, unsigned char* myID, hash_table* contexts) {
+	BiFloodingState* state = (BiFloodingState*) (context_state->vars);
+
+	if(strcmp(query, "bi") == 0) {
+        assert(query_args);
+        void** aux1 = hash_table_find_value(query_args, "p_msg");
+        assert(aux1);
+		PendingMessage* p_msg = *aux1;
+        assert(p_msg);
+
+        byte hops = 0;
+        double route_cost = 0.0;
+        *((bool*)result) = getCost(state, getCopies(p_msg), &hops, &route_cost);
+		return true;
+    } else {
+		return false;
+	}
 }
 
 static void BiFloodingContextAppendHeaders(ModuleState* context_state, PendingMessage* p_msg, hash_table* serialized_headers, unsigned char* myID, hash_table* contexts, struct timespec* current_time) {
 
+    BiFloodingState* state = (BiFloodingState*) (context_state->vars);
+
     byte hops = 0;
     double route_cost = 0.0;
-    getCost(getCopies(p_msg), &hops, &route_cost);
+    getCost(state, getCopies(p_msg), &hops, &route_cost);
 
     appendHeader(serialized_headers, "hops", &hops, sizeof(byte));
     appendHeader(serialized_headers, "route_cost", &route_cost, sizeof(double));
@@ -89,19 +200,30 @@ static void BiFloodingContextParseHeaders(ModuleState* context_state, hash_table
     }
 }
 
+static void BiFloodingContextDestroy(ModuleState* context_state) {
+
+    BiFloodingState* state = (BiFloodingState*) (context_state->vars);
+    hash_table_delete(state->neighbors);
+    free(state);
+}
+
 RetransmissionContext* BiFloodingContext() {
+
+    BiFloodingState* state = malloc(sizeof(BiFloodingState));
+
+    state->neighbors = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
     return newRetransmissionContext(
         "BiFloodingContext",
         NULL,
-        NULL,
-        NULL,
-        NULL,
+        state,
+        &BiFloodingContextInit,
+        &BiFloodingContextEvent,
         &BiFloodingContextAppendHeaders,
         &BiFloodingContextParseHeaders,
+        &BiFloodingContextQuery,
         NULL,
-        NULL,
-        NULL,
+        &BiFloodingContextDestroy,
         NULL
     );
 }

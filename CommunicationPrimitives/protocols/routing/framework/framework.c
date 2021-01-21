@@ -37,6 +37,7 @@ proto_def* routing_framework_init(void* arg) {
 
 	proto_def* framework = create_protocol_definition(ROUTING_FRAMEWORK_PROTO_ID, ROUTING_FRAMEWORK_PROTO_NAME, f_state, NULL);
 	proto_def_add_protocol_main_loop(framework, &routing_framework_main_loop);
+    proto_def_add_produced_events(framework, (RoutingEventType)ROUTING_EVENT_COUNT);
 
     proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, NEW_NEIGHBOR);
     proto_def_add_consumed_event(framework, DISCOVERY_FRAMEWORK_PROTO_ID, UPDATE_NEIGHBOR);

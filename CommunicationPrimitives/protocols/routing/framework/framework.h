@@ -80,4 +80,9 @@ typedef enum {
 	ROUTING_MSG_TYPE_COUNT
 } RoutingMessageType;
 
+typedef enum {
+	EV_ROUTING_NEIGHS = 0,
+	ROUTING_EVENT_COUNT
+} RoutingEvType;
+
 #endif /* _ROUTING_FRAMEWORK_H_ */

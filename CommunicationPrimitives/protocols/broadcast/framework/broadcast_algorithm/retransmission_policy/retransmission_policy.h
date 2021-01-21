@@ -59,4 +59,6 @@ RetransmissionPolicy* AHBPPolicy(bool mobility_extension);
 
 RetransmissionPolicy* DynamicProbabilityPolicy();
 
+RetransmissionPolicy* BiFloodingPolicy();
+
 #endif /* _RETRANSMISSION_POLICY_H_ */

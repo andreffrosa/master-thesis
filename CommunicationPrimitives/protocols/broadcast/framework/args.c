@@ -845,6 +845,8 @@ static RetransmissionPolicy* parse_r_policy(char* value, bool nested) {
         }
     } else if(strcmp(token, (name = "DynamicProbability")) == 0 || strcmp(token, (name = "DynamicProbabilityPolicy")) == 0) {
         return DynamicProbabilityPolicy();
+    } else if(strcmp(token, (name = "BiFlooding")) == 0 || strcmp(token, (name = "BiFloodingPolicy")) == 0) {
+        return BiFloodingPolicy();
     } else {
         printf("Unrecognized Retransmission Policy! \n");
 		exit(-1);
