@@ -15,10 +15,11 @@
 
 #include <assert.h>
 
-RoutingContext* newRoutingContext(void* args, void* vars, rc_init init, rc_triggerEvent trigger_event, rc_createMsg create_msg, rc_processMsg process_msg, rc_destroy destroy) {
+RoutingContext* newRoutingContext(const char* id, void* args, void* vars, rc_init init, rc_triggerEvent trigger_event, rc_createMsg create_msg, rc_processMsg process_msg, rc_destroy destroy) {
 
     RoutingContext* rc = malloc(sizeof(RoutingContext));
 
+    strcpy(rc->id, id);
     rc->state.args = args;
     rc->state.vars = vars;
     rc->init = init;
@@ -44,14 +45,14 @@ void RCtx_init(RoutingContext* context, proto_def* protocol_definition, unsigned
     assert(context);
 
     if(context->init)
-        context->init(&context->state, protocol_definition, myID, r_table, current_time);
+        context->init(&context->state, context->id, protocol_definition, myID, r_table, current_time);
 }
 
 RoutingContextSendType RCtx_triggerEvent(RoutingContext* context, RoutingEventType event_type, void* args, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time) {
     assert(context);
 
     if(context->trigger_event) {
-        return context->trigger_event(&context->state, event_type, args, routing_table, neighbors, source_table, myID, current_time);
+        return context->trigger_event(&context->state, context->id, event_type, args, routing_table, neighbors, source_table, myID, current_time);
     } else {
         return false;
     }
@@ -61,15 +62,21 @@ void RCtx_createMsg(RoutingContext* context, RoutingControlHeader* header, Routi
     assert(context);
 
     if(context->create_msg) {
-        context->create_msg(&context->state, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
+        context->create_msg(&context->state, context->id, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
     }
 }
 
-RoutingContextSendType RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool* forward) {
+RoutingContextSendType RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length) {
     assert(context);
 
     if(context->process_msg) {
-        return context->process_msg(&context->state, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, src_proto, meta_data, meta_length, forward);
+        return context->process_msg(&context->state, context->id, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, src_proto, meta_data, meta_length);
     }
     return NO_SEND;
+}
+
+const char* RCtx_getID(RoutingContext* context) {
+    assert(context);
+
+    return context->id;
 }

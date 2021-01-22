@@ -43,6 +43,8 @@ typedef struct RoutingTableEntry_ {
 
     //void* attrs;
     //unsigned int attrs_size;
+
+    char proto[10];
 } RoutingTableEntry;
 
 RoutingTable* newRoutingTable() {
@@ -151,7 +153,7 @@ bool RT_update(RoutingTable* rt, list* to_update, list* to_remove) {
     return updated;
 }
 
-RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time) {
+RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time, const char* proto) {
     RoutingTableEntry* entry = malloc(sizeof(RoutingTableEntry));
 
     uuid_copy(entry->destination_id, destination_id);
@@ -168,6 +170,8 @@ RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned 
 
     //entry->attrs = attrs;
     //entry->attrs_size = attrs_size;
+
+    strcpy(entry->proto, proto);
 
     return entry;
 }
@@ -195,6 +199,16 @@ unsigned char* RTE_getNextHopID(RoutingTableEntry* entry) {
 WLANAddr* RTE_getNextHopAddr(RoutingTableEntry* entry) {
     assert(entry);
     return &entry->next_hop_addr;
+}
+
+const char* RTE_getProto(RoutingTableEntry* entry) {
+    assert(entry);
+    return entry->proto;
+}
+
+void RTE_setProto(RoutingTableEntry* entry, const char* new_proto) {
+    assert(entry);
+    strcpy(entry->proto, new_proto);
 }
 
 void RTE_setNexHop(RoutingTableEntry* entry, unsigned char* id, WLANAddr* addr) {
@@ -320,7 +334,7 @@ char* RTE_toString(RoutingTableEntry* entry, struct timespec* current_time) {
 char* RT_toString(RoutingTable* rt, char** str, struct timespec* current_time) {
     assert(rt && current_time);
 
-    char* header = " # |            DESTINATION ID            |             NEXT HOP ID              |    NEXT HOP MAC   |  COST  |  HOPS  |  FOUND  |  USED  |  FORWARDED  |  \n";
+    char* header = " # |            DESTINATION ID            |             NEXT HOP ID              |    NEXT HOP MAC   |  COST  |  HOPS  |  FOUND  |  USED  |  FORWARDED  |  PROTO  | \n";
 
     unsigned int line_size = strlen(header) + 1;
 
@@ -390,8 +404,13 @@ char* RT_toString(RoutingTable* rt, char** str, struct timespec* current_time) {
         sprintf(forwarded_str, "%lu", RTE_getMessagesForwarded(current_route));
         align_str(forwarded_str, forwarded_str, 11, "R");
 
-        sprintf(ptr, "%2.d   %s   %s   %s   %s     %s    %s   %s   %s  \n",
-        counter+1, dest_id_str, next_hop_id_str, next_hop_addr_str, cost_str, hops_str, found_time_str, used_time_str, forwarded_str);
+        char proto_str[8];
+        assert(strlen(RTE_getProto(current_route)) < 8);
+        sprintf(proto_str, "%s", RTE_getProto(current_route));
+        align_str(proto_str, proto_str, 7, "CR");
+
+        sprintf(ptr, "%2.d   %s   %s   %s   %s     %s    %s   %s   %s   %s \n",
+        counter+1, dest_id_str, next_hop_id_str, next_hop_addr_str, cost_str, hops_str, found_time_str, used_time_str, forwarded_str, proto_str);
         ptr += strlen(ptr);
 
         counter++;

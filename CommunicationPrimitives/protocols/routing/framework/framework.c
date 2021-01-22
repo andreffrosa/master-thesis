@@ -93,7 +93,9 @@ void* routing_framework_main_loop(main_loop_args* args) {
 		}
 
         if(!processed) {
-            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "event not processed");
+            char str[100];
+            sprintf(str, "event not processed %d", elem.type);
+            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", str);
         }
 
 		// Release memory of elem payload
@@ -132,7 +134,7 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
     return false;
 }
 
-/*static*/ bool processMessage(routing_framework_state* f_state, YggMessage* message) {
+static bool processMessage(routing_framework_state* f_state, YggMessage* message) {
 
     unsigned short src_proto = 0;
     byte aux = 0;
@@ -165,11 +167,15 @@ static bool processTimer(routing_framework_state* f_state, YggTimer* timer) {
         uuid_t source_id;
         memcpy(source_id, meta_data, sizeof(uuid_t));
 
-        if(type == MSG_CONTROL_MESSAGE && uuid_compare(source_id, f_state->myID) != 0) {
-            printf("RECEIVED CONTROL MSG \n");
-            RF_uponNewControlMessage(f_state, &msg, source_id, src_proto, meta_data, meta_length);
+        if(type == MSG_CONTROL_MESSAGE) {
+            if(uuid_compare(source_id, f_state->myID) != 0) {
+                printf("RECEIVED CONTROL MSG \n");
+                RF_uponNewControlMessage(f_state, &msg, source_id, src_proto, meta_data, meta_length);
+            }
+
             return true;
         }
+
     } else if( src_proto == ROUTING_FRAMEWORK_PROTO_ID ) {
         ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
         type = aux;

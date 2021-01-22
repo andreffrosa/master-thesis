@@ -169,6 +169,25 @@ static RoutingContext* parse_r_context(char* value, bool nested) {
         return OLSRRoutingContext();
     } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVRoutingContext")) == 0) {
         return AODVRoutingContext();
+    } else if(strcmp(token, (name = "ZONE")) == 0 || strcmp(token, (name = "ZoneRoutingContext")) == 0) {
+
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+            RoutingContext* proactive_ctx = parse_r_context(token, true);
+
+            token = strtok_r(NULL, " ", &ptr);
+            if(token != NULL) {
+                RoutingContext* reactive_ctx = parse_r_context(token, true);
+
+                return ZoneRoutingContext(proactive_ctx, reactive_ctx);
+            } else {
+                printf("Parameter 2 of %s not passed!\n", name);
+                exit(-1);
+            }
+        } else {
+            printf("Parameter 1 of %s not passed!\n", name);
+            exit(-1);
+        }
     } else {
         printf("Unrecognized Routing Context! \n");
         exit(-1);
@@ -316,6 +335,8 @@ static DisseminationStrategy* parse_d_strategy(char* value, bool nested) {
         return LocalDissemination();
     } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVDissemination")) == 0) {
         return AODVDissemination();
+    } else if(strcmp(token, (name = "ZONE")) == 0 || strcmp(token, (name = "ZoneDissemination")) == 0) {
+        return ZoneDissemination();
     } else {
         printf("Unrecognized Static Announce Period! \n");
         exit(-1);

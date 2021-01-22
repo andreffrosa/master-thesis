@@ -13,7 +13,8 @@ DURATION=$2
 TESTS=(
 #"routing/static"
 #"routing/olsr;broadcast/mpr;discovery/OLSRDiscovery"
-"routing/aodv;broadcast/biflooding;discovery/PeriodicJointDiscovery"
+#"routing/aodv;broadcast/biflooding;discovery/PeriodicJointDiscovery"
+"routing/zone;broadcast/biflooding;discovery/OLSRDiscovery"
 )
 
 i=1

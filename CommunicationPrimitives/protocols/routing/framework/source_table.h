@@ -31,9 +31,9 @@ SourceEntry* ST_removeEntry(SourceTable* st, unsigned char* source_id);
 
 SourceEntry* ST_nexEntry(SourceTable* st, void** iterator);
 
-SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, unsigned long period_s, struct timespec* exp_time, void* attrs);
+SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, unsigned long period_s, struct timespec* exp_time);
 
-void* destroySourceEntry(SourceEntry* se);
+void destroySourceEntry(SourceEntry* se);
 
 unsigned char* SE_getID(SourceEntry* se);
 
@@ -45,9 +45,11 @@ struct timespec* SE_getExpTime(SourceEntry* se);
 
 void SE_setExpTime(SourceEntry* se, struct timespec* new_exp_time);
 
-void* SE_getAttrs(SourceEntry* se);
+void* SE_getAttr(SourceEntry* se, char* key);
 
-void* SE_setAttrs(SourceEntry* se, void* new_attrs);
+void* SE_setAttr(SourceEntry* se, char* key, void* value);
+
+void* SE_remAttr(SourceEntry* se, char* key);
 
 unsigned long SE_getPeriod(SourceEntry* se);
 

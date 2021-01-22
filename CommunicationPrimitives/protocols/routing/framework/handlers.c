@@ -408,7 +408,7 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
 
         SourceEntry* entry = ST_getEntry(state->source_table, source_id);
         if(entry == NULL) {
-            entry = newSourceEntry(source_id, header.seq, header.announce_period, &exp_time, NULL);
+            entry = newSourceEntry(source_id, header.seq, header.announce_period, &exp_time);
             ST_addEntry(state->source_table, entry);
 
             // Set timer
@@ -446,8 +446,8 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
             ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "RCV CONTROL", str);
             #endif
 
-            bool forward = false;
-            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, src_proto, meta_data, meta_length, &forward);
+            //bool forward = false;
+            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, src_proto, meta_data, meta_length);
 
             if(send_type != NO_SEND) {
 

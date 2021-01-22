@@ -16,6 +16,7 @@
 #include "data_structures/hash_table.h"
 
 #include "utility/my_misc.h"
+#include "utility/my_string.h"
 
 #include <uuid/uuid.h>
 #include <assert.h>
@@ -28,8 +29,10 @@ typedef struct SourceEntry_ {
     uuid_t source_id;
     unsigned short seq;
     struct timespec exp_time;
-    void* attrs;
+    //void* attrs;
     unsigned long period_s;
+
+    hash_table* attrs;
 } SourceEntry;
 
 SourceTable* newSourceTable() {
@@ -89,7 +92,7 @@ SourceEntry* ST_nexEntry(SourceTable* st, void** iterator) {
     }
 }
 
-SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, unsigned long period_s, struct timespec* exp_time, void* attrs) {
+SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, unsigned long period_s, struct timespec* exp_time) {
     assert(source_id && exp_time);
 
     SourceEntry* se = malloc(sizeof(SourceEntry));
@@ -97,20 +100,19 @@ SourceEntry* newSourceEntry(unsigned char* source_id, unsigned short seq, unsign
     uuid_copy(se->source_id, source_id);
     se->seq = seq;
     copy_timespec(&se->exp_time, exp_time);
-    se->attrs = attrs;
+    se->attrs = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
     se->period_s = period_s;
 
     return se;
 }
 
-void* destroySourceEntry(SourceEntry* se) {
+void destroySourceEntry(SourceEntry* se) {
     if(se) {
-        void* attrs = se->attrs;
+        assert(se->attrs->n_items == 0);
+        hash_table_delete(se->attrs);
         free(se);
-        return attrs;
     }
 
-    return NULL;
 }
 
 unsigned char* SE_getID(SourceEntry* se) {
@@ -138,16 +140,19 @@ void SE_setExpTime(SourceEntry* se, struct timespec* new_exp_time) {
     copy_timespec(&se->exp_time, new_exp_time);
 }
 
-void* SE_getAttrs(SourceEntry* se) {
+void* SE_getAttr(SourceEntry* se, char* key) {
     assert(se);
-    return se->attrs;
+    return hash_table_find_value(se->attrs, key);
 }
 
-void* SE_setAttrs(SourceEntry* se, void* new_attrs) {
+void* SE_setAttr(SourceEntry* se, char* key, void* value) {
     assert(se);
-    void* old = se->attrs;
-    se->attrs = new_attrs;
-    return old;
+    return hash_table_insert(se->attrs, key, value);
+}
+
+void* SE_remAttr(SourceEntry* se, char* key) {
+    assert(se);
+    return hash_table_remove(se->attrs, key);
 }
 
 unsigned long SE_getPeriod(SourceEntry* se) {

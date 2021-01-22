@@ -33,7 +33,7 @@ RoutingTableEntry* RT_removeEntry(RoutingTable* rt, unsigned char* destination_i
 
 bool RT_update(RoutingTable* rt, list* to_update, list* to_remove);
 
-RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time);
+RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time, const char* proto);
 
 RoutingTableEntry* RT_nextRoute(RoutingTable* rt, void** iterator);
 
@@ -44,6 +44,10 @@ unsigned char* RTE_getDestinationID(RoutingTableEntry* entry);
 unsigned char* RTE_getNextHopID(RoutingTableEntry* entry);
 
 WLANAddr* RTE_getNextHopAddr(RoutingTableEntry* entry);
+
+const char* RTE_getProto(RoutingTableEntry* entry);
+
+void RTE_setProto(RoutingTableEntry* entry, const char* new_proto);
 
 void RTE_setNexHop(RoutingTableEntry* entry, unsigned char* id, WLANAddr* addr);
 
