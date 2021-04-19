@@ -54,7 +54,7 @@ hash_table* getHeaders(MessageCopy* msg_copy);
 
 ////////////////////////////////////////////////////////////
 
-PendingMessage* newPendingMessage(unsigned char* id, short proto_origin, void* payload, int length, int total_phases);
+PendingMessage* newPendingMessage(unsigned char* id, short proto_origin, unsigned int alg, void* payload, int length, int total_phases);
 
 void deletePendingMessage(PendingMessage* p_msg);
 
@@ -79,6 +79,8 @@ double_list* getCopies(PendingMessage* p_msg);
 unsigned int getCurrentPhase(PendingMessage* p_msg);
 
 PhaseStats* getPhaseStats(PendingMessage* p_msg, unsigned int phase);
+
+unsigned int getAlg(PendingMessage* p_msg);
 
 void splitDuration(PendingMessage* p_msg, struct timespec* current_time, unsigned long* elapsed, unsigned long* remaining);
 

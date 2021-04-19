@@ -11,10 +11,10 @@ PIS=$1
 DURATION=$2
 
 TESTS=(
-#"broadcast/flooding"
-#"broadcast/gossip1"
+"broadcast/flooding"
+"broadcast/gossip1"
 #"broadcast/gossip1_horizon"
-#"broadcast/gossip2;discovery/PeriodicHelloDiscovery"
+"broadcast/gossip2;discovery/PeriodicHelloDiscovery"
 #"broadcast/gossip3"
 #"broadcast/rapid;discovery/PeriodicHelloDiscovery"
 #"broadcast/enhanced_rapid;discovery/PeriodicHelloDiscovery"
@@ -26,9 +26,9 @@ TESTS=(
 #"broadcast/naba3;discovery/PeriodicJointDiscovery"
 #"broadcast/naba4;discovery/PeriodicJointDiscovery"
 #"broadcast/sba;discovery/PeriodicJointDiscovery"
-"broadcast/mpr;discovery/OLSRDiscovery"
+#"broadcast/mpr;discovery/OLSRDiscovery"
 #"broadcast/ahbp;discovery/PeriodicJointDiscovery"
-"broadcast/lenwb;discovery/LENWBDiscovery"
+#"broadcast/lenwb;discovery/LENWBDiscovery"
 #"broadcast/dynamic_probability"
 
 #"broadcast/rad_extension"
