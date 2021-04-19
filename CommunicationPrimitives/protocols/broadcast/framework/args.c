@@ -647,7 +647,7 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char** ptr) {
         }
     } else if(strcmp(token, (name = "BiFlooding")) == 0) {
 
-        token = strtok_r(NULL, " ", &ptr);
+        token = strtok_r(NULL, " ", ptr);
 		if(token != NULL) {
 			unsigned long t = strtol(token, NULL, 10);
 

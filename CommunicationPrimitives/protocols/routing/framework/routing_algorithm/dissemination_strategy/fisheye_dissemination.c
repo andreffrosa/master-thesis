@@ -31,7 +31,7 @@ static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* m
 
     unsigned int radius = *current_phase == args->n_phases ? -1 : *current_phase*args->phase_radius;
 
-    BroadcastMessage(msg->Proto_id, radius, (byte*)msg->data, msg->dataLen);
+    BroadcastMessage(msg->Proto_id, radius, 0, (byte*)msg->data, msg->dataLen);
 }
 
 DisseminationStrategy* FisheyeDissemination(unsigned int n_phases, unsigned int phase_radius) {

@@ -64,7 +64,7 @@ static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* m
 
 }
 
-DisseminationStrategy* ZoneDissemination(int zone_radius) {
+DisseminationStrategy* ZoneDissemination(unsigned short zone_radius) {
 
     unsigned short* zone_radius_arg = malloc(sizeof(unsigned short));
     *zone_radius_arg = zone_radius;

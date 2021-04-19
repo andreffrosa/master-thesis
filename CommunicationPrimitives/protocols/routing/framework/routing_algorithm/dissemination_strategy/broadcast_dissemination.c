@@ -21,7 +21,7 @@ static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* m
 
     unsigned int radius = -1; // Infinite
 
-    BroadcastMessage(msg->Proto_id, radius, (byte*)msg->data, msg->dataLen);
+    BroadcastMessage(msg->Proto_id, radius, 0, (byte*)msg->data, msg->dataLen);
 }
 
 DisseminationStrategy* BroadcastDissemination() {

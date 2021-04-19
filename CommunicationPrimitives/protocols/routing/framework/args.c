@@ -336,7 +336,16 @@ static DisseminationStrategy* parse_d_strategy(char* value, bool nested) {
     } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVDissemination")) == 0) {
         return AODVDissemination();
     } else if(strcmp(token, (name = "ZONE")) == 0 || strcmp(token, (name = "ZoneDissemination")) == 0) {
-        return ZoneDissemination();
+
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+            unsigned short zone_radius = strtol(token, NULL, 10);
+
+            return ZoneDissemination(zone_radius);
+        } else {
+            printf("Parameter 1 of %s not passed!\n", name);
+            exit(-1);
+        }
     } else {
         printf("Unrecognized Static Announce Period! \n");
         exit(-1);
