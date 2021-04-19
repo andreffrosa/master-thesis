@@ -21,8 +21,8 @@
 static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* msg, RoutingEventType event_type, void* info) {
 
     if(event_type == RTE_NEIGHBORS_CHANGE || event_type == RTE_ANNOUNCE_TIMER || event_type == RTE_SOURCE_EXPIRE) {
-        unsigned int radius = 2; // Infinite
-        BroadcastMessage(msg->Proto_id, radius, (byte*)msg->data, msg->dataLen);
+        unsigned short radius = *(unsigned short*)(m_state->args);
+        BroadcastMessage(msg->Proto_id, radius, 0, (byte*)msg->data, msg->dataLen);
     } else {
         bool line = false;
 
@@ -58,18 +58,19 @@ static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* m
             RouteMessage(destination_id, msg->Proto_id, -1, true, (byte*)msg->data, msg->dataLen);
         } else {
             unsigned int radius = -1; // Infinite
-            BroadcastMessage(msg->Proto_id, radius, (byte*)msg->data, msg->dataLen);
+            BroadcastMessage(msg->Proto_id, radius, 1, (byte*)msg->data, msg->dataLen);
         }
     }
 
 }
 
-DisseminationStrategy* ZoneDissemination() {
+DisseminationStrategy* ZoneDissemination(int zone_radius) {
 
-    // TODO; fazer zone radius
+    unsigned short* zone_radius_arg = malloc(sizeof(unsigned short));
+    *zone_radius_arg = zone_radius;
 
     return newDisseminationStrategy(
-        NULL,
+        zone_radius_arg,
         NULL,
         &disseminate,
         NULL

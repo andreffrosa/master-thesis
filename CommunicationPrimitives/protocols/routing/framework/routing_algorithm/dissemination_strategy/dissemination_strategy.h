@@ -32,6 +32,6 @@ DisseminationStrategy* LocalDissemination();
 
 DisseminationStrategy* AODVDissemination();
 
-DisseminationStrategy* ZoneDissemination();
+DisseminationStrategy* ZoneDissemination(unsigned short zone_radius);
 
 #endif /*_DISSEMINATION_STRATEGY_H_*/
