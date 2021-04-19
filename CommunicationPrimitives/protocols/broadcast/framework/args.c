@@ -102,6 +102,14 @@ broadcast_framework_args* load_broadcast_framework_args(const char* file_path) {
                 args->gc_interval_s = strtol(value, NULL, 10);
             } else if( strcmp(key, "late_delivery") == 0 ) {
                 args->late_delivery = parse_bool(value);
+            } else if( strcmp(key, "measure_latency") == 0 ) {
+                bool measure_latency = parse_bool(value);
+
+                if(measure_latency) {
+                    for(int i = 0; i < args->algorithms_length; i++) {
+                        BA_addContext(args->algorithms[i], LatencyContext());
+                    }
+                }
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
