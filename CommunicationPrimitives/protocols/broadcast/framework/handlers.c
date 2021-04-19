@@ -49,7 +49,7 @@ void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage
     unsigned long elapsed, remaining;
     splitDuration(p_msg, &state->current_time, &elapsed, &remaining);
 
-	unsigned long delay = BA_computeRetransmissionDelay(state->args->algorithm, p_msg, remaining, isCopy, state->myID);
+	unsigned long delay = BA_computeRetransmissionDelay(state->args->algorithms[getAlg(p_msg)], p_msg, remaining, isCopy, state->myID);
 
     setCurrentPhaseDuration(p_msg, elapsed + delay);
 
@@ -93,7 +93,7 @@ void changePhase(broadcast_framework_state* state, PendingMessage* p_msg) {
 
     finishCurrentPhase(p_msg);
 
-	if( getCurrentPhase(p_msg) < BA_getRetransmissionPhases(state->args->algorithm) ) {
+	if( getCurrentPhase(p_msg) < BA_getRetransmissionPhases(state->args->algorithms[getAlg(p_msg)]) ) {
         // Increment current current_phase
         incCurrentPhase(p_msg);
 
@@ -208,6 +208,10 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
     unsigned short ttl = 0;
     void* ptr = YggRequest_readPayload(req, NULL, &ttl, sizeof(ttl));
 
+    unsigned int alg = 0;
+    ptr = YggRequest_readPayload(req, ptr, &alg, sizeof(alg));
+    assert(alg < state->args->algorithms_length);
+
     unsigned short size = req->length - sizeof(ttl);
     byte data[size];
     ptr = YggRequest_readPayload(req, ptr, (char*)data, size);
@@ -217,7 +221,7 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
 	genUUID(msg_id);
 
 	// Create a new message item
-    PendingMessage* p_msg = newPendingMessage(msg_id, req->proto_origin, data, size, BA_getRetransmissionPhases(state->args->algorithm));
+    PendingMessage* p_msg = newPendingMessage(msg_id, req->proto_origin, alg, data, size, BA_getRetransmissionPhases(state->args->algorithms[alg]));
     setCurrentPhaseStats(p_msg, &state->current_time, 0L, true, true);
 
     // Add the first copy
@@ -291,7 +295,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 
     assert(header.ttl > 0);
 
-    hash_table* headers = BA_parseHeader(state->args->algorithm, header.context_length, context_header, state->myID);
+    hash_table* headers = BA_parseHeader(state->args->algorithms[header.alg], header.context_length, context_header, state->myID);
 
     PendingMessage* p_msg = getPendingMessage(state->seen_msgs, header.msg_id);
 
@@ -299,7 +303,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 	if( p_msg == NULL ){
 
 		// Insert on seen_msgs
-        p_msg = newPendingMessage(header.msg_id, header.dest_proto, toDeliver.data, toDeliver.dataLen, BA_getRetransmissionPhases(state->args->algorithm));
+        p_msg = newPendingMessage(header.msg_id, header.dest_proto, header.alg, toDeliver.data, toDeliver.dataLen, BA_getRetransmissionPhases(state->args->algorithms[header.alg]));
         setCurrentPhaseStart(p_msg, &state->current_time);
 
         addMessageCopy(p_msg, &state->current_time, &header, context_header, headers);
@@ -311,7 +315,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
             DeliverMessage(state, p_msg);
         }
 
-        BA_processCopy(state->args->algorithm, p_msg, state->myID);
+        BA_processCopy(state->args->algorithms[getAlg(p_msg)], p_msg, state->myID);
 
 		// Compute Current Phase's Retransmission Delay
 		ComputeRetransmissionDelay(state, p_msg, false);
@@ -319,7 +323,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
 	} else {  // Duplicate message
         addMessageCopy(p_msg, &state->current_time, &header, context_header, headers);
 
-        BA_processCopy(state->args->algorithm, p_msg, state->myID);
+        BA_processCopy(state->args->algorithms[getAlg(p_msg)], p_msg, state->myID);
 
         if( isPendingMessageActive(p_msg) ){
             // Compute Retransmission Delay
@@ -394,7 +398,7 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
             bool retransmit = false;
             if(max_ttl > 0) {
                 // Execute Policy
-        		retransmit = BA_evalRetransmissionPolicy(state->args->algorithm, p_msg, state->myID);
+        		retransmit = BA_evalRetransmissionPolicy(state->args->algorithms[getAlg(p_msg)], p_msg, state->myID);
             }/* else {
                 retransmit = false;
             }*/
@@ -455,9 +459,11 @@ void serializeHeader(broadcast_framework_state* state, PendingMessage* p_msg, Br
     unsigned char* source_id = getBcastHeader(first)->source_id;
     uuid_copy(header->source_id, source_id);
 
-	header->context_length = BA_createHeader(state->args->algorithm, p_msg, context_header, state->myID, &state->current_time);
+	header->context_length = BA_createHeader(state->args->algorithms[getAlg(p_msg)], p_msg, context_header, state->myID, &state->current_time);
 
     header->ttl = ttl;
+
+    header->alg = getAlg(p_msg);
 }
 
 void serializeMessage(broadcast_framework_state* state, YggMessage* m, PendingMessage* p_msg, unsigned short ttl) {

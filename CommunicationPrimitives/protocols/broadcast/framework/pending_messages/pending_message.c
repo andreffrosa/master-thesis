@@ -32,6 +32,8 @@ typedef struct PendingMessage_ {
 
 	unsigned int current_phase;      		// Message's current phase
 
+    unsigned int alg;
+
     PhaseStats* PhaseStats;
 } PendingMessage;
 
@@ -114,7 +116,7 @@ hash_table* getHeaders(MessageCopy* p_msg_copy) {
 
 ////////////////////////////////////////////////////////////
 
-PendingMessage* newPendingMessage(unsigned char* id, short proto_origin, void* payload, int length, int total_phases) {
+PendingMessage* newPendingMessage(unsigned char* id, short proto_origin, unsigned int alg, void* payload, int length, int total_phases) {
 	PendingMessage* p_msg = malloc(sizeof(PendingMessage));
 
 	uuid_copy(p_msg->id, id);
@@ -126,6 +128,8 @@ PendingMessage* newPendingMessage(unsigned char* id, short proto_origin, void* p
 
 	p_msg->active = true;
 	p_msg->current_phase = 1;
+
+    p_msg->alg = alg;
 
     p_msg->PhaseStats = malloc(total_phases*sizeof(PhaseStats));
     memset(p_msg->PhaseStats, 0, total_phases*sizeof(PhaseStats));
@@ -204,6 +208,11 @@ PhaseStats* getPhaseStats(PendingMessage* p_msg, unsigned int phase) {
     assert(p_msg != NULL);
     assert(p_msg->PhaseStats);
     return &p_msg->PhaseStats[phase-1];
+}
+
+unsigned int getAlg(PendingMessage* p_msg) {
+    assert(p_msg != NULL);
+    return p_msg->alg;
 }
 
 /////////////////////////////////////////////////////////////

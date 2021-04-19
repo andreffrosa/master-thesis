@@ -35,7 +35,8 @@ typedef struct broadcast_stats_ {
 } broadcast_stats;
 
 typedef struct broadcast_framework_args_ {
-	BroadcastAlgorithm* algorithm;
+	BroadcastAlgorithm** algorithms;
+    unsigned int algorithms_length;
 	unsigned long seen_expiration_ms;
 	unsigned long gc_interval_s;
     bool late_delivery;
@@ -44,13 +45,13 @@ typedef struct broadcast_framework_args_ {
 proto_def* broadcast_framework_init(void* arg);
 void* broadcast_framework_main_loop(main_loop_args* args);
 
-broadcast_framework_args* new_broadcast_framework_args(BroadcastAlgorithm* algorithm, unsigned long seen_expiration_ms, unsigned long gc_interval_s, bool late_delivery);
+broadcast_framework_args* new_broadcast_framework_args(BroadcastAlgorithm** algorithms, unsigned int algorithms_length, unsigned long seen_expiration_ms, unsigned long gc_interval_s, bool late_delivery);
 
 broadcast_framework_args* default_broadcast_framework_args();
 
 broadcast_framework_args* load_broadcast_framework_args(const char* file_path);
 
-void BroadcastMessage(unsigned short protocol_id, unsigned short ttl, byte* data, unsigned short size);
+void BroadcastMessage(unsigned short protocol_id, unsigned short ttl, unsigned int alg, byte* data, unsigned short size);
 
 typedef enum {
     REQ_BROADCAST_MESSAGE = 0,

@@ -23,6 +23,7 @@ typedef struct BroadcastHeader_ {
 	uuid_t msg_id;
 	unsigned short dest_proto;
     unsigned short ttl;
+    unsigned char alg;
 	unsigned short context_length;
 } BroadcastHeader;
 #pragma pack()

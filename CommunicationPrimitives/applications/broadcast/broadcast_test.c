@@ -254,7 +254,7 @@ static void sendMessage(const char* hostname, unsigned int counter, BroadcastApp
 
     sprintf(payload, "I'm %s and this is my %d%s message.", hostname, counter, ordinal);
 
-    BroadcastMessage(APP_ID, -1, (byte*)payload, strlen(payload)+1);
+    BroadcastMessage(APP_ID, -1, 0, (byte*)payload, strlen(payload)+1);
 
     if(app_args->verbose)
 	   ygg_log(APP_NAME, "BROADCAST SENT", payload);
