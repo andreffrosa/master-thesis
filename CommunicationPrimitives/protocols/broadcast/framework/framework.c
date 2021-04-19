@@ -38,7 +38,9 @@ proto_def* broadcast_framework_init(void* arg) {
 	// Initialize f_state variables
 	init(f_state);
 
-	BA_initRetransmissionContext(f_state->args->algorithm, framework, f_state->myID);
+    for(int i = 0; i < f_state->args->algorithms_length; i++) {
+        BA_initRetransmissionContext(f_state->args->algorithms[i], framework, f_state->myID);
+    }
 
 	return framework;
 }
@@ -81,7 +83,9 @@ void* broadcast_framework_main_loop(main_loop_args* args) {
 
         // this eent is meant to be processed by the Retransmission Context
         if(!processed) {
-            BA_processEvent(f_state->args->algorithm, &elem, f_state->myID);
+            for(int i = 0; i < f_state->args->algorithms_length; i++) {
+                BA_processEvent(f_state->args->algorithms[i], &elem, f_state->myID);
+            }
         }
 
 		// Release memory of elem payload
@@ -175,11 +179,14 @@ static bool processEvent(broadcast_framework_state* f_state, YggEvent* event) {
     }
 }
 
-void BroadcastMessage(unsigned short protocol_id, unsigned short ttl, byte* data, unsigned short size) {
+void BroadcastMessage(unsigned short protocol_id, unsigned short ttl, unsigned int alg, byte* data, unsigned short size) {
     YggRequest framework_bcast_req;
     YggRequest_init(&framework_bcast_req, protocol_id, BROADCAST_FRAMEWORK_PROTO_ID, REQUEST, REQ_BROADCAST_MESSAGE);
 
     YggRequest_addPayload(&framework_bcast_req, &ttl, sizeof(ttl));
+
+    YggRequest_addPayload(&framework_bcast_req, &alg, sizeof(alg));
+
     YggRequest_addPayload(&framework_bcast_req, data, size);
 
     deliverRequest(&framework_bcast_req);
