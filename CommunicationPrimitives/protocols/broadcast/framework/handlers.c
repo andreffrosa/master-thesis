@@ -212,7 +212,7 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
     ptr = YggRequest_readPayload(req, ptr, &alg, sizeof(alg));
     assert(alg < state->args->algorithms_length);
 
-    unsigned short size = req->length - sizeof(ttl);
+    unsigned short size = req->length - (sizeof(ttl) + sizeof(alg));
     byte data[size];
     ptr = YggRequest_readPayload(req, ptr, (char*)data, size);
 
