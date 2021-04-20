@@ -165,16 +165,20 @@ static void RecomputeRoutingTable(SourceTable* source_table, RoutingNeighbors* n
     while( (neigh = RN_nextNeigh(neighbors, &iterator)) ) {
         unsigned char* neigh_id = RNE_getID(neigh);
         assert(graph_find_node(g, neigh_id) == NULL);
-        graph_insert_node(g, new_id(neigh_id), NULL);
 
-        graph_insert_edge(g, myID, neigh_id, new_double(RNE_getTxCost(neigh)));
-        graph_insert_edge(g, neigh_id, myID, new_double(RNE_getRxCost(neigh)));
+        if( RNE_isBi(neigh) ) {
+            graph_insert_node(g, new_id(neigh_id), NULL);
 
-        /*
-        char str[UUID_STR_LEN];
-        uuid_unparse(neigh_id, str);
-        printf("neigh_id: %s\n", str);
-        */
+            graph_insert_edge(g, myID, neigh_id, new_double(RNE_getTxCost(neigh)));
+            graph_insert_edge(g, neigh_id, myID, new_double(RNE_getRxCost(neigh)));
+
+            /*
+            char str[UUID_STR_LEN];
+            uuid_unparse(neigh_id, str);
+            printf("neigh_id: %s\n", str);
+            */
+        }
+
     }
 
     //printf("tc:\n");

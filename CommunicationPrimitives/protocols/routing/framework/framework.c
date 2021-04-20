@@ -94,7 +94,15 @@ void* routing_framework_main_loop(main_loop_args* args) {
 
         if(!processed) {
             char str[100];
-            sprintf(str, "event not processed %d", elem.type);
+            char* type = NULL;
+            switch (elem.type) {
+                case YGG_TIMER: type = "YGG_TIMER"; break;
+                case YGG_MESSAGE: type = "YGG_MESSAGE"; break;
+                case YGG_REQUEST: type = "YGG_REQUEST"; break;
+                case YGG_EVENT: type = "YGG_EVENT"; break;
+                default: type = "???";
+            }
+            sprintf(str, "event not processed %s", type);
             ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", str);
         }
 
@@ -152,7 +160,8 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
         unsigned short payload_size = 0;
         ptr = YggMessage_readPayload(message, ptr, &payload_size, sizeof(unsigned short));
 
-        ptr = YggMessage_readPayload(message, ptr, &type, sizeof(byte));
+        ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
+        type = aux;
         printf("TYPE: %d\n", type);
 
         byte payload[payload_size];
@@ -179,6 +188,7 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
     } else if( src_proto == ROUTING_FRAMEWORK_PROTO_ID ) {
         ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
         type = aux;
+        printf("TYPE: %d\n", type);
 
         printf("RECEIVED MSG \n");
 
