@@ -20,27 +20,30 @@
 
 static bool BiFloodingPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, unsigned char* myID, hash_table* contexts) {
 
-    bool bi = false;
+    unsigned int current_phase = getCurrentPhase(p_msg);
 
-    hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
-    char* key = malloc(6*sizeof(char));
-    strcpy(key, "p_msg");
-    void** value = malloc(sizeof(void*));
-    *value = p_msg;
-    hash_table_insert(query_args, key, value);
+    if(current_phase == 1) {
+        bool bi = false;
 
+        hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
+        char* key = malloc(6*sizeof(char));
+        strcpy(key, "p_msg");
+        void** value = malloc(sizeof(void*));
+        *value = p_msg;
+        hash_table_insert(query_args, key, value);
 
-    RetransmissionContext* r_context = hash_table_find_value(contexts, "BiFloodingContext");
-    assert(r_context);
+        RetransmissionContext* r_context = hash_table_find_value(contexts, "BiFloodingContext");
+        assert(r_context);
 
-    bool found = RC_query(r_context, "bi", &bi, query_args, myID, contexts);
-    assert(found);
+        bool found = RC_query(r_context, "bi", &bi, query_args, myID, contexts);
+        assert(found);
 
-    hash_table_delete(query_args);
+        hash_table_delete(query_args);
 
-    
+        return bi;
+    }
 
-    return bi;
+    return false;
 }
 
 RetransmissionPolicy* BiFloodingPolicy() {

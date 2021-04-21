@@ -44,6 +44,8 @@ RoutingContext* OLSRRoutingContext();
 
 RoutingContext* AODVRoutingContext();
 
+RoutingContext* DSRRoutingContext();
+
 RoutingContext* ZoneRoutingContext(RoutingContext* proactive_ctx, RoutingContext* reactive_ctx);
 
 

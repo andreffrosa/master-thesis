@@ -41,4 +41,6 @@ RetransmissionDelay* DensityNeighDelay(unsigned long t);
 RetransmissionDelay* RADExtensionDelay(unsigned long delta_t);
 RetransmissionDelay* HopCountAwareRADExtensionDelay(unsigned long delta_t);
 
+RetransmissionDelay* BiFloodingDelay(unsigned long t1, unsigned long t2);
+
 #endif /* _RETRANSMISSION_DELAY_H_ */

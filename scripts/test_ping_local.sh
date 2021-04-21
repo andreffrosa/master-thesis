@@ -14,8 +14,8 @@ TESTS=(
 #"routing/static"
 #"routing/olsr;broadcast/mpr;discovery/OLSRDiscovery"
 #"routing/aodv;broadcast/biflooding;discovery/PeriodicJointDiscovery"
-#"routing/zone;broadcast/biflooding;discovery/OLSRDiscovery"
-"routing/zone;broadcast/mpr+biflooding;discovery/OLSRDiscovery"
+"routing/dsr;broadcast/biflooding;discovery/PeriodicJointDiscovery"
+#"routing/zone;broadcast/mpr+biflooding;discovery/OLSRDiscovery"
 )
 
 i=1

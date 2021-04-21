@@ -657,9 +657,17 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char** ptr) {
 
         token = strtok_r(NULL, " ", ptr);
 		if(token != NULL) {
-			unsigned long t = strtol(token, NULL, 10);
+			unsigned long t1 = strtol(token, NULL, 10);
 
-			return BiFlooding(t);
+            token = strtok_r(NULL, " ", ptr);
+    		if(token != NULL) {
+    			unsigned long t2 = strtol(token, NULL, 10);
+
+    			return BiFlooding(t1, t2);
+    		} else {
+    			printf("Parameter 2 of %s not passed!\n", name);
+    			exit(-1);
+    		}
 		} else {
 			printf("Parameter 1 of %s not passed!\n", name);
 			exit(-1);

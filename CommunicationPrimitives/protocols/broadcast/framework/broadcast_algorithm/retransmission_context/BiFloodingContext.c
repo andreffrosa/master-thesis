@@ -32,11 +32,13 @@ typedef struct BiFloodingState_ {
     hash_table* neighbors;
 } BiFloodingState;
 
-static bool getCost(BiFloodingState* state, double_list* copies, byte* hops, double* cost) {
+static bool getCost(BiFloodingState* state, double_list* copies, byte* hops, double* cost, list** route, unsigned char* myID) {
     assert(copies && copies->size > 0);
+    assert(route);
 
     double min_cost = 0.0;
-    unsigned int min_hops = 1;
+    unsigned int min_hops = 0;
+    list* min_route = NULL;
     bool first = true;
 
     for(double_list_item* dit = copies->head; dit; dit = dit->next) {
@@ -45,8 +47,10 @@ static bool getCost(BiFloodingState* state, double_list* copies, byte* hops, dou
 
         byte* hops_ = (byte*)hash_table_find_value(headers, "hops");
         double* cost_ = (double*)hash_table_find_value(headers, "route_cost");
+        list* route_ = (list*)hash_table_find_value(headers, "route");
 
-        if(hops_ && cost_) {
+        if(hops_ && cost_ && route_) {
+            assert(*hops_ == route_->size);
 
             RoutingNeigh* n = hash_table_find_value(state->neighbors, getBcastHeader(copy)->sender_id);
 
@@ -54,20 +58,32 @@ static bool getCost(BiFloodingState* state, double_list* copies, byte* hops, dou
 
             if(n && n->is_bi) {
                 double current_cost = *cost_ + n->tx_cost;
-                unsigned int current_hops = *hops_ + 1;
+                unsigned int current_hops = *hops_; // + 1;
 
                 if( current_cost < min_cost || (current_cost == min_cost && current_hops < min_hops) || first ) {
                     min_cost = current_cost;
                     min_hops = current_hops;
+                    list_delete(min_route);
+                    min_route = list_clone(route_, sizeof(uuid_t));
                     first = false;
                 }
-
             }
         }
+
+        //list_delete(route_);
     }
+
+    if(min_route == NULL) {
+        min_route = list_init();
+    }
+    //list_add_item_to_tail(min_route, new_id(myID));
 
     *cost = min_cost;
     *hops = min_hops;
+    *route = min_route;
+
+    assert(*route != NULL);
+    assert(*hops == (*route)->size);
 
     return !first;
 }
@@ -89,7 +105,7 @@ static void BiFloodingContextEvent(ModuleState* context_state, queue_t_elem* ele
             bool process = ev_id == EV_ROUTING_NEIGHS;
             if(process) {
 
-                printf("EV_ROUTING_NEIGHS\n");
+                // printf("EV_ROUTING_NEIGHS\n");
 
                 hash_table_delete(state->neighbors);
                 state->neighbors = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
@@ -152,7 +168,9 @@ static bool BiFloodingContextQuery(ModuleState* context_state, const char* query
 
         byte hops = 0;
         double route_cost = 0.0;
-        *((bool*)result) = getCost(state, getCopies(p_msg), &hops, &route_cost);
+        list* route = NULL;
+        *((bool*)result) = getCost(state, getCopies(p_msg), &hops, &route_cost, &route, myID);
+        list_delete(route);
 		return true;
     } else {
 		return false;
@@ -165,10 +183,27 @@ static void BiFloodingContextAppendHeaders(ModuleState* context_state, PendingMe
 
     byte hops = 0;
     double route_cost = 0.0;
-    getCost(state, getCopies(p_msg), &hops, &route_cost);
+    list* route = NULL;
+
+    getCost(state, getCopies(p_msg), &hops, &route_cost, &route, myID);
+    hops++;
+    list_add_item_to_tail(route, new_id(myID));
+    assert(hops == route->size);
+
+    unsigned int size = route->size*sizeof(uuid_t);
+    byte buffer[size];
+    byte* ptr = buffer;
+
+    for(list_item* it = route->head; it; it = it->next) {
+        unsigned char* id = (unsigned char*)(it->data);
+        memcpy(ptr, id, sizeof(uuid_t));
+        ptr += sizeof(uuid_t);
+    }
+    list_delete(route);
 
     appendHeader(serialized_headers, "hops", &hops, sizeof(byte));
     appendHeader(serialized_headers, "route_cost", &route_cost, sizeof(double));
+    appendHeader(serialized_headers, "route", buffer, size);
 }
 
 static void BiFloodingContextParseHeaders(ModuleState* context_state, hash_table* serialized_headers, hash_table* headers, unsigned char* myID) {
@@ -198,6 +233,31 @@ static void BiFloodingContextParseHeaders(ModuleState* context_state, hash_table
         strcpy(key, key_);
         hash_table_insert(headers, key, route_cost);
     }
+
+    buffer = (byte*)hash_table_find_value(serialized_headers, "route");
+    if(buffer) {
+        byte* ptr = buffer;
+
+        byte size = 0;
+        memcpy(&size, ptr, sizeof(byte));
+        ptr += sizeof(byte);
+
+        list* route = list_init();
+
+        int n = size / sizeof(uuid_t);
+        for(int i = 0; i < n; i++) {
+            list_add_item_to_tail(route, new_id(ptr));
+            ptr += sizeof(uuid_t);
+        }
+
+        printf("n=%d size=%d route->size=%d\n", n, size, route->size);
+
+        const char* key_ = "route";
+        char* key = malloc(strlen(key_)+1);
+        strcpy(key, key_);
+        hash_table_insert(headers, key, route);
+    }
+
 }
 
 static void BiFloodingContextDestroy(ModuleState* context_state) {

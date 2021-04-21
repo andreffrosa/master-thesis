@@ -169,6 +169,8 @@ static RoutingContext* parse_r_context(char* value, bool nested) {
         return OLSRRoutingContext();
     } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVRoutingContext")) == 0) {
         return AODVRoutingContext();
+    } else if(strcmp(token, (name = "DSR")) == 0 || strcmp(token, (name = "DSRRoutingContext")) == 0) {
+        return DSRRoutingContext();
     } else if(strcmp(token, (name = "ZONE")) == 0 || strcmp(token, (name = "ZoneRoutingContext")) == 0) {
 
         token = strtok_r(NULL, " ", &ptr);
