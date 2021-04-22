@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-static bool ConventionalRouting_getNextHop(ModuleState* m_state, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time) {
+static bool ConventionalRouting_getNextHop(ModuleState* m_state, RoutingTable* routing_table, SourceTable* source_table, RoutingNeighbors* neighbors, unsigned char* myID, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, byte** meta_data, unsigned short* meta_data_length, byte* prev_meta_data, unsigned short prev_meta_data_length, bool first, struct timespec* current_time) {
 
     RoutingTableEntry* entry = RT_findEntry(routing_table, destination_id);
     if(entry) {

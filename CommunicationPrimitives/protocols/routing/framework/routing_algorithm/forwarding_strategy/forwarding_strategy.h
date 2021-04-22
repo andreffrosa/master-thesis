@@ -20,10 +20,12 @@ typedef struct ForwardingStrategy_ ForwardingStrategy;
 
 void destroyForwardingStrategy(ForwardingStrategy* f_strategy);
 
-bool FS_getNextHop(ForwardingStrategy* f_strategy, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time);
+bool FS_getNextHop(ForwardingStrategy* f_strategy, RoutingTable* routing_table, SourceTable* source_table, RoutingNeighbors* neighbors, unsigned char* myID, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, byte** meta_data, unsigned short* meta_data_length, byte* prev_meta_data, unsigned short prev_meta_data_length, bool first, struct timespec* current_time);
 
 ///////
 
 ForwardingStrategy* ConventionalRouting();
+
+ForwardingStrategy* SourceRouting();
 
 #endif /* _FORWARDING_STRATEGY_H_ */

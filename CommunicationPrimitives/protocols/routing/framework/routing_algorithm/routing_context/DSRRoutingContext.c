@@ -16,6 +16,8 @@
 #include "protocols/discovery/framework/framework.h"
 #include "protocols/routing/framework/framework.h"
 
+#include "utility/my_string.h"
+
 #include <assert.h>
 
 typedef enum {
@@ -23,6 +25,8 @@ typedef enum {
     DSR_RREP,
     DSR_RERR
 } DSRControlMessageType;
+
+static void addRoute(unsigned char* source_id, unsigned char* parent_id, double cost, unsigned int hops, RoutingNeighbors* neighbors, RoutingTable* routing_table, struct timespec* current_time, const char* proto);
 
 static bool getBestBiParent(RoutingNeighbors* neighbors, byte* meta_data, unsigned int meta_length, unsigned char* found_parent, double* found_route_cost, unsigned int* found_route_hops, list** found_route);
 
@@ -162,21 +166,28 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
         bool found = getBestBiParent(neighbors, meta_data, meta_length, found_parent, &found_route_cost, &found_route_hops, &found_route);
         if( found ) {
 
-            // TODO
-            printf("found_route %d\n", found_route->size);
-
-            // Update Routing Table
-            //addRoute(SE_getID(source_entry), found_parent, found_route_cost, found_route_hops, neighbors, routing_table, current_time, proto);
-
             if( uuid_compare(destination_id, myID) == 0 ) {
 
                 printf("I'm the wanted destination! SEND RREP\n");
 
-                return NO_SEND;
-                //return SEND_INC; // SEND RREP
+                // o custo não está a ser considerado. acrescentar entrada na routing table na mesma para saber que rotas temos
+
+                list* to_src_route = reverse(found_route, sizeof(uuid_t));
+
+                list* old = (list*)SE_setAttr(source_entry, new_str("route"), to_src_route);
+                if(old) {
+                    list_delete(old);
+                }
+
+                // Update Routing Table
+                addRoute(SE_getID(source_entry), found_parent, found_route_cost, found_route_hops, neighbors, routing_table, current_time, proto);
+
+                return SEND_INC; // SEND RREP
             }
         }
     } else if( type == DSR_RREP ) {
+
+        // TODO
 
         uuid_t destination_id;
         uuid_t prev_hop_id;
@@ -354,6 +365,13 @@ static bool getBestBiParent(RoutingNeighbors* neighbors, byte* meta_data, unsign
             if(strcmp(key, "route_cost") == 0) {
                 assert(len == sizeof(double));
                 route_cost = *((double*)value);
+
+                // add cost do parent
+                /*RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, parent_id);
+                assert(neigh);
+                double tx_cost = RNE_getTxCost(neigh);
+                route_cost += tx_cost;*/
+
                 printf("context: %s -> (%u bytes, %f)\n", key, len, route_cost);
                 has_cost = true;
             } else if(strcmp(key, "hops") == 0) {
@@ -409,7 +427,7 @@ static bool getBestBiParent(RoutingNeighbors* neighbors, byte* meta_data, unsign
 
 }
 
-/*
+
 static void addRoute(unsigned char* source_id, unsigned char* parent_id, double cost, unsigned int hops, RoutingNeighbors* neighbors, RoutingTable* routing_table, struct timespec* current_time, const char* proto) {
 
     RoutingTableEntry* old_entry = RT_findEntry(routing_table, source_id);
@@ -433,7 +451,6 @@ static void addRoute(unsigned char* source_id, unsigned char* parent_id, double 
     }
 
 }
-*/
 
 /*
 static void ProcessDiscoveryEvent(YggEvent* ev, void* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, const char* proto) {

@@ -154,3 +154,15 @@ list* new_list(unsigned int n, ...) {
 
     return l;
 }
+
+list* reverse(list* l, unsigned int item_size) {
+    list* l2 = list_init();
+
+    for(list_item* it = l->head; it; it = it->next) {
+        void* item = malloc(item_size);
+        memcpy(item, it->data, item_size);
+        list_add_item_to_head(l2, item);
+    }
+
+    return l2;
+}

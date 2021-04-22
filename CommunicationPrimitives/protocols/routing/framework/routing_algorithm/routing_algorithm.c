@@ -77,10 +77,10 @@ void RA_setDisseminationStrategy(RoutingAlgorithm* alg, DisseminationStrategy* n
     alg->d_strategy = new_d_strategy;
 }
 
-bool RA_getNextHop(RoutingAlgorithm* alg, RoutingTable* routing_table, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, struct timespec* current_time) {
+bool RA_getNextHop(RoutingAlgorithm* alg, RoutingTable* routing_table, SourceTable* source_table, RoutingNeighbors* neighbors, unsigned char* myID, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, byte** meta_data, unsigned short* meta_data_length, byte* prev_meta_data, unsigned short prev_meta_data_length, bool first, struct timespec* current_time) {
     assert(alg);
 
-    return FS_getNextHop(alg->f_strategy, routing_table, destination_id, next_hop_id, next_hop_addr, current_time);
+    return FS_getNextHop(alg->f_strategy, routing_table, source_table, neighbors, myID, destination_id, next_hop_id, next_hop_addr, meta_data, meta_data_length, prev_meta_data, prev_meta_data_length, first, current_time);
 }
 
 void RA_init(RoutingAlgorithm* alg, proto_def* protocol_definition, unsigned char* myID, RoutingTable* r_table, struct timespec* current_time) {

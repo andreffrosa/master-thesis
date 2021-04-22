@@ -40,4 +40,6 @@ list* list_map(list* l, void* (*f)(void* v, unsigned int argc, void** argv), uns
 
 list* new_list(unsigned int n, ...);
 
+list* reverse(list* l, unsigned int item_size);
+
 #endif /* DATA_STRUCTURES_LIST_H_ */
