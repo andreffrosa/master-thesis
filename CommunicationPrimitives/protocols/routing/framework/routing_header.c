@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned char* prev_hop_id, unsigned char* next_hop_id, unsigned char* destination_id, unsigned char* msg_id, unsigned short ttl, unsigned short dest_proto, bool hop_delivery) {
+void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned char* prev_hop_id, unsigned char* next_hop_id, unsigned char* destination_id, unsigned char* msg_id, unsigned short ttl, unsigned short dest_proto, bool hop_delivery, unsigned short meta_data_length) {
     assert(header);
 
     uuid_copy(header->source_id, source_id);
@@ -26,6 +26,7 @@ void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned
     header->ttl = ttl;
     header->dest_proto = dest_proto;
     header->hop_delivery = hop_delivery;
+    header->meta_data_length = meta_data_length;
 }
 
 void initRoutingControlHeader(RoutingControlHeader* header, /*unsigned char* source_id,*/ unsigned short seq, byte announce_period) {

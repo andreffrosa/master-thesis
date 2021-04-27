@@ -21,11 +21,16 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
         SourceEntry* source_entry = ST_getEntry(source_table, destination_id);
 
         if(source_entry == NULL) {
+            printf("[getNextHop] No source entry\n");
             return false;
         }
 
         list* route = (list*)SE_getAttr(source_entry, "route");
         if(route) {
+
+            char aux_str[UUID_STR_LEN];
+            uuid_unparse(SE_getID(source_entry), aux_str);
+            printf("[getNextHop] Found route to %s (%d):\n", aux_str, route->size);
 
             *meta_data_length = route->size*sizeof(uuid_t);
             *meta_data = malloc(*meta_data_length);
@@ -34,6 +39,10 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
             for(list_item* it = route->head; it; it = it->next) {
                 memcpy(ptr, it->data, sizeof(uuid_t));
                 ptr += sizeof(uuid_t);
+
+                char id_str[UUID_STR_LEN];
+                uuid_unparse(ptr, id_str);
+                printf("=> %s\n", id_str);
             }
 
             RoutingTableEntry* entry = RT_findEntry(routing_table, destination_id);
@@ -45,12 +54,16 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
                 RTE_setLastUsedTime(entry, current_time);
                 RTE_incMessagesForwarded(entry);
 
+                printf("[getNextHop] Found route in routing table!\n");
+
                 return true;
             /*}
             else {
                 return false;
             }*/
         } else {
+            printf("[getNextHop] No route in source_entry\n");
+
             // send RREQ
             return false;
         }
@@ -62,11 +75,17 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
 
             bool found = false;
 
+            int n = prev_meta_data_length / sizeof(uuid_t);
+
+            printf("[SOURCE ROUTING] route_length=%d\n", n);
+
             byte* ptr = prev_meta_data;
-            for(int i = 0; i < prev_meta_data_length; i += sizeof(uuid_t)) {
-                if( uuid_compare(myID, ptr + i) == 0 ) {
-                    assert( i + sizeof(uuid_t) < prev_meta_data_length );
-                    uuid_copy(next_hop_id, ptr + i + sizeof(uuid_t) );
+            for(int i = 0; i < n - 1; i++) {
+                unsigned char* id = ptr + i*sizeof(uuid_t);
+                if( uuid_compare(myID, id) == 0 ) {
+                    //assert( i + sizeof(uuid_t) < prev_meta_data_length );
+                    //assert(i < n - 1);
+                    uuid_copy(next_hop_id, ptr + (i+1)*sizeof(uuid_t));
                     found = true;
                     break;
                 }
@@ -77,9 +96,13 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
                 if(neigh) {
                     memcpy(next_hop_addr->data, RNE_getAddr(neigh)->data, WLAN_ADDR_LEN);
 
+                    printf("[getNextHop] Found!\n");
+
                     return true;
                 }
             }
+
+            printf("[getNextHop] Cannot find myself in route!\n");
 
             return false;
         } else {

@@ -28,7 +28,7 @@ typedef struct RoutingHeader_ {
     unsigned short ttl;
 	unsigned short dest_proto;
     byte hop_delivery;
-	//unsigned short payload_length;
+	unsigned short meta_data_length;
 } RoutingHeader;
 #pragma pack()
 
@@ -43,7 +43,7 @@ typedef struct RoutingControlHeader_ {
 
 // #define ROUTING_HEADER_LENGTH sizeof(RoutingHeader)
 
-void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned char* prev_hop_id, unsigned char* next_hop_id, unsigned char* destination_id, unsigned char* msg_id, unsigned short ttl, unsigned short dest_proto, bool hop_delivery);
+void initRoutingHeader(RoutingHeader* header, unsigned char* source_id, unsigned char* prev_hop_id, unsigned char* next_hop_id, unsigned char* destination_id, unsigned char* msg_id, unsigned short ttl, unsigned short dest_proto, bool hop_delivery, unsigned short meta_data_length);
 
 void initRoutingControlHeader(RoutingControlHeader* header, /*unsigned char* source_id,*/ unsigned short seq, byte announce_period);
 

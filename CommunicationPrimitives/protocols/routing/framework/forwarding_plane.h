@@ -22,14 +22,14 @@ void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req);
 
 void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg);
 
-void RF_processMessage(routing_framework_state* state, RoutingHeader* header, YggMessage* toDeliver);
-void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, unsigned short ttl, YggMessage* toDeliver);
+void RF_processMessage(routing_framework_state* state, RoutingHeader* header, byte* prev_meta_data, bool first, YggMessage* toDeliver);
+void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, byte* prev_meta_data, unsigned short ttl, bool first, YggMessage* toDeliver);
 
-void RF_SendMessage(routing_framework_state* state, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, unsigned short ttl, YggMessage* toDeliver);
+void RF_SendMessage(routing_framework_state* state, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, byte* new_meta_data, unsigned short new_meta_data_length, unsigned short ttl, YggMessage* toDeliver);
 
-void RF_serializeMessage(routing_framework_state* state, YggMessage* m, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, unsigned short ttl, YggMessage* toDeliver);
+void RF_serializeMessage(routing_framework_state* state, YggMessage* m, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, byte* new_meta_data, unsigned short new_meta_data_length, unsigned short ttl, YggMessage* toDeliver);
 
-void RF_deserializeMessage(YggMessage* m, RoutingHeader* header, YggMessage* toDeliver);
+void RF_deserializeMessage(YggMessage* m, RoutingHeader* header, byte* meta_data, YggMessage* toDeliver);
 
 bool RF_findNextHop(routing_framework_state* state, unsigned char* destination_id, unsigned char* next_hop_id, unsigned char* next_hop_addr);
 

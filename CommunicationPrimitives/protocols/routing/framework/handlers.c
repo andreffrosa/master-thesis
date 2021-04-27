@@ -456,7 +456,7 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
 
                 //RoutingControlHeader* neigh_header = forward ? &header : NULL;
 
-                void* info = (void*[]){entry, payload, &length};
+                void* info = (void*[]){entry, payload, &length, &header/*, meta_data, &meta_length*/};
 
                 RF_sendControlMessage(state, send_type, RTE_CONTROL_MESSAGE, info, NULL/* neigh_header*/);
             }

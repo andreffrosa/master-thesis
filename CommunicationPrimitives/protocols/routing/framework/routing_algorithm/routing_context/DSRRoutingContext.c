@@ -45,9 +45,11 @@ static RoutingContextSendType DSRRoutingContextTriggerEvent(ModuleState* m_state
     if(event_type == RTE_ROUTE_NOT_FOUND) {
         //printf("SENDING RREQ\n");
         return SEND_INC;
-    } /*else if(event_type == RTE_SOURCE_EXPIRE) {
-        // SourceEntry* entry = (SourceEntry*)args;
-    }*/
+    } else if(event_type == RTE_SOURCE_EXPIRE) {
+        SourceEntry* se = (SourceEntry*)args;
+        list* route = (list*)SE_remAttr(se, "route");
+        list_delete(route);
+    }
 
     return NO_SEND;
 }
@@ -92,9 +94,11 @@ static void DSRRoutingContextCreateMsg(ModuleState* m_state, const char* proto, 
 
     }*/ else if(event_type == RTE_CONTROL_MESSAGE) {
         assert(info);
-        SourceEntry* entry = ((void**)info)[0];
+        //SourceEntry* entry = ((void**)info)[0];
         byte* payload = ((void**)info)[1];
-        unsigned short length = *((unsigned short*)((void**)info)[2]);
+        unsigned short length = *((unsigned short*)(((void**)info)[2]));
+
+        RoutingHeader* old_header = (RoutingHeader*)(((void**)info)[3]);
 
         byte* ptr = payload;
 
@@ -110,17 +114,30 @@ static void DSRRoutingContextCreateMsg(ModuleState* m_state, const char* proto, 
             byte route_hops = 0;
 
             if( msg_type == DSR_RREP ) {
-                RoutingTableEntry* rt_entry = RT_findEntry(routing_table, SE_getID(entry)); // The source of the rrep
+                /*RoutingTableEntry* rt_entry = RT_findEntry(routing_table, SE_getID(entry)); // The source of the rrep
                 route_cost = RTE_getCost(rt_entry);
-                route_hops = RTE_getHops(rt_entry);
+                route_hops = RTE_getHops(rt_entry);*/
+
+                memcpy(&route_cost, ptr, sizeof(double));
+                ptr += sizeof(double);
+
+                memcpy(&route_hops, ptr, sizeof(byte));
+                ptr += sizeof(byte);
+
+                RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, old_header->prev_hop_id);
+                assert(neigh); // TODO: what to do when the neighbor is not known? --> return false and cancel transmission? mas essa verificação deveria ser feita onde? Aqui e ao tentar enviar
+                double tx_cost = RNE_getTxCost(neigh);
+
+                route_cost += tx_cost;
+                route_hops += 1;
             }
 
             YggMessage_addPayload(msg, (char*)&route_cost, sizeof(double));
             YggMessage_addPayload(msg, (char*)&route_hops, sizeof(byte));
 
-            //char str[UUID_STR_LEN];
-            //uuid_unparse(header2->destination_id, str);
-            //printf("GENERATING RREP \n");
+            char str[UUID_STR_LEN];
+            uuid_unparse(old_header->source_id, str);
+            printf("GENERATING RREP to %s \n", str);
 
         } else if(msg_type == DSR_RERR) {
             //byte type = DSR_RERR;
@@ -170,9 +187,15 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
 
                 printf("I'm the wanted destination! SEND RREP\n");
 
-                // o custo não está a ser considerado. acrescentar entrada na routing table na mesma para saber que rotas temos
-
                 list* to_src_route = reverse(found_route, sizeof(uuid_t));
+
+                printf("Found route n=%d\n", to_src_route->size);
+
+                for(list_item* it = to_src_route->head; it; it = it->next) {
+                    char id_str[UUID_STR_LEN];
+                    uuid_unparse(it->data, id_str);
+                    printf(" => %s\n", id_str);
+                }
 
                 list* old = (list*)SE_setAttr(source_entry, new_str("route"), to_src_route);
                 if(old) {
@@ -187,17 +210,32 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
         }
     } else if( type == DSR_RREP ) {
 
-        // TODO
+        char str[UUID_STR_LEN];
+        uuid_unparse(SE_getID(source_entry), str);
+        printf("RECEIVED RREP with route to %s\n", str);
 
         uuid_t destination_id;
         uuid_t prev_hop_id;
 
+        list* route = list_init();
+
         if(src_proto == ROUTING_FRAMEWORK_PROTO_ID) {
-            RoutingHeader* header = (RoutingHeader*)meta_data;
+            RoutingHeader* header = (RoutingHeader*)((void**)meta_data)[0];
+            byte* prev_meta_data = (byte*)((void**)meta_data)[1];
+            //bool first
+
+            printf("Yo!\n");
 
             uuid_copy(destination_id, header->destination_id);
             uuid_copy(prev_hop_id, header->prev_hop_id);
+
+            unsigned int n = header->meta_data_length / sizeof(uuid_t);
+            for(int i = 0; i < n; i++) {
+                unsigned char* id = prev_meta_data + (i * sizeof(uuid_t));
+                list_add_item_to_head(route, new_id(id));
+            }
         } else {
+            printf("Ya!\n");
             assert(false);
         }
 
@@ -211,18 +249,26 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
         ptr += sizeof(byte);
 
 
-        char str[UUID_STR_LEN];
-        uuid_unparse(SE_getID(source_entry), str);
-        printf("RECEIVED RREP with route to %s\n", str);
+        if(uuid_compare(myID, destination_id) == 0) {
+            RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, prev_hop_id);
+            if(neigh && RNE_isBi(neigh)) {
+                route_cost += RNE_getTxCost(neigh);
+                route_hops += 1;
 
-        RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, prev_hop_id);
-        if(neigh && RNE_isBi(neigh)) {
-            route_cost += RNE_getTxCost(neigh);
-            route_hops += 1;
+                list* old = (list*)SE_setAttr(source_entry, new_str("route"), route);
+                if(old) {
+                    list_delete(old);
+                }
 
-            // Update routing table
-            //addRoute(SE_getID(source_entry), prev_hop_id, route_cost, route_hops, neighbors, routing_table, current_time, proto);
+                // Update Routing Table
+                addRoute(SE_getID(source_entry), prev_hop_id, route_cost, route_hops, neighbors, routing_table, current_time, proto);
+            } else {
+                list_delete(route);
+            }
+        } else {
+            list_delete(route);
         }
+
     }
     else if( type == DSR_RERR ) {
 

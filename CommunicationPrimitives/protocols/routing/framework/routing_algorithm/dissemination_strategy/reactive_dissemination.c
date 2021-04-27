@@ -20,6 +20,8 @@
 
 static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* msg, RoutingEventType event_type, void* info) {
 
+    bool hop_delivery = *(bool*)m_state->args;
+
     bool line = false;
 
     unsigned char* destination_id = NULL;
@@ -51,7 +53,7 @@ static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* m
         uuid_unparse(destination_id, str);
         printf("USING ROUTING TO DISSEMINATE to %s!!!  proto = %d\n", str, msg->Proto_id);
         //BroadcastMessage(msg->Proto_id, 1, (byte*)msg->data, msg->dataLen);
-        RouteMessage(destination_id, msg->Proto_id, -1, true, (byte*)msg->data, msg->dataLen);
+        RouteMessage(destination_id, msg->Proto_id, -1, hop_delivery, (byte*)msg->data, msg->dataLen);
     } else {
         unsigned int radius = -1; // Infinite
         BroadcastMessage(msg->Proto_id, radius, 0, (byte*)msg->data, msg->dataLen);
@@ -59,9 +61,13 @@ static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* m
 
 }
 
-DisseminationStrategy* AODVDissemination() {
+DisseminationStrategy* ReactiveDissemination(bool hop_delivery) {
+
+    bool* hop_delivery_arg = malloc(sizeof(bool));
+    *hop_delivery_arg = hop_delivery;
+
     return newDisseminationStrategy(
-        NULL,
+        hop_delivery_arg,
         NULL,
         &disseminate,
         NULL

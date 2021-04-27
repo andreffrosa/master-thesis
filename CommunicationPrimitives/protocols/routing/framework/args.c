@@ -219,6 +219,8 @@ static ForwardingStrategy* parse_f_strategy(char* value, bool nested) {
 
     if(strcmp(token, (name = "Conventional")) == 0 || strcmp(token, (name = "ConventionalRouting")) == 0) {
         return ConventionalRouting();
+    } else if(strcmp(token, (name = "Source")) == 0 || strcmp(token, (name = "SourceRouting")) == 0) {
+        return SourceRouting();
     } else {
         printf("Unrecognized Forwarding Strategy! \n");
         exit(-1);
@@ -313,7 +315,6 @@ static DisseminationStrategy* parse_d_strategy(char* value, bool nested) {
     }
 
     if(strcmp(token, (name = "Broadcast")) == 0 || strcmp(token, (name = "BroadcastDissemination")) == 0) {
-
         return BroadcastDissemination();
     } else if(strcmp(token, (name = "Fisheye")) == 0 || strcmp(token, (name = "FisheyeDissemination")) == 0) {
         token = strtok_r(NULL, " ", &ptr);
@@ -335,9 +336,18 @@ static DisseminationStrategy* parse_d_strategy(char* value, bool nested) {
         }
     } else if(strcmp(token, (name = "Local")) == 0 || strcmp(token, (name = "LocalDissemination")) == 0) {
         return LocalDissemination();
-    } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVDissemination")) == 0) {
-        return AODVDissemination();
-    } else if(strcmp(token, (name = "ZONE")) == 0 || strcmp(token, (name = "ZoneDissemination")) == 0) {
+    } else if(strcmp(token, (name = "Reactive")) == 0 || strcmp(token, (name = "ReactiveDissemination")) == 0) {
+
+        token = strtok_r(NULL, " ", &ptr);
+        if(token != NULL) {
+            bool hop_delivery = parse_bool(token);
+
+            return ReactiveDissemination(hop_delivery);
+        } else {
+            printf("Parameter 1 of %s not passed!\n", name);
+            exit(-1);
+        }
+    } else if(strcmp(token, (name = "Zone")) == 0 || strcmp(token, (name = "ZoneDissemination")) == 0) {
 
         token = strtok_r(NULL, " ", &ptr);
         if(token != NULL) {

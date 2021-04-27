@@ -30,7 +30,7 @@ DisseminationStrategy* FisheyeDissemination(unsigned int n_phases, unsigned int 
 
 DisseminationStrategy* LocalDissemination();
 
-DisseminationStrategy* AODVDissemination();
+DisseminationStrategy* ReactiveDissemination(bool hop_delivery);
 
 DisseminationStrategy* ZoneDissemination(unsigned short zone_radius);
 
