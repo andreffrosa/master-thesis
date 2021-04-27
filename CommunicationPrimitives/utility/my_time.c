@@ -77,7 +77,7 @@ void SetPeriodicTimer(struct timespec* t, unsigned char* id, unsigned short prot
 }
 
 void CancelTimer(uuid_t id, unsigned short protoID) {
-	YggTimer timer;
+	YggTimer timer = {0};
 	YggTimer_init_with_uuid(&timer, id, protoID, protoID);
 	cancelTimer(&timer);
 }
