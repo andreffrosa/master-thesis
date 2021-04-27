@@ -16,7 +16,7 @@ TESTS=(
 #"discovery/PassiveDiscovery2"
 #"discovery/PeriodicHelloDiscovery"
 #"discovery/HybridHelloDiscovery"
-#"discovery/PeriodicJointDiscovery"
+"discovery/PeriodicJointDiscovery"
 #"discovery/PeriodicDisjointDiscovery"
 #"discovery/HybridDisjointDiscovery"
 #"discovery/HybridHelloPeriodicHackDiscovery"
@@ -24,8 +24,8 @@ TESTS=(
 #"discovery/EchoDiscovery1"
 #"discovery/EchoDiscovery2"
 #"discovery/EchoDiscovery3"
-"discovery/OLSRDiscovery"
-"discovery/LENWBDiscovery"
+#"discovery/OLSRDiscovery"
+#"discovery/LENWBDiscovery"
 #"discovery/PeriodicJointDiscovery+Age"
 #"discovery/PeriodicJointDiscovery+Hysteresis"
 #"discovery/HybridDisjointDiscovery+Age"
@@ -34,8 +34,8 @@ TESTS=(
 #"discovery/PassiveDiscovery1+Hysteresis"
 #"discovery/EchoDiscovery1+Age"
 #"discovery/EchoDiscovery1+Hysteresis"
-"discovery/OLSRDiscovery+Age"
-"discovery/OLSRDiscovery+Hysteresis"
+#"discovery/OLSRDiscovery+Age"
+#"discovery/OLSRDiscovery+Hysteresis"
 )
 
 i=1
