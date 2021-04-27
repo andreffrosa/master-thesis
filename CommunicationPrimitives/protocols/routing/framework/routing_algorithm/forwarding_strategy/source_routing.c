@@ -41,13 +41,13 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
                 ptr += sizeof(uuid_t);
 
                 char id_str[UUID_STR_LEN];
-                uuid_unparse(ptr, id_str);
+                uuid_unparse(it->data, id_str);
                 printf("=> %s\n", id_str);
             }
 
             RoutingTableEntry* entry = RT_findEntry(routing_table, destination_id);
-            assert(entry);
-            //if(entry) {
+            //assert(entry);
+            if(entry) {
                 uuid_copy(next_hop_id, RTE_getNextHopID(entry));
                 memcpy(next_hop_addr->data, RTE_getNextHopAddr(entry)->data, WLAN_ADDR_LEN);
 
@@ -57,10 +57,11 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
                 printf("[getNextHop] Found route in routing table!\n");
 
                 return true;
-            /*}
+            }
             else {
+                printf("[getNextHop] Route not found in routing table!\n");
                 return false;
-            }*/
+            }
         } else {
             printf("[getNextHop] No route in source_entry\n");
 
@@ -106,7 +107,8 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
 
             return false;
         } else {
-            assert(false);
+            //assert(false);
+            return false;
         }
     }
 
