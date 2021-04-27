@@ -565,7 +565,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(NE_getNeighborID(neigh), id_str);
+        uuid_unparse(neigh_id, id_str);
 
         char str[200];
         sprintf(str, "Neigh %s was deleted before! (ERROR)", id_str);
@@ -606,6 +606,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
             neigh = NULL;
 
             summary->removed = true;
+            summary->neigh = NULL;
         } else {
             struct timespec aux = {0};
             subtract_timespec(&aux, removal_time, &state->current_time);
@@ -615,7 +616,6 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
 
     // If neigh was not removed
     if( !summary->removed ) {
-
 
         unsigned int hello_misses = state->args->hello_misses;
         unsigned int hack_misses = state->args->hack_misses;
