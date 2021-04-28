@@ -95,9 +95,11 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
 
     }*/ else if(event_type == RTE_CONTROL_MESSAGE) {
         assert(info);
-        SourceEntry* entry = ((void**)info)[0];
+        //SourceEntry* entry = ((void**)info)[0];
         byte* payload = ((void**)info)[1];
         unsigned short length = *((unsigned short*)((void**)info)[2]);
+
+        RoutingHeader* old_header = (RoutingHeader*)(((void**)info)[3]);
 
         byte* ptr = payload;
 
@@ -113,35 +115,39 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
             byte route_hops = 0;
 
             if( msg_type == AODV_RREP ) {
-                RoutingTableEntry* rt_entry = RT_findEntry(routing_table, SE_getID(entry)); // The source of the rrep
+                /*RoutingTableEntry* rt_entry = RT_findEntry(routing_table, SE_getID(entry)); // The source of the rrep
                 route_cost = RTE_getCost(rt_entry);
-                route_hops = RTE_getHops(rt_entry);
+                route_hops = RTE_getHops(rt_entry);*/
+
+                memcpy(&route_cost, ptr, sizeof(double));
+                ptr += sizeof(double);
+
+                memcpy(&route_hops, ptr, sizeof(byte));
+                ptr += sizeof(byte);
+
+                RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, old_header->prev_hop_id);
+
+                if(neigh) {
+                    double tx_cost = RNE_getTxCost(neigh);
+
+                    route_cost += tx_cost;
+                    route_hops += 1;
+                } else {
+                    route_cost = -1;
+                    route_hops = -1;
+
+                    printf("[RREP] Neighbor not known!\n");
+                }
             }
 
             YggMessage_addPayload(msg, (char*)&route_cost, sizeof(double));
             YggMessage_addPayload(msg, (char*)&route_hops, sizeof(byte));
 
-            //char str[UUID_STR_LEN];
-            //uuid_unparse(header2->destination_id, str);
-            //printf("GENERATING RREP \n");
+            char str[UUID_STR_LEN];
+            uuid_unparse(old_header->destination_id, str);
+            printf("GENERATING RREP \n");
 
         } else if(msg_type == AODV_RERR) {
-            //byte type = AODV_RERR;
-
-            //YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
-
-            //byte* ptr = payload + sizeof(byte);
-
-            /*byte amount = 1;
-
-            memcpy(&amount, ptr, sizeof(byte));
-            ptr += sizeof(byte);
-
-            uuid_t dest_to_remove_id;
-            memcpy(dest_to_remove_id, ptr, sizeof(uuid_t));
-            ptr += sizeof(uuid_t);
-            YggMessage_addPayload(msg, (char*)dest_to_remove_id, sizeof(uuid_t));*/
-
             YggMessage_addPayload(msg, (char*)payload, length);
         }
     }
@@ -183,7 +189,7 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
         uuid_t prev_hop_id;
 
         if(src_proto == ROUTING_FRAMEWORK_PROTO_ID) {
-            RoutingHeader* header = (RoutingHeader*)meta_data;
+            RoutingHeader* header = (RoutingHeader*)((void**)meta_data)[0];
 
             uuid_copy(destination_id, header->destination_id);
             uuid_copy(prev_hop_id, header->prev_hop_id);

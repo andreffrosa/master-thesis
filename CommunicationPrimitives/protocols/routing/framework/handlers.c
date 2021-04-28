@@ -66,7 +66,7 @@ void scheduleAnnounceTimer(routing_framework_state* state, bool now) {
             unsigned long jitter = (unsigned long)(randomProb()*state->args->max_jitter_ms);
             unsigned long t = now ? jitter : period_s*1000 - state->args->period_margin_ms - jitter;
 
-            printf("NEXT ANNOUNCE TIMER: %lu ms\n", t);
+            //printf("NEXT ANNOUNCE TIMER: %lu ms\n", t);
 
             struct timespec t_ = {0};
             milli_to_timespec(&t_, t);
@@ -313,7 +313,7 @@ void RF_scheduleJitter(routing_framework_state* state, RoutingEventType event_ty
                 add_timespec(&aux1, &aux1, &state->current_time);
                 subtract_timespec(&aux2, &aux1, &state->last_announce_time);
 
-                printf("NEXT JITTER TIMER: %lu ms | diff = %lu ms / %lu ms\n", timespec_to_milli(&t), timespec_to_milli(&aux2), state->args->min_announce_interval_ms);
+                // printf("NEXT JITTER TIMER: %lu ms | diff = %lu ms / %lu ms\n", timespec_to_milli(&t), timespec_to_milli(&aux2), state->args->min_announce_interval_ms);
 
                 assert(timespec_to_milli(&aux2) >= state->args->min_announce_interval_ms );
 

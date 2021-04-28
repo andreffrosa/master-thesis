@@ -145,6 +145,8 @@ static void DSRRoutingContextCreateMsg(ModuleState* m_state, const char* proto, 
                 } else {
                     route_cost = -1;
                     route_hops = -1;
+
+                    printf("[RREP] Neighbor not known!\n");
                 }
             }
 
@@ -169,7 +171,7 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
     memcpy(&type, ptr, sizeof(byte));
     ptr += sizeof(byte);
 
-    printf("RECEIVED DSR TYPE: %d\n", type);
+    //printf("RECEIVED DSR TYPE: %d\n", type);
 
     if( type == DSR_RREQ ) {
         uuid_t destination_id;
@@ -190,6 +192,7 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
                 list_add_item_to_tail(found_route, new_id(myID));
                 list* to_src_route = reverse(found_route, sizeof(uuid_t));
 
+                /*
                 printf("Found route n=%d\n", to_src_route->size);
 
                 for(list_item* it = to_src_route->head; it; it = it->next) {
@@ -197,6 +200,7 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
                     uuid_unparse(it->data, id_str);
                     printf(" => %s\n", id_str);
                 }
+                */
 
                 list* old = (list*)SE_setAttr(source_entry, new_str("route"), to_src_route);
                 if(old) {
@@ -211,6 +215,7 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
                 list_add_item_to_tail(found_route, new_id(myID));
                 list* to_src_route = reverse(found_route, sizeof(uuid_t));
 
+                /*
                 printf("Found route n=%d\n", to_src_route->size);
 
                 for(list_item* it = to_src_route->head; it; it = it->next) {
@@ -218,6 +223,7 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
                     uuid_unparse(it->data, id_str);
                     printf(" => %s\n", id_str);
                 }
+                */
 
                 list* old = (list*)SE_setAttr(source_entry, new_str("route"), to_src_route);
                 if(old) {
@@ -226,14 +232,13 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
 
                 // Update Routing Table
                 addRoute(SE_getID(source_entry), found_parent, found_route_cost, found_route_hops, neighbors, routing_table, current_time, proto);
-
             }
         }
     } else if( type == DSR_RREP ) {
 
-        char str[UUID_STR_LEN];
-        uuid_unparse(SE_getID(source_entry), str);
-        printf("RECEIVED RREP with route to %s\n", str);
+        // char str[UUID_STR_LEN];
+        // uuid_unparse(SE_getID(source_entry), str);
+        // printf("RECEIVED RREP with route to %s\n", str);
 
         uuid_t destination_id;
         uuid_t prev_hop_id;
@@ -254,14 +259,15 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
                 list_add_item_to_head(route, new_id(id));
             }
 
+            /*
             printf("Route contained in RREP (%d):\n", route->size);
             for(list_item* it = route->head; it; it = it->next) {
                 char id_str[UUID_STR_LEN];
                 uuid_unparse(it->data, id_str);
                 printf(" => %s\n", id_str);
             }
+            */
         } else {
-            printf("Ya!\n");
             assert(false);
         }
 
@@ -349,9 +355,9 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
             list* route = (list*)SE_remAttr(se, "route");
             list_delete(route);
 
-            char str[UUID_STR_LEN];
-            uuid_unparse(dest_to_remove_id, str);
-            printf("RECEIVED RERR to %s\n", str);
+            //char str[UUID_STR_LEN];
+            //uuid_unparse(dest_to_remove_id, str);
+            //printf("RECEIVED RERR to %s\n", str);
         }
 
         RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
@@ -447,12 +453,12 @@ static bool getBestBiParent(RoutingNeighbors* neighbors, byte* meta_data, unsign
                 double tx_cost = RNE_getTxCost(neigh);
                 route_cost += tx_cost;*/
 
-                printf("context: %s -> (%u bytes, %f)\n", key, len, route_cost);
+                //printf("context: %s -> (%u bytes, %f)\n", key, len, route_cost);
                 has_cost = true;
             } else if(strcmp(key, "hops") == 0) {
                 assert(len == sizeof(byte));
                 route_hops = *((byte*)value);
-                printf("context: %s -> (%u bytes, %u)\n", key, len, route_hops);
+                //printf("context: %s -> (%u bytes, %u)\n", key, len, route_hops);
                 has_hops = true;
             } else if(strcmp(key, "route") == 0) {
                 route = list_init();
@@ -462,12 +468,11 @@ static bool getBestBiParent(RoutingNeighbors* neighbors, byte* meta_data, unsign
                     list_add_item_to_tail(route, new_id(ptr4));
                     ptr4 += sizeof(uuid_t);
                 }
-                printf("context: %s -> (%u bytes, %u)\n", key, len, route_hops);
+                //printf("context: %s -> (%u bytes, %u)\n", key, len, route_hops);
                 has_route = true;
-
             } else {
                 // debug
-                printf("context: %s -> (%u bytes, - )\n", key, len);
+                //printf("context: %s -> (%u bytes, - )\n", key, len);
             }
         }
 
