@@ -274,7 +274,6 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
         memcpy(&route_hops, ptr, sizeof(byte));
         ptr += sizeof(byte);
 
-
         //if(uuid_compare(myID, destination_id) == 0) {
             RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, prev_hop_id);
             if(neigh && RNE_isBi(neigh)) {
@@ -345,6 +344,10 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
             if(rt_entry && strcmp(RTE_getProto(rt_entry), proto) == 0) {
                 list_add_item_to_tail(to_remove, new_id(dest_to_remove_id));
             }
+
+            SourceEntry* se = ST_getEntry(source_table, dest_to_remove_id);
+            list* route = (list*)SE_remAttr(se, "route");
+            list_delete(route);
 
             char str[UUID_STR_LEN];
             uuid_unparse(dest_to_remove_id, str);
@@ -576,6 +579,10 @@ static void ProcessDiscoveryEvent(YggEvent* ev, void* state, RoutingTable* routi
             while( (current_route = RT_nextRoute(routing_table, &iterator)) ) {
                 if( uuid_compare(RTE_getNextHopID(current_route), id) == 0) {
                     list_add_item_to_tail(to_remove, new_id(RTE_getDestinationID(current_route)));
+
+                    SourceEntry* se = ST_getEntry(source_table, RTE_getDestinationID(current_route));
+                    list* route = (list*)SE_remAttr(se, "route");
+                    list_delete(route);
                 }
             }
 
