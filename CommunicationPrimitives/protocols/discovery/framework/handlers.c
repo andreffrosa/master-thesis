@@ -575,6 +575,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
 
         return true;
     } else {
+        /*
         #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
@@ -585,6 +586,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
 
         ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
         #endif
+        */
     }
 
     NeighborTimerSummary* summary = newNeighborTimerSummary();
