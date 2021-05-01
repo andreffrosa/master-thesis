@@ -574,6 +574,19 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         #endif
 
         return true;
+    } else {
+        /*
+        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
+        char id_str[UUID_STR_LEN+1];
+        id_str[UUID_STR_LEN] = '\0';
+        uuid_unparse(neigh_id, id_str);
+
+        char str[200];
+        sprintf(str, "%s (Timer expired)", id_str);
+
+        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
+        #endif
+        */
     }
 
     NeighborTimerSummary* summary = newNeighborTimerSummary();
@@ -863,6 +876,10 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         struct timespec t;
         milli_to_timespec(&t, next_timer_ms);
         SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
+
+        //char id_str[UUID_STR_LEN];
+        //uuid_unparse(NE_getNeighborID(neigh), id_str);
+        //printf("SetTimer %s = %lu ms\n", id_str, next_timer_ms);
     }
 
     bool removed = summary->removed;
@@ -995,7 +1012,7 @@ void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neig
         }
     }
 
-    if( next_timer_ms > 0 ) {
+    //if( next_timer_ms > 0 ) {
         // TODO: compare with old timer
         CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
         struct timespec t;
@@ -1005,8 +1022,8 @@ void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neig
 
         //char id_str[UUID_STR_LEN];
         //uuid_unparse(NE_getNeighborID(neigh), id_str);
-        //printf("Re-scheduling neighbor timer of %s (next_timer = %lu ms > 0)\n", id_str, next_timer_ms);
-    }
+        //printf("SetTimer Re-scheduling neighbor timer of %s (next_timer = %lu ms)\n", id_str, next_timer_ms);
+    //}
 
 }
 
@@ -1455,17 +1472,16 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     milli_to_timespec(&rx_exp_time, hello->period*1000*state->args->hello_misses);
     add_timespec(&rx_exp_time, &rx_exp_time, &state->current_time);
 
-    if( neigh ) {
+    //bool old_accepted_reboot = false;
+
+    /*if( neigh ) {
         int seq_cmp = compare_seq(hello->seq, NE_getNeighborSEQ(neigh), state->args->ignore_zero_seq);
         summary->rebooted = seq_cmp < 0;
 
         if( NE_isLost(neigh) || summary->rebooted ) {
-            flushNeighbor(state, neigh);
-            neigh = NULL;
-
-            CancelTimer(hello->process_id, DISCOVERY_FRAMEWORK_PROTO_ID);
-
             if(summary->rebooted) {
+                old_accepted_reboot = NE_isAccepted(neigh);
+
                 // Log
                 #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
                     char id_str[UUID_STR_LEN+1];
@@ -1475,50 +1491,76 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
                     ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
                 #endif
             }
+            flushNeighbor(state, neigh);
+            neigh = NULL;
+
+            //CancelTimer(hello->process_id, DISCOVERY_FRAMEWORK_PROTO_ID);
         }
+    }*/
+
+    if( neigh && NE_isLost(neigh) ) {
+        flushNeighbor(state, neigh);
+        neigh = NULL;
     }
 
     if( neigh ) {
         unsigned short previous_seq = NE_getNeighborSEQ(neigh);
 
         int seq_cmp = compare_seq(hello->seq, previous_seq, state->args->ignore_zero_seq);
-        assert(seq_cmp >= 0);
-
-        unsigned int prev_missed_hellos = compute_missed(state->args->hello_misses, NE_getNeighborHelloPeriod(neigh)*1000, NE_getNeighborRxExpTime(neigh), NE_getLastNeighborTimer(neigh));
+        summary->rebooted = seq_cmp < 0;
 
         int missed_hellos = 0;
-        if( seq_cmp > 0 ) {
-            // Fresh Hello
 
-            unsigned short seq_missed_hellos = seq_cmp - 1;
-
-            if( prev_missed_hellos <= seq_missed_hellos ) {
-                // If there were less or equal missed hellos due to timeouts than hellos due to seq difference, then the remaining missed hellos are given by the difference
-                missed_hellos = seq_missed_hellos - prev_missed_hellos;
-            } else {
-                // There were more missed hellos due to timeouts than hellos due to seq difference, which punished the quality more than it should.
-                // It is being ignored for now.
-                // TODO: what should be done?
-
-                missed_hellos = 0;
-
-                // Log
-                #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
-                    char str[200];
-                    sprintf(str, "prev_missed_hellos=%u   seq_missed_hellos=%d", missed_hellos, seq_missed_hellos);
-                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO SEQ ERROR", str);
-                #endif
-            }
-        } else {
-            // Repeated hello
-            missed_hellos = 0;
+        if(summary->rebooted) {
+            //old_accepted_reboot = NE_isAccepted(neigh);
 
             // Log
             #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
-                char str[200];
-                sprintf(str, "seq=%hu", previous_seq);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REPEATED HELLO SEQ", str);
+                char id_str[UUID_STR_LEN+1];
+                id_str[UUID_STR_LEN] = '\0';
+                uuid_unparse(hello->process_id, id_str);
+
+                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
             #endif
+
+            missed_hellos = 0;
+        } else {
+            unsigned int prev_missed_hellos = compute_missed(state->args->hello_misses, NE_getNeighborHelloPeriod(neigh)*1000, NE_getNeighborRxExpTime(neigh), NE_getLastNeighborTimer(neigh));
+
+            missed_hellos = 0;
+            if( seq_cmp > 0 ) {
+                // Fresh Hello
+
+                unsigned short seq_missed_hellos = seq_cmp - 1;
+
+                if( prev_missed_hellos <= seq_missed_hellos ) {
+                    // If there were less or equal missed hellos due to timeouts than hellos due to seq difference, then the remaining missed hellos are given by the difference
+                    missed_hellos = seq_missed_hellos - prev_missed_hellos;
+                } else {
+                    // There were more missed hellos due to timeouts than hellos due to seq difference, which punished the quality more than it should.
+                    // It is being ignored for now.
+                    // TODO: what should be done?
+
+                    missed_hellos = 0;
+
+                    // Log
+                    #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+                        char str[200];
+                        sprintf(str, "prev_missed_hellos=%u   seq_missed_hellos=%d", missed_hellos, seq_missed_hellos);
+                        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO SEQ ERROR", str);
+                    #endif
+                }
+            } else {
+                // Repeated hello
+                missed_hellos = 0;
+
+                // Log
+                #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
+                    char str[200];
+                    sprintf(str, "seq=%hu", previous_seq);
+                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REPEATED HELLO SEQ", str);
+                #endif
+            }
         }
         assert(missed_hellos >= 0);
 
@@ -1544,12 +1586,16 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
         NT_addNeighbor(state->neighbors, neigh);
 
-        summary->new_neighbor = summary->rebooted ? false : true;
+        summary->new_neighbor = /*summary->rebooted ? false :*/ true;
         summary->missed_hellos = 0;
 
         struct timespec t;
         milli_to_timespec(&t, hello->period*1000);
         SetTimer(&t, hello->process_id, DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
+
+        //char id_str[UUID_STR_LEN];
+        //uuid_unparse(NE_getNeighborID(neigh), id_str);
+        //printf("SetTimer %s = %lu ms\n", id_str, (unsigned long)(hello->period*1000));
 
         /*if(!summary->rebooted)
             state->stats.new_neighbors++;*/
@@ -1571,7 +1617,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
     }
 
     // Update Link Admission
-    bool old_accepted = NE_isAccepted(neigh);
+    bool old_accepted = /*summary->rebooted ? old_accepted_reboot :*/ NE_isAccepted(neigh);
     bool accepted = DA_evalLinkAdmission(state->args->algorithm, neigh, &state->current_time);
     NE_setAccepted(neigh, accepted);
 
