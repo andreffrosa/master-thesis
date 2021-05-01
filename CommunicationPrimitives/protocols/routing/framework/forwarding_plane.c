@@ -168,7 +168,7 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
             RF_processMessage(state, &header, meta_data, false, &toDeliver);
         } else {
             // Duplicate message: ignore or send ack
-            printf("Duplicate message\n");
+            //printf("Duplicate message\n");
         }
     } else {
         // Message is not meant for this node: ignore
@@ -203,7 +203,7 @@ void RF_processMessage(routing_framework_state* state, RoutingHeader* header, by
 
                     void* info = (void*[]){header, prev_meta_data, &first};
 
-                    printf("RECEIVED CONTROL MSG \n");
+                    //printf("RECEIVED CONTROL MSG \n");
 
 
                     RF_uponNewControlMessage(state, &m, header->source_id, ROUTING_FRAMEWORK_PROTO_ID, info, sizeof(RoutingHeader));

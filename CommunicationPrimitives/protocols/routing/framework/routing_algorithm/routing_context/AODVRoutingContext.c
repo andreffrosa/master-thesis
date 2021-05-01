@@ -161,7 +161,7 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
     memcpy(&type, ptr, sizeof(byte));
     ptr += sizeof(byte);
 
-    printf("RECEIVED AODV TYPE: %d\n", type);
+    //printf("RECEIVED AODV TYPE: %d\n", type);
 
     if( type == AODV_RREQ ) {
         uuid_t destination_id;
@@ -207,9 +207,9 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
         ptr += sizeof(byte);
 
 
-        char str[UUID_STR_LEN];
-        uuid_unparse(SE_getID(source_entry), str);
-        printf("RECEIVED RREP with route to %s\n", str);
+        //char str[UUID_STR_LEN];
+        //uuid_unparse(SE_getID(source_entry), str);
+        //printf("RECEIVED RREP with route to %s\n", str);
 
         RoutingNeighborsEntry* neigh = RN_getNeighbor(neighbors, prev_hop_id);
         if(neigh && RNE_isBi(neigh)) {
@@ -358,16 +358,16 @@ static bool getBestBiParent(RoutingNeighbors* neighbors, byte* meta_data, unsign
             if(strcmp(key, "route_cost") == 0) {
                 assert(len == sizeof(double));
                 route_cost = *((double*)value);
-                printf("context: %s -> (%u bytes, %f)\n", key, len, route_cost);
+                //printf("context: %s -> (%u bytes, %f)\n", key, len, route_cost);
                 has_cost = true;
             } else if(strcmp(key, "hops") == 0) {
                 assert(len == sizeof(byte));
                 route_hops = *((byte*)value);
-                printf("context: %s -> (%u bytes, %u)\n", key, len, route_hops);
+                //printf("context: %s -> (%u bytes, %u)\n", key, len, route_hops);
                 has_hops = true;
             } else {
                 // debug
-                printf("context: %s -> (%u bytes, - )\n", key, len);
+                //printf("context: %s -> (%u bytes, - )\n", key, len);
             }
         }
 

@@ -101,7 +101,7 @@ void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id
     if( entry == NULL ) {
         char id_str[UUID_STR_LEN];
         uuid_unparse(source_id, id_str);
-        printf("Source Entry of %s is NULL!\n", id_str);
+        printf("Source Entry of %s is NULL! (ERROR)\n", id_str);
         return;
     }
 

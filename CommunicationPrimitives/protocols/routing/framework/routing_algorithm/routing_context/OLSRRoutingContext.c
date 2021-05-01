@@ -344,8 +344,8 @@ static RoutingContextSendType ProcessDiscoveryEvent(YggEvent* ev, OLSRState* sta
 
                 if( strcmp(type, "MPRS") == 0 || strcmp(type, "MPR SELECTORS") == 0 ) {
 
-                    printf("discovery update: %s\n", type);
-                    fflush(stdout);
+                    //printf("discovery update: %s\n", type);
+                    //fflush(stdout);
 
                     unsigned int amount = 0;
                     ptr = YggEvent_readPayload(&gen_ev, ptr, &amount, sizeof(unsigned int));
@@ -392,9 +392,9 @@ static RoutingContextSendType ProcessDiscoveryEvent(YggEvent* ev, OLSRState* sta
     // Recompute routing table
     RecomputeRoutingTable(source_table, neighbors, myID, routing_table, current_time, proto);
 
-    if(state->dirty) {
-        printf("MPR SELECTORS CHANGED; SENDING ANNOUNCE\n");
-    }
+    //if(state->dirty) {
+    //    printf("MPR SELECTORS CHANGED; SENDING ANNOUNCE\n");
+    //}
 
     return state->dirty ? SEND_INC : NO_SEND;
 }

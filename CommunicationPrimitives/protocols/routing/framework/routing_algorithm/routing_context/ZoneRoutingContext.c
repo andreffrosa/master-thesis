@@ -89,7 +89,7 @@ static RoutingContextSendType ZoneRoutingContextProcessMsg(ModuleState* m_state,
     byte aux[new_len];
     memcpy(aux, payload+sizeof(byte), new_len);
 
-    printf("ZONE TYPE: %d    %d bytes\n", type, new_len);
+    //printf("ZONE TYPE: %d    %d bytes\n", type, new_len);
 
     if(type == 1) {
         return RCtx_processMsg(args->proactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length);

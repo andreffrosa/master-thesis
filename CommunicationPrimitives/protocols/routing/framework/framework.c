@@ -151,7 +151,7 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
     void* ptr = NULL;
     ptr = YggMessage_readPayload(message, ptr, &src_proto, sizeof(unsigned short));
 
-    printf("SRC PROTO: %hu\n", src_proto);
+    //printf("SRC PROTO: %hu\n", src_proto);
 
     YggMessage msg;
     YggMessage_init(&msg, message->srcAddr.data, message->Proto_id);
@@ -162,7 +162,7 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
 
         ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
         type = aux;
-        printf("TYPE: %d\n", type);
+        //printf("TYPE: %d\n", type);
 
         byte payload[payload_size];
         ptr = YggMessage_readPayload(message, ptr, payload, payload_size - sizeof(byte));
@@ -178,7 +178,7 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
 
         if(type == MSG_CONTROL_MESSAGE) {
             if(uuid_compare(source_id, f_state->myID) != 0) {
-                printf("RECEIVED CONTROL MSG \n");
+                //printf("RECEIVED CONTROL MSG \n");
                 RF_uponNewControlMessage(f_state, &msg, source_id, src_proto, meta_data, meta_length);
             }
 
@@ -188,12 +188,12 @@ static bool processMessage(routing_framework_state* f_state, YggMessage* message
     } else if( src_proto == ROUTING_FRAMEWORK_PROTO_ID ) {
         ptr = YggMessage_readPayload(message, ptr, &aux, sizeof(byte));
         type = aux;
-        printf("TYPE: %d\n", type);
+        //printf("TYPE: %d\n", type);
 
-        printf("RECEIVED MSG \n");
+        //printf("RECEIVED MSG \n");
 
         if(type == MSG_ROUTING_MESSAGE) {
-            printf("RECEIVED ROUTING MSG \n");
+            //printf("RECEIVED ROUTING MSG \n");
 
             YggMessage_addPayload(&msg, ptr, message->dataLen - sizeof(unsigned short) - sizeof(byte));
 
