@@ -96,7 +96,14 @@ void RF_uponAnnounceTimer(routing_framework_state* state) {
 void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id) {
 
     SourceEntry* entry = ST_getEntry(state->source_table, source_id);
-    assert(entry);
+    //assert(entry);
+
+    if( entry == NULL ) {
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(source_id, id_str);
+        printf("Source Entry of %s is NULL!\n", id_str);
+        return;
+    }
 
     if( compare_timespec(SE_getExpTime(entry), &state->current_time) > 0 ) {
         struct timespec remaining = {0};

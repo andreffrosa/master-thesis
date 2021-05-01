@@ -52,7 +52,7 @@ static void* OLSR_createAttrs(ModuleState* state) {
     return attrs;
 }
 
-
+/*
 static void Invariant(OLSRState* state, unsigned char* myID, NeighborsTable* neighbors, struct timespec* current_time) {
 
     // All mprs must be neighbors and bi
@@ -133,7 +133,7 @@ static void Invariant(OLSRState* state, unsigned char* myID, NeighborsTable* nei
             assert(!neigh_attrs->routing_mpr_selector);
         }
     }
-}
+}*/
 
 /*
 static void OLSR_destroyAttrs(ModuleState* state, void* d_msg_attrs) {
@@ -156,9 +156,11 @@ static bool update_mpr_selectors(void* f_state, OLSRState* state, unsigned char*
 static void OLSR_createMessage(ModuleState* m_state, unsigned char* myID, NeighborsTable* neighbors, DiscoveryInternalEventType event_type, void* event_args, struct timespec* current_time, HelloMessage* hello, HackMessage* hacks, byte n_hacks, byte* buffer, unsigned short* size) {
     assert(hello);
 
-    OLSRState* state = (OLSRState*)m_state->vars;
+    //OLSRState* state = (OLSRState*)m_state->vars;
 
-    Invariant(state, myID, neighbors, current_time);
+    printf("OLSR_createMessage start\n");
+
+    //Invariant(state, myID, neighbors, current_time);
 
     // Serialize Message
 
@@ -190,7 +192,9 @@ static void OLSR_createMessage(ModuleState* m_state, unsigned char* myID, Neighb
         *size += sizeof(aux);
     }
 
-    Invariant(state, myID, neighbors, current_time);
+    printf("OLSR_createMessage end\n");
+
+    //Invariant(state, myID, neighbors, current_time);
 
 }
 
@@ -198,7 +202,9 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
 
     OLSRState* state = (OLSRState*)m_state->vars;
 
-    Invariant(state, myID, neighbors, current_time);
+    printf("OLSR_processMessage start\n");
+
+    //Invariant(state, myID, neighbors, current_time);
 
     bool one_hop_change = false;
     bool two_hop_change = false;
@@ -293,7 +299,9 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
 
     bool changed_mprs = update_mprs(f_state, state, myID, neighbors, current_time, one_hop_change, two_hop_change);
 
-    Invariant(state, myID, neighbors, current_time);
+    printf("OLSR_processMessage end\n");
+
+    //Invariant(state, myID, neighbors, current_time);
 
     return changed_mpr_selectors || changed_mprs;
 }
@@ -301,7 +309,9 @@ static bool OLSR_processMessage(ModuleState* m_state, void* f_state, unsigned ch
 static bool OLSRDiscovery_updateContext(ModuleState* m_state, void* f_state, unsigned char* myID, NeighborEntry* neighbor, NeighborsTable* neighbors, struct timespec* current_time, NeighborTimerSummary* summary) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
-    //Invariant(state, myID, neighbors, current_time);
+    printf("OLSRDiscovery_updateContext start\n");
+
+    ////Invariant(state, myID, neighbors, current_time);
 
     // Recompute mprs if necessary
     bool one_hop_change = /*summary->new_neighbor ||*/ summary->updated_neighbor || summary->lost_neighbor;
@@ -311,7 +321,9 @@ static bool OLSRDiscovery_updateContext(ModuleState* m_state, void* f_state, uns
 
     bool aux2 = update_mpr_selectors(f_state, state, myID, neighbor, current_time, neighbors, summary->lost_neighbor, summary->lost_bi);
 
-    Invariant(state, myID, neighbors, current_time);
+    printf("OLSRDiscovery_updateContext end\n");
+
+    //Invariant(state, myID, neighbors, current_time);
 
     return aux1 || aux2;
 }
@@ -401,6 +413,9 @@ static bool update_mprs(void* f_state, OLSRState* state, unsigned char* myID, Ne
 
 static void notify(void* f_state, char* type, list* flooding_set, list* routing_set) {
 
+    printf("%s BROADCAST:\n", type);
+
+
     unsigned int size = 2*sizeof(unsigned int) + (flooding_set->size + routing_set->size)*sizeof(uuid_t);
     byte buffer[size];
     byte* ptr = buffer;
@@ -414,17 +429,27 @@ static void notify(void* f_state, char* type, list* flooding_set, list* routing_
 
         memcpy(ptr, id, sizeof(uuid_t));
         ptr += sizeof(uuid_t);
+
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(id, id_str);
+        printf("=> %s\n", id_str);
     }
 
     aux = routing_set->size;
     memcpy(ptr, &aux, sizeof(unsigned int));
     ptr += sizeof(unsigned int);
 
+    printf("%s ROUTING:\n", type);
+
     for( list_item* it = routing_set->head; it; it = it->next ) {
         unsigned char* id = (unsigned char*)it->data;
 
         memcpy(ptr, id, sizeof(uuid_t));
         ptr += sizeof(uuid_t);
+
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(id, id_str);
+        printf("=> %s\n", id_str);
     }
 
     DF_notifyGenericEvent(f_state, type, buffer, size);

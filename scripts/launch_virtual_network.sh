@@ -30,7 +30,7 @@ do
     IFS=' - '
     addrs=(${db[$i]})
 
-    wlan=" wlan"$i
+    wlan="wlan"$i
 
     PI=$(($i+1))
 
@@ -99,21 +99,24 @@ IFS=$SAVEIFS   # Restore IFS
 #Ensure virtual nodes are connected
 for (( i=0; i<${#db[@]} && $i < $RADIOS; i++ ))
 do
-    wlan=" wlan"$i
+    #wlan="wlan"$i
+    #PI=$(($i+1))
+
+    #HOSTNAME="raspi-0"$PI
+    #INTERFACE=$wlan #"wlan"$(($PI-1))
+
+    #echo "Connecting virtual node $PI (HOSTNAME=$HOSTNAME INTERFACE=$INTERFACE) ..."
+
+    #sudo ../bin/connect_test -i $INTERFACE -h $HOSTNAME > /dev/null 2>&1
+    #RES=$?
+    #while [ "$RES" -ne "0" ]; do
+    #    sudo ../bin/connect_test -i $INTERFACE -h $HOSTNAME > /dev/null 2>&1
+    #    RES=$?
+    #    sleep 1
+    #done
+
     PI=$(($i+1))
-
-    HOSTNAME="raspi-0"$PI
-    INTERFACE=$wlan #"wlan"$(($PI-1))
-
-    echo "Connecting virtual node $PI (HOSTNAME=$HOSTNAME INTERFACE=$INTERFACE) ..."
-
-    sudo ../bin/connect_test -i $INTERFACE -h $HOSTNAME > /dev/null 2>&1
-    RES=$?
-    while [ "$RES" -ne "0" ]; do
-        sudo ../bin/connect_test -i $INTERFACE -h $HOSTNAME > /dev/null 2>&1
-        RES=$?
-        sleep 1
-    done
+    ./connect.sh $PI
 done
 
 echo "DONE"
