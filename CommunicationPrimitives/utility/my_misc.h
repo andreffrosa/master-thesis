@@ -68,4 +68,6 @@ unsigned char* new_id(unsigned char* id);
 
 double* new_double(double d);
 
+short* new_short(short s);
+
 #endif /* MY_MISC_H_ */

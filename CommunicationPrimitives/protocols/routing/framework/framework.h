@@ -82,6 +82,7 @@ typedef enum {
 
 typedef enum {
 	EV_ROUTING_NEIGHS = 0,
+    EV_ROUTING_TABLE,
 	ROUTING_EVENT_COUNT
 } RoutingEvType;
 

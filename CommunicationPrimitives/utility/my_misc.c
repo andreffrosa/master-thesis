@@ -390,3 +390,9 @@ double* new_double(double d) {
     *x = d;
     return x;
 }
+
+short* new_short(short s) {
+    short* x = malloc(sizeof(short));
+    *x = s;
+    return x;
+}

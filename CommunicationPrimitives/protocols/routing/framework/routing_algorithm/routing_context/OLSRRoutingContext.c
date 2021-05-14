@@ -132,7 +132,12 @@ static RoutingContextSendType OLSRRoutingContextProcessMsg(ModuleState* m_state,
     return NO_SEND;
 }
 
-//typedef void (*rc_destroy)(ModuleState* m_state);
+void OLSRRoutingDestroy(ModuleState* m_state) {
+    OLSRState* state = (OLSRState*)m_state->vars;
+    list_delete(state->mprs);
+    list_delete(state->mpr_selectors);
+    free(state);
+}
 
 RoutingContext* OLSRRoutingContext() {
 
@@ -151,7 +156,7 @@ RoutingContext* OLSRRoutingContext() {
         &OLSRRoutingContextTriggerEvent,
         &OLSRRoutingContextCreateMsg,
         &OLSRRoutingContextProcessMsg,
-        NULL
+        &OLSRRoutingDestroy
     );
 }
 

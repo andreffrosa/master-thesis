@@ -48,5 +48,8 @@ RoutingContext* DSRRoutingContext();
 
 RoutingContext* ZoneRoutingContext(RoutingContext* proactive_ctx, RoutingContext* reactive_ctx);
 
+//RoutingContext* TORARoutingContext();
+
+RoutingContext* BATMANRoutingContext();
 
 #endif /* _ROUTING_CONTEXT_H_ */

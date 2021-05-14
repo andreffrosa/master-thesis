@@ -68,6 +68,12 @@ static void hash_table_delete_custom_fun(hash_table_item* it, void* args) {
     //}
 }
 
+unsigned int RT_size(RoutingTable* rt) {
+    assert(rt);
+
+    return rt->ht->n_items;
+}
+
 void destroyRoutingTable(RoutingTable* rt/*, void (*destroy_attrs)(void*, void*)*/) {
     assert(rt);
 
@@ -108,24 +114,23 @@ bool RT_update(RoutingTable* rt, list* to_update, list* to_remove) {
         RoutingTableEntry* new_entry = NULL;
         while( (new_entry = list_remove_head(to_update)) ) {
 
-            RoutingTableEntry* old_entry = RT_removeEntry(rt, new_entry->destination_id);
-            if(old_entry) {
+            RoutingTableEntry* current_entry = RT_findEntry(rt, new_entry->destination_id);
+            if(current_entry) {
 
-                if(uuid_compare(new_entry->next_hop_id, old_entry->next_hop_id) == 0) {
-                    copy_timespec(&new_entry->found_time, &old_entry->found_time);
-                    copy_timespec(&new_entry->last_used_time, &old_entry->last_used_time);
-                    new_entry->messages_forwarded = old_entry->messages_forwarded;
-                } else {
-                    RTE_resetMessagesForwarded(new_entry);
-                    //RTE_setFoundTime(current_entry, current_time);
-                    RTE_setLastUsedTime(new_entry, (struct timespec*)&zero_timespec);
-                }
+                // New Entry
+                if(uuid_compare(new_entry->next_hop_id, current_entry->next_hop_id) != 0 || new_entry->cost != current_entry->cost || new_entry->hops != current_entry->hops) {
+                        RoutingTableEntry* old_entry = RT_removeEntry(rt, new_entry->destination_id);
+                        free(old_entry);
 
-                RT_addEntry(rt, new_entry);
+                        RTE_resetMessagesForwarded(new_entry);
+                        //RTE_setFoundTime(current_entry, current_time);
+                        RTE_setLastUsedTime(new_entry, (struct timespec*)&zero_timespec);
+                        RT_addEntry(rt, new_entry);
 
-                free(old_entry);
-
-                updated = true;
+                        updated = true;
+                    } else {
+                        free(new_entry);
+                    }
             } else {
                 RT_addEntry(rt, new_entry);
 

@@ -153,3 +153,7 @@ BroadcastAlgorithm* HopCountAwareRADExtension(unsigned long delta_t, unsigned in
 BroadcastAlgorithm* BiFlooding(unsigned long t1, unsigned long t2) {
 	return newBroadcastAlgorithm(new_list(1, BiFloodingContext()), BiFloodingDelay(t1, t2), BiFloodingPolicy(), 2);
 }
+
+BroadcastAlgorithm* BATMANFlooding(unsigned long t) {
+	return newBroadcastAlgorithm(new_list(2, BiFloodingContext(), BATMANContext()), BiFloodingDelay(t, t), BATMANPolicy(), 2);
+}

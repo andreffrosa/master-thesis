@@ -473,10 +473,10 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
 
 void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, struct timespec* current_time) {
 
-    #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
         bool updated = RT_update(rt, to_update, to_remove);
 
         if(updated) {
+            #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
             char* table_str = NULL;
             RT_toString(rt, &table_str, current_time);
 
@@ -485,10 +485,11 @@ void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, s
             ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
 
             free(table_str);
+            #endif
+
+            RF_notifyRoutingTable(rt);
         }
-    #else
-        RT_update(rt, to_update, to_remove);
-    #endif
+
 }
 
 
@@ -551,7 +552,7 @@ void RF_notifyCost(routing_framework_state* state) {
 
         YggEvent_addPayload(&ev, RNE_getID(current_neigh), sizeof(uuid_t));
 
-        YggEvent_addPayload(&ev, RNE_getAddr(current_neigh), WLAN_ADDR_LEN);
+        YggEvent_addPayload(&ev, RNE_getAddr(current_neigh)->data, WLAN_ADDR_LEN);
 
         double rx_cost = RNE_getRxCost(current_neigh);
         YggEvent_addPayload(&ev, &rx_cost, sizeof(double));
@@ -563,6 +564,34 @@ void RF_notifyCost(routing_framework_state* state) {
         YggEvent_addPayload(&ev, &is_bi, sizeof(byte));
 
         YggEvent_addPayload(&ev, RNE_getFoundTime(current_neigh), sizeof(struct timespec));
+    }
+
+    deliverEvent(&ev);
+    YggEvent_freePayload(&ev);
+}
+
+void RF_notifyRoutingTable(RoutingTable* rt) {
+    YggEvent ev = {0};
+    YggEvent_init(&ev, ROUTING_FRAMEWORK_PROTO_ID, EV_ROUTING_TABLE);
+
+    byte amount = RT_size(rt);
+    YggEvent_addPayload(&ev, &amount, sizeof(byte));
+
+    void* iterator = NULL;
+    RoutingTableEntry* re = NULL;
+    while( (re = RT_nextRoute(rt, &iterator)) ) {
+
+        YggEvent_addPayload(&ev, RTE_getDestinationID(re), sizeof(uuid_t));
+
+        YggEvent_addPayload(&ev, RTE_getNextHopID(re), sizeof(uuid_t));
+
+        YggEvent_addPayload(&ev, RTE_getNextHopAddr(re)->data, WLAN_ADDR_LEN);
+
+        double c = RTE_getCost(re);
+        YggEvent_addPayload(&ev, &c, sizeof(double));
+
+        byte b = RTE_getHops(re);
+        YggEvent_addPayload(&ev, &b, sizeof(byte));
     }
 
     deliverEvent(&ev);

@@ -25,6 +25,8 @@ RoutingTable* newRoutingTable();
 
 void destroyRoutingTable(RoutingTable* rt);
 
+unsigned int RT_size(RoutingTable* rt);
+
 RoutingTableEntry* RT_addEntry(RoutingTable* rt, RoutingTableEntry* entry);
 
 RoutingTableEntry* RT_findEntry(RoutingTable* rt, unsigned char* destination_id);
@@ -33,9 +35,9 @@ RoutingTableEntry* RT_removeEntry(RoutingTable* rt, unsigned char* destination_i
 
 bool RT_update(RoutingTable* rt, list* to_update, list* to_remove);
 
-RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time, const char* proto);
-
 RoutingTableEntry* RT_nextRoute(RoutingTable* rt, void** iterator);
+
+RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time, const char* proto);
 
 void destroyRoutingTableEntry(RoutingTableEntry* entry);
 

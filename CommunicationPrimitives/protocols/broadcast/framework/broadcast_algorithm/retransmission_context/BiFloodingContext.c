@@ -54,7 +54,7 @@ static bool getCost(BiFloodingState* state, double_list* copies, byte* hops, dou
 
             RoutingNeigh* n = hash_table_find_value(state->neighbors, getBcastHeader(copy)->sender_id);
 
-            printf("Parent: %s\n", (n?"T":"F"));
+            //printf("Parent: %s\n", (n?"T":"F"));
 
             if(n && n->is_bi) {
                 double current_cost = *cost_ + n->tx_cost;
@@ -250,7 +250,7 @@ static void BiFloodingContextParseHeaders(ModuleState* context_state, hash_table
             ptr += sizeof(uuid_t);
         }
 
-        printf("n=%d size=%d route->size=%d\n", n, size, route->size);
+        //printf("n=%d size=%d route->size=%d\n", n, size, route->size);
 
         const char* key_ = "route";
         char* key = malloc(strlen(key_)+1);

@@ -11,11 +11,13 @@ PIS=$1
 DURATION=$2
 
 TESTS=(
-"routing/static"
-"routing/olsr;broadcast/mpr;discovery/OLSRDiscovery"
-"routing/aodv;broadcast/biflooding;discovery/PeriodicJointDiscovery"
-"routing/dsr;broadcast/biflooding;discovery/PeriodicJointDiscovery"
-"routing/zone;broadcast/mpr+biflooding;discovery/OLSRDiscovery"
+#"routing/static"
+#"routing/olsr;broadcast/mpr;discovery/OLSRDiscovery"
+#"routing/aodv;broadcast/biflooding;discovery/PeriodicJointDiscovery"
+#"routing/dsr;broadcast/biflooding;discovery/PeriodicJointDiscovery"
+#"routing/zone;broadcast/mpr+biflooding;discovery/OLSRDiscovery"
+#"routing/tora;broadcast/biflooding;discovery/PeriodicJointDiscovery"
+"routing/batman;broadcast/batmanflooding;discovery/PassiveDiscovery2"
 )
 
 i=1

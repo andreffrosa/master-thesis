@@ -167,6 +167,8 @@ static RoutingContext* parse_r_context(char* value, bool nested) {
         return StaticRoutingContext();
     } else if(strcmp(token, (name = "OLSR")) == 0 || strcmp(token, (name = "OLSRRoutingContext")) == 0) {
         return OLSRRoutingContext();
+    } else if(strcmp(token, (name = "BATMAN")) == 0 || strcmp(token, (name = "BATMANRoutingContext")) == 0) {
+        return BATMANRoutingContext();
     } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVRoutingContext")) == 0) {
         return AODVRoutingContext();
     } else if(strcmp(token, (name = "DSR")) == 0 || strcmp(token, (name = "DSRRoutingContext")) == 0) {
@@ -190,7 +192,9 @@ static RoutingContext* parse_r_context(char* value, bool nested) {
             printf("Parameter 1 of %s not passed!\n", name);
             exit(-1);
         }
-    } else {
+    } /*else if(strcmp(token, (name = "TORA")) == 0 || strcmp(token, (name = "TORARoutingContext")) == 0) {
+        return TORARoutingContext();
+    }*/ else {
         printf("Unrecognized Routing Context! \n");
         exit(-1);
     }

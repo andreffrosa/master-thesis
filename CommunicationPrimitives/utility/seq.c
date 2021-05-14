@@ -23,6 +23,16 @@ unsigned short dec_seq(unsigned short current_seq, bool ignore_zero) {
     return ignore_zero ? (prev_seq == 0 ? (MAX_SEQ - 1) : prev_seq) : prev_seq;
 }
 
+unsigned short add_seq(unsigned short current_seq, unsigned short x, bool ignore_zero) {
+    unsigned short next_seq = current_seq + x;
+    return ignore_zero ? (next_seq == 0 ? 1 : next_seq) : next_seq;
+}
+
+unsigned short sub_seq(unsigned short current_seq, unsigned short x, bool ignore_zero) {
+    unsigned short prev_seq = current_seq - x;
+    return ignore_zero ? (prev_seq == 0 ? (MAX_SEQ - 1) : prev_seq) : prev_seq;
+}
+
 int compare_seq(unsigned short s1, unsigned short s2, bool ignore_zero) {
 
     // TODO: incluir o ignore zero

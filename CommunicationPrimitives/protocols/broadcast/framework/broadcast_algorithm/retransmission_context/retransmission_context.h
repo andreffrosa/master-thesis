@@ -82,5 +82,7 @@ RetransmissionContext* LatencyContext();
 
 RetransmissionContext* BiFloodingContext();
 
+RetransmissionContext* BATMANContext();
+
 
 #endif /* _RETRANSMISSION_CONTEXT_H_ */

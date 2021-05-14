@@ -672,11 +672,21 @@ static BroadcastAlgorithm* parse_broadcast_algorithm(char** ptr) {
 			printf("Parameter 1 of %s not passed!\n", name);
 			exit(-1);
 		}
+    } else if(strcmp(token, (name = "BATMANFlooding")) == 0) {
+
+        token = strtok_r(NULL, " ", ptr);
+		if(token != NULL) {
+			unsigned long t = strtol(token, NULL, 10);
+
+            return BATMANFlooding(t);
+		} else {
+			printf("Parameter 1 of %s not passed!\n", name);
+			exit(-1);
+		}
     } else {
 		printf("Unrecognized Broadcast Algorithm! \n");
 		exit(-1);
 	}
-
 }
 
 static void parse_policy_param(BroadcastAlgorithm** algorithms, char* value) {
@@ -908,6 +918,8 @@ static RetransmissionPolicy* parse_r_policy(char** ptr) {
         return DynamicProbabilityPolicy();
     } else if(strcmp(token, (name = "BiFlooding")) == 0 || strcmp(token, (name = "BiFloodingPolicy")) == 0) {
         return BiFloodingPolicy();
+    } else if(strcmp(token, (name = "BATMAN")) == 0 || strcmp(token, (name = "BATMANPolicy")) == 0) {
+        return BATMANPolicy();
     } else {
         printf("Unrecognized Retransmission Policy! \n");
 		exit(-1);
@@ -1189,6 +1201,8 @@ static RetransmissionContext* parse_r_context(char* value, bool nested) {
         return LatencyContext();
 	} else if(strcmp(token, (name = "BiFlooding")) == 0 || strcmp(token, (name = "BiFloodingContext")) == 0) {
         return BiFloodingContext();
+	} else if(strcmp(token, (name = "BATMAN")) == 0 || strcmp(token, (name = "BATMANContext")) == 0) {
+        return BATMANContext();
 	} else {
         printf("Unrecognized Retransmission Context! \n");
 		exit(-1);

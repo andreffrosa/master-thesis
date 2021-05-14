@@ -25,6 +25,10 @@ unsigned short inc_seq(unsigned short current_seq, bool ignore_zero);
 
 unsigned short dec_seq(unsigned short current_seq, bool ignore_zero);
 
+unsigned short add_seq(unsigned short current_seq, unsigned short x, bool ignore_zero);
+
+unsigned short sub_seq(unsigned short current_seq, unsigned short x, bool ignore_zero);
+
 int compare_seq(unsigned short s1, unsigned short s2, bool ignore_zero);
 
 #endif /* _UTILITY_SEQ_H_ */

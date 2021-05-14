@@ -46,4 +46,6 @@ BroadcastAlgorithm* AHBP(unsigned long t, unsigned int route_max_len, bool mobil
 
 BroadcastAlgorithm* BiFlooding(unsigned long t1, unsigned long t2);
 
+BroadcastAlgorithm* BATMANFlooding(unsigned long t);
+
 #endif /* _BCAST_ALGORITHMS_H_ */

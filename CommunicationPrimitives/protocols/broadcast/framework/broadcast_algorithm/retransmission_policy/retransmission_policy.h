@@ -61,4 +61,6 @@ RetransmissionPolicy* DynamicProbabilityPolicy();
 
 RetransmissionPolicy* BiFloodingPolicy();
 
+RetransmissionPolicy* BATMANPolicy();
+
 #endif /* _RETRANSMISSION_POLICY_H_ */
