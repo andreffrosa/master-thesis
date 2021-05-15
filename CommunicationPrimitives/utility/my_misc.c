@@ -396,3 +396,9 @@ short* new_short(short s) {
     *x = s;
     return x;
 }
+
+int* new_int(int n) {
+    int* x = malloc(sizeof(int));
+    *x = n;
+    return x;
+}

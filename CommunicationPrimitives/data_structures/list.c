@@ -12,6 +12,8 @@
 
 #include "list.h"
 
+#include "utility/my_math.h"
+
 #include <assert.h>
 
 #include <stdarg.h>
@@ -165,4 +167,29 @@ list* reverse(list* l, unsigned int item_size) {
     }
 
     return l2;
+}
+
+list* list_shuffle(list* l, int iterations) {
+    assert(l);
+
+    for(int i = 0; i < iterations; i++) {
+        list* l2 = list_init();
+
+        void* data = NULL;
+        while( (data = list_remove_head(l)) ) {
+            if(randomProb() < 0.5) {
+                list_add_item_to_head(l2, data);
+            } else {
+                list_add_item_to_tail(l2, data);
+            }
+        }
+
+        l->head = l2->head;
+        l->tail = l2->tail;
+        l->size = l2->size;
+
+        free(l2);
+    }
+
+    return l;
 }

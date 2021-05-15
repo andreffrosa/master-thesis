@@ -70,4 +70,6 @@ double* new_double(double d);
 
 short* new_short(short s);
 
+int* new_int(int n);
+
 #endif /* MY_MISC_H_ */

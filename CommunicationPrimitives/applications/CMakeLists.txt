@@ -13,11 +13,14 @@ link_directories(${PROJECT_SOURCE_DIR})
 add_executable(connect_test ${PROJECT_SOURCE_DIR}/connect.c ${PROJECT_SOURCE_DIR}/app_common.c)
 target_link_libraries(connect_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
 
-add_executable(dijkstra_test ${PROJECT_SOURCE_DIR}/aux/dijkstra_test.c)
-target_link_libraries(dijkstra_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+#add_executable(dijkstra_test ${PROJECT_SOURCE_DIR}/aux/dijkstra_test.c)
+#target_link_libraries(dijkstra_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
 
-add_executable(tlv_test ${PROJECT_SOURCE_DIR}/aux/tlv_test.c)
-target_link_libraries(tlv_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+#add_executable(tlv_test ${PROJECT_SOURCE_DIR}/aux/tlv_test.c)
+#target_link_libraries(tlv_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
+add_executable(shuffle_test ${PROJECT_SOURCE_DIR}/aux/shuffle_test.c)
+target_link_libraries(shuffle_test utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
 
 
 # DISCOVERY
@@ -44,6 +47,11 @@ target_link_libraries(broadcast_test broadcast broadcast_algorithm discovery_alg
 link_directories(${PROJECT_SOURCE_DIR}/routing/)
 add_executable(ping_test ${PROJECT_SOURCE_DIR}/routing/ping_test.c ${PROJECT_SOURCE_DIR}/app_common.c)
 target_link_libraries(ping_test routing routing_algorithm broadcast broadcast_algorithm discovery_framework discovery_algorithm utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
+link_directories(${PROJECT_SOURCE_DIR}/routing/)
+add_executable(ping2_test ${PROJECT_SOURCE_DIR}/routing/ping2_test.c ${PROJECT_SOURCE_DIR}/app_common.c)
+target_link_libraries(ping2_test routing routing_algorithm broadcast broadcast_algorithm discovery_framework discovery_algorithm utility yggprotos yggcore ygginterfaces yggdatastruct ygglllib_obj)
+
 
 #link_directories(${PROJECT_SOURCE_DIR}/routing/)
 #add_executable(routing_test ${PROJECT_SOURCE_DIR}/routing/routing_test.c)

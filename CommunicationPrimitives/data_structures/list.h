@@ -42,4 +42,6 @@ list* new_list(unsigned int n, ...);
 
 list* reverse(list* l, unsigned int item_size);
 
+list* list_shuffle(list* l, int iterations);
+
 #endif /* DATA_STRUCTURES_LIST_H_ */
