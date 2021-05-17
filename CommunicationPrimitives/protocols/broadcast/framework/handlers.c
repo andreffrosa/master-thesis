@@ -84,7 +84,7 @@ void ComputeRetransmissionDelay(broadcast_framework_state* state, PendingMessage
         } else {
             sprintf(str, "[%s] change to phase = %d previous_phase_duration = %lu delay = %lu", id_str, current_phase, current_phase == 1? 0:getPhaseDuration(getPhaseStats(p_msg, current_phase-1)), delay);
         }
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELAY", str);
+        my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "DELAY", str);
     }
     #endif
 }
@@ -180,7 +180,7 @@ void DeliverMessage(broadcast_framework_state* state, PendingMessage* p_msg) {
         uuid_unparse(getPendingMessageID(p_msg), id_str);
         char str[UUID_STR_LEN+4];
         sprintf(str, "[%s]", id_str);
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
+        my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "DELIVER", str);
     }
     #endif
 
@@ -200,6 +200,17 @@ void RetransmitMessage(broadcast_framework_state* state, PendingMessage* p_msg, 
 	dispatch(&m);
 
 	state->stats.messages_transmitted++;
+
+    #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, SIMPLE_DEBUG)
+    {
+        char id_str[UUID_STR_LEN+1];
+        id_str[UUID_STR_LEN] = '\0';
+        uuid_unparse(getPendingMessageID(p_msg), id_str);
+        char str[UUID_STR_LEN+4];
+        sprintf(str, "[%s]", id_str);
+        my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "RETRANSMIT", str);
+    }
+    #endif
 }
 
 void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
@@ -263,9 +274,10 @@ void uponBroadcastRequest(broadcast_framework_state* state, YggRequest* req) {
         }
 
         char str[ym->dataLen+UUID_STR_LEN+100];
-        sprintf(str, "[%s] ttl=%s : %s", id_str, ttl_str, content);
+        //sprintf(str, "[%s] ttl=%s : %s", id_str, ttl_str, content);
+        sprintf(str, "[%s] ttl=%s", id_str, ttl_str);
 
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "BROADCAST REQ", str);
+        my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "BROADCAST REQ", str);
     }
     #endif
 
@@ -362,7 +374,7 @@ void uponNewMessage(broadcast_framework_state* state, YggMessage* msg) {
             sprintf(str, "[%s] %d copy on inactive from %s with ttl=%s", id_str, getCopies(p_msg)->size, parent_str, ttl_str);
         }
 
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "RECEIVED MESSAGE", str);
+        my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "RECEIVED MESSAGE", str);
     }
     #endif
 }
@@ -412,7 +424,7 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
                 state->stats.messages_not_transmitted++;
             }
 
-            #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, SIMPLE_DEBUG)
+            #if DEBUG_INCLUDE_GT(BROADCAST_DEBUG_LEVEL, ADVANCED_DEBUG)
             {
                 char id_str[UUID_STR_LEN+1];
                 id_str[UUID_STR_LEN] = '\0';
@@ -427,7 +439,7 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
 
                 char str [100];
                 sprintf(str, "[%s] Decision %s on phase %d max_ttl=%s", id_str, retransmit?"true":"false", getCurrentPhase(p_msg), ttl_str);
-                ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "POLICY", str);
+                my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "POLICY", str);
             }
             #endif
 
@@ -444,7 +456,7 @@ void uponTimeout(broadcast_framework_state* state, YggTimer* timer) {
     		}*/
         }
 	} else {
-		ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "TIMEOUT", "Received wierd timer!");
+		my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "TIMEOUT", "Received wierd timer! (ERROR)");
 	}
 }
 
@@ -529,7 +541,7 @@ void runGarbageCollector(broadcast_framework_state* state) {
 
         char s[100];
         sprintf(s, "deleted %u messages.", counter);
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "GC", s);
+        my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "GC", s);
     #else
         runGarbageCollectorPM(state->seen_msgs, &state->current_time, &seen_expiration);
     #endif

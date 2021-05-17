@@ -114,6 +114,8 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested);
 static PiggybackFilter* parse_piggyback_filter(char* value, bool nested);
 static PeriodicType parse_periodic_type(char* token);
 
+
+
 discovery_framework_args* load_discovery_framework_args(const char* file_path) {
     list* order = list_init();
     hash_table* configs = parse_configs_order(file_path, &order);
@@ -121,8 +123,8 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
     if(configs == NULL) {
         char str[100];
         sprintf(str, "Config file %s not found!", file_path);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
-        ygg_logflush();
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
+        //ygg_logflush();
 
         exit(-1);
     }
@@ -208,12 +210,12 @@ discovery_framework_args* load_discovery_framework_args(const char* file_path) {
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
+                my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
             }
         } else {
             char str[50];
             sprintf(str, "Empty Config %s", key);
-            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
+            my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
         }
 
     }
@@ -835,6 +837,8 @@ static DiscoveryPattern* parse_d_pattern(char* value, bool nested) {
             printf("Parameter 1 of %s not passed!\n", name);
             exit(-1);
         }
+    } else if( strcmp(token, (name = "BATMANDiscovery")) == 0 ) {
+        return BATMANDiscovery();
     } else {
         printf("Unrecognized DiscoveryContext! \n");
         exit(-1);

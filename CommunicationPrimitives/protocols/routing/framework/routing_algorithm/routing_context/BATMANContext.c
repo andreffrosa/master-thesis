@@ -71,7 +71,7 @@ static RoutingContextSendType BATMANRoutingContextTriggerEvent(ModuleState* m_st
             }
             hash_table_delete(neigh_info);
         }
-        
+
         // Remove
         list* to_remove = list_init();
         list_add_item_to_tail(to_remove, new_id(SE_getID(entry)));
@@ -220,6 +220,7 @@ static bool getFirstBiParent(RoutingNeighbors* neighbors, byte* meta_data, unsig
 
 static void processOGM(RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceEntry* source_entry, unsigned char* found_parent, double found_route_cost, unsigned int found_route_hops, unsigned char* myID, struct timespec* current_time, const char* proto) {
 
+    /*
     char str1[UUID_STR_LEN];
     uuid_unparse(SE_getID(source_entry), str1);
 
@@ -227,6 +228,7 @@ static void processOGM(RoutingTable* routing_table, RoutingNeighbors* neighbors,
     uuid_unparse(found_parent, str2);
 
     printf("Received OGM from %s through %s\n", str1, str2);
+    */
 
     hash_table* neigh_info = SE_getAttr(source_entry, "neigh_info");
     if(neigh_info == NULL) {

@@ -72,15 +72,16 @@ void ygg_loginit(){
 }
 
 void ygg_loginit_2(const char* hostname_){
-	pthread_mutexattr_t atr;
-	pthread_mutexattr_init(&atr);
-	pthread_mutex_init(&loglock, &atr);
-
-	out = stdout;
 
     if(hostname_ == NULL || strlen(hostname_) == 0) {
         ygg_loginit();
     } else {
+        pthread_mutexattr_t atr;
+    	pthread_mutexattr_init(&atr);
+    	pthread_mutex_init(&loglock, &atr);
+
+    	out = stdout;
+
         int len = strlen(hostname_);
         hostname = malloc(len+1);
         strcpy(hostname, hostname_);

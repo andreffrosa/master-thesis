@@ -30,7 +30,7 @@ static bool DynamicProbabilityPolicyEval(ModuleState* policy_state, PendingMessa
     /*
 char str[20];
     sprintf(str, "p=%f", p);
-    ygg_log("DYNAMIC_PROBABILITY", "", str);
+    my_logger_write(broadcast_logger, "DYNAMIC_PROBABILITY", "", str);
 */
 
 	double u = randomProb();

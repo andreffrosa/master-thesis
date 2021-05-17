@@ -17,7 +17,7 @@ TESTS=(
 #"routing/dsr;broadcast/biflooding;discovery/PeriodicJointDiscovery"
 #"routing/zone;broadcast/mpr+biflooding;discovery/OLSRDiscovery"
 #"routing/tora;broadcast/biflooding;discovery/PeriodicJointDiscovery"
-"routing/batman;broadcast/batmanflooding;discovery/PassiveDiscovery2"
+"routing/batman;broadcast/batmanflooding;discovery/BATMANDiscovery"
 )
 
 i=1

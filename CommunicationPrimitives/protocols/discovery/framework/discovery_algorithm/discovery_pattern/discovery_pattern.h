@@ -143,6 +143,11 @@ DiscoveryPattern* HybridDisjointDiscovery(PiggybackFilter* hello_piggyback_filte
  */
 DiscoveryPattern* EchoDiscovery(HackReplyType reply_type, bool piggyback_hello_on_reply_if_new_neighbor);
 
+
+DiscoveryPattern* BATMANDiscovery();
+
+
+
 HelloScheduler* DP_getHelloScheduler(DiscoveryPattern* dp);
 
 HackScheduler* DP_getHackScheduler(DiscoveryPattern* dp);

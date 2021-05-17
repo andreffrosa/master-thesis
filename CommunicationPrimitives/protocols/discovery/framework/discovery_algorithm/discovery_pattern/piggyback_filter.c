@@ -106,6 +106,80 @@ PiggybackFilter* PiggybackOnNewNeighbor() {
     return newPiggybackFilter(NULL, NULL, &PiggybackOnNewNeighbor_, NULL);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+#include "protocols/broadcast/framework/framework.h"
+#include "protocols/broadcast/framework/broadcast_header.h"
+
+//#include "protocols/routing/framework/framework.h"
+
+//#define BROADCAST_FRAMEWORK_PROTO_ID 160
+//#define MSG_BROADCAST_MESSAGE 0
+
+#define ROUTING_FRAMEWORK_PROTO_ID 161
+
+static PiggybackType PiggybackOnOGM_(ModuleState* m_state, YggMessage* msg, void* extra_args) {
+    assert(extra_args);
+
+    NeighborsTable* neighbors = ((void**)extra_args)[0];
+    bool isHello = *((bool*)((void**)extra_args)[1]);
+    NeighborEntry** neigh = ((void**)extra_args)[2];
+
+    uuid_t myID;
+    getmyId(myID);
+
+    if(msg->Proto_id == BROADCAST_FRAMEWORK_PROTO_ID) {
+
+        void* ptr = NULL;
+        unsigned char type_;
+        ptr = YggMessage_readPayload(msg, ptr, &type_, sizeof(unsigned char));
+        BcastMessageType type = type_;
+
+        if(type == MSG_BROADCAST_MESSAGE) {
+            BroadcastHeader bcast_header;
+        	ptr = YggMessage_readPayload(msg, ptr, &bcast_header, BROADCAST_HEADER_LENGTH);
+
+            if(bcast_header.dest_proto == ROUTING_FRAMEWORK_PROTO_ID) {
+
+                if(uuid_compare(bcast_header.source_id, myID) == 0) {
+                    if(isHello) {
+                        //printf("piggy hello!\n");
+                        return BROADCAST_PIGGYBACK;
+                    }
+                }
+
+                else {
+                    // usar o nº de hops
+
+                    NeighborEntry* ne = NT_getNeighbor(neighbors, bcast_header.source_id);
+                    if(ne) {
+                        if(!NE_isLost(ne)) {
+                            //printf("piggy hack!\n");
+                            *neigh = ne;
+                            return BROADCAST_PIGGYBACK;
+                        } else {
+                            //printf("is lost!\n");
+                        }
+                        //if(uuid_compare(bcast_header.source_id, bcast_header.sender_id) == 0)
+                    } else {
+                        //printf("not neighbor!\n");
+                    }
+                }
+            }
+        }
+    }
+
+    return NO_PIGGYBACK;
+}
+
+PiggybackFilter* BATMANHelloPiggyback() {
+    return newPiggybackFilter(NULL, NULL, &PiggybackOnOGM_, NULL);
+}
+
+PiggybackFilter* BATMANHackPiggyback() {
+    return newPiggybackFilter(NULL, NULL, &PiggybackOnOGM_, NULL);
+}
+
 
 
 

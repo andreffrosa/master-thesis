@@ -126,6 +126,21 @@ DiscoveryPattern* EchoDiscovery(HackReplyType reply_type, bool piggyback_hello_o
     );
 }
 
+
+DiscoveryPattern* BATMANDiscovery() {
+
+    return newDiscoveryPattern(
+        PiggybackHELLO(BATMANHelloPiggyback()),
+        PiggybackHACK(BATMANHelloPiggyback())
+    );
+}
+
+
+
+
+
+
+
 HelloScheduler* DP_getHelloScheduler(DiscoveryPattern* dp) {
     assert(dp);
     return dp->hello_sh;
@@ -144,13 +159,18 @@ DiscoveryInternalEventResult* DP_triggerEvent(DiscoveryPattern* dp, DiscoveryInt
 
     switch(event_type) {
         case DPE_DOWNSTREAM_MESSAGE: {
+            NeighborEntry* neigh = NULL;
+
+            bool isHello = true;
+
             // Piggyback Hello
-            PiggybackType hello_piggyback_type = HELLO_evalPiggybackFilter(dp->hello_sh, msg, NULL);
+            PiggybackType hello_piggyback_type = HELLO_evalPiggybackFilter(dp->hello_sh, msg, (void*[]){neighbors, &isHello, &neigh});
+
+            isHello = false;
 
             // Piggyback Hacks
-            PiggybackType hack_piggyback_type = HACK_evalPiggybackFilter(dp->hack_sh, msg, NULL);
+            PiggybackType hack_piggyback_type = HACK_evalPiggybackFilter(dp->hack_sh, msg, (void*[]){neighbors, &isHello, &neigh});
 
-            NeighborEntry* neigh = NULL;
             WLANAddr* dest_addr = NULL;
             if( hello_piggyback_type == NO_PIGGYBACK && hack_piggyback_type == UNICAST_PIGGYBACK ) {
                 // Find Neighbor with the corresponding MAC addr

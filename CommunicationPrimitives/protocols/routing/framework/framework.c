@@ -23,6 +23,9 @@
 
 #include <assert.h>
 
+MyLogger* routing_logger = NULL;
+MyLogger* routing_table_logger = NULL;
+
 void* routing_framework_main_loop(main_loop_args* args);
 
 static bool processTimer(routing_framework_state* f_state, YggTimer* timer);
@@ -87,7 +90,7 @@ void* routing_framework_main_loop(main_loop_args* args) {
     		default: {
     			char s[100];
     			sprintf(s, "Got weird queue elem, type = %u", elem.type);
-    			ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", s);
+    			my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", s);
     			exit(-1);
             }
 		}
@@ -103,7 +106,7 @@ void* routing_framework_main_loop(main_loop_args* args) {
                 default: type = "???";
             }
             sprintf(str, "event not processed %s", type);
-            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", str);
+            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", str);
         }
 
 		// Release memory of elem payload
@@ -249,7 +252,7 @@ static bool processRequest(routing_framework_state* f_state, YggRequest* request
         else
             sprintf(s, "Received request from protocol %d meant for protocol %d", request->proto_origin, request->proto_dest);
 
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ERROR", s);
+        my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ERROR", s);
 
         return true;
     }
@@ -271,7 +274,7 @@ static bool processEvent(routing_framework_state* f_state, YggEvent* event) {
     else {
         char s[100];
         sprintf(s, "Received event from protocol %d meant for protocol %d", event->proto_origin, event->proto_dest);
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ERROR", s);
+        my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ERROR", s);
 
         return true;
     }

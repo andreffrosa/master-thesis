@@ -20,6 +20,8 @@
 
 #include <assert.h>
 
+MyLogger* broadcast_logger = NULL;
+
 void* broadcast_framework_main_loop(main_loop_args* args);
 
 static bool processTimer(broadcast_framework_state* f_state, YggTimer* timer);
@@ -28,6 +30,8 @@ static bool processRequest(broadcast_framework_state* f_state, YggRequest* reque
 static bool processEvent(broadcast_framework_state* f_state, YggEvent* event);
 
 proto_def* broadcast_framework_init(void* arg) {
+
+    assert(broadcast_logger);
 
 	broadcast_framework_state* f_state = malloc(sizeof(broadcast_framework_state));
 	f_state->args = (broadcast_framework_args*)arg;
@@ -46,6 +50,8 @@ proto_def* broadcast_framework_init(void* arg) {
 }
 
 void* broadcast_framework_main_loop(main_loop_args* args) {
+
+    my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "INIT", "Starting broadcast framework ...");
 
 	broadcast_framework_state* f_state = args->state;
 
@@ -77,7 +83,7 @@ void* broadcast_framework_main_loop(main_loop_args* args) {
 			; // On purpose
 			char s[100];
 			sprintf(s, "Got weird queue elem, type = %u", elem.type);
-			ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", s);
+			my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", s);
 			exit(-1);
 		}
 
@@ -155,7 +161,7 @@ static bool processRequest(broadcast_framework_state* f_state, YggRequest* reque
         else
             sprintf(s, "Received request from protocol %d meant for protocol %d", request->proto_origin, request->proto_dest);
 
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "ERROR", s);
+        my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "ERROR", s);
 
         return true;
     }
@@ -173,7 +179,7 @@ static bool processEvent(broadcast_framework_state* f_state, YggEvent* event) {
     else {
         char s[100];
         sprintf(s, "Received event from protocol %d meant for protocol %d", event->proto_origin, event->proto_dest);
-        ygg_log(BROADCAST_FRAMEWORK_PROTO_NAME, "ERROR", s);
+        my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "ERROR", s);
 
         return true;
     }

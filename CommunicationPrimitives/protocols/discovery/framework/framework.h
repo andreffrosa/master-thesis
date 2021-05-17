@@ -20,8 +20,13 @@
 
 #include "discovery_algorithm/discovery_algorithms.h"
 
+#include "utility/my_logger.h"
+
 #define DISCOVERY_FRAMEWORK_PROTO_ID 159
 #define DISCOVERY_FRAMEWORK_PROTO_NAME "DISCOVERY FRAMEWORK"
+
+extern MyLogger* discovery_logger;
+extern MyLogger* neighbors_logger;
 
 typedef struct discovery_stats_ {
     unsigned long new_neighbors;

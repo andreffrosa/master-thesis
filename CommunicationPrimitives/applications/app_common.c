@@ -37,10 +37,11 @@ struct option long_options[] = {
     { "overlay", required_argument, NULL, 'o' },
     { "interface", required_argument, NULL, 'i' },
     { "hostname", required_argument, NULL, 'h' },
+    { "log", required_argument, NULL, 'l'},
     { NULL, 0, NULL, 0 }
 };
 
-static const char* opt_str = "a:d:b:r:o:i:h:";
+static const char* opt_str = "a:d:b:r:o:i:h:l:";
 
 static void* process_arg(char option, int option_index, char* args);
 
@@ -90,6 +91,7 @@ static void* process_arg(char option, int option_index, char* opt_arg) {
         case 'r':
         case 'o':
         case 'i':
+        case 'l':
         case 'h': {
                 unsigned int str_size = (strlen(opt_arg)+1)*sizeof(char);
                 char* value = malloc(str_size);
@@ -97,7 +99,7 @@ static void* process_arg(char option, int option_index, char* opt_arg) {
                 return value;
             }
         case '?':
-            if ( optopt == 'a' || optopt == 'd' || optopt == 'b' || optopt == 'r' || optopt == 'o' || optopt == 'i' || optopt == 'h')
+            if ( optopt == 'a' || optopt == 'd' || optopt == 'b' || optopt == 'r' || optopt == 'o' || optopt == 'i' || optopt == 'h' || optopt == 'l')
                 fprintf(stderr, "Option -%c is followed by a parameter.\n", optopt);
             else if (isprint(optopt))
                 fprintf(stderr, "Unknown option `-%c'.\n", optopt);

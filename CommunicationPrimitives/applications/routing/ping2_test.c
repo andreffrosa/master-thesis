@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <linux/limits.h>
 
+
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -36,6 +38,8 @@
 #include "utility/my_time.h"
 #include "utility/my_sys.h"
 #include "utility/my_string.h"
+
+#include "utility/my_logger.h"
 
 #define ID_TEMPLATE "66600666-1001-1001-1001-000000000001"
 
@@ -83,7 +87,8 @@ static void parse_node(unsigned char* id, unsigned int node_id);
 static void uponSendTimer(RoutingAppArgs* app_args, RoutingAppState* app_state, unsigned char* send_timer_id);
 
 static void printDiscoveryStats(YggRequest* req);
-static void printBcastStats(YggRequest* req);
+static void printBroadcastStats(YggRequest* req);
+static void printRoutingStats(YggRequest* req);
 
 static void sendMessage(RoutingAppArgs* app_args, RoutingAppState* app_state);
 static void rcvMessage(YggMessage* msg, RoutingAppArgs* app_args, RoutingAppState* app_state);
@@ -92,12 +97,15 @@ static void uponNotification(YggEvent* ev, RoutingAppArgs* app_args);
 
 static void requestDiscoveryStats();
 static void requestBroadcastStats();
+static void requestRoutingStats();
 
 static void setRoutingTimer(RoutingAppArgs* app_args, unsigned char* send_timer_id, bool isFirst/*, struct timespec* start_time*/);
 
 #define APP_ID 400
 
 #define APP_NAME "PING2 APP"
+
+/*static*/ MyLogger* app_logger = NULL;
 
 int main(int argc, char* argv[]) {
 
@@ -107,6 +115,59 @@ int main(int argc, char* argv[]) {
     // Interface and Hostname
     char interface[20] = {0}, hostname[30] = {0};
     unparse_host(hostname, 20, interface, 30, args);
+
+    // Logs
+    char destination[200] = "../experiments/output/routing/exp1-";
+    hash_table_insert(args, new_str("log"), new_str(strcat(destination, hostname))); // temp
+
+    char* log_path = hash_table_find_value(args, "log");
+    if(log_path) {
+        //rmdir(log_path);
+        char cmd[100];
+        sprintf(cmd, "rm -r %s", log_path);
+        run_command(cmd, NULL, 0);
+
+        // Create dir if does not exist
+        struct stat st = {0};
+        if (stat(log_path, &st) == -1) {
+            if(mkdir(log_path, S_IRWXO) != 0) {
+                printf("Could not create dir %s!\n", log_path);
+                exit(-1);
+            }
+        }
+
+        char file_path[PATH_MAX];
+        build_path(file_path, log_path, "app.log");
+        //app_logger = new_my_logger(fopen("../experiments/output/routing/test.txt", "w"), hostname);
+        //app_logger = new_my_logger(stdout, hostname);
+
+        /*FILE* f = */freopen(file_path, "w", stdout);
+        dup2(1, 2);  //redirects stderr to stdout below this line.
+
+        app_logger = new_my_logger(stdout, hostname);
+
+        build_path(file_path, log_path, "discovery.log");
+        discovery_logger = new_my_logger(fopen(file_path, "w"), hostname);
+
+        build_path(file_path, log_path, "neighbors.log");
+        neighbors_logger = new_my_logger(fopen(file_path, "w"), hostname);
+
+        build_path(file_path, log_path, "broadcast.log");
+        broadcast_logger = new_my_logger(fopen(file_path, "w"), hostname);
+
+        build_path(file_path, log_path, "routing.log");
+        routing_logger = new_my_logger(fopen(file_path, "w"), hostname);
+
+        build_path(file_path, log_path, "routing_table.log");
+        routing_table_logger = new_my_logger(fopen(file_path, "w"), hostname);
+    } else {
+        app_logger = new_my_logger(stdout, hostname);
+        discovery_logger = app_logger;
+        neighbors_logger = app_logger;
+        broadcast_logger = app_logger;
+        routing_logger = app_logger;
+        routing_table_logger = app_logger;
+    }
 
     // Network
     NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
@@ -189,7 +250,7 @@ int main(int argc, char* argv[]) {
 
     char str[100];
     sprintf(str, "%s starting experience with duration %lu + %lu + %lu s\n", hostname, app_args->initial_grace_period_s, app_args->exp_duration_s, app_args->final_grace_period_s);
-    ygg_log(APP_NAME, "INIT", str);
+    my_logger_write(app_logger, APP_NAME, "INIT", str);
 
     struct timespec start_time = {0};
     clock_gettime(CLOCK_MONOTONIC, &start_time);
@@ -201,6 +262,9 @@ int main(int argc, char* argv[]) {
 	genUUID(end_exp);
 	milli_to_timespec(&t, (app_args->exp_duration_s + app_args->initial_grace_period_s)*1000);
     SetTimer(&t, end_exp, APP_ID, 0);
+
+    uuid_t kill_exp;
+	genUUID(kill_exp);
 
     // Set periodic timer
     uuid_t send_timer_id;
@@ -222,16 +286,45 @@ int main(int argc, char* argv[]) {
 			if( uuid_compare(elem.data.timer.id, end_exp ) == 0 ) {
                 if(!app_state->finished) {
                     app_state->finished = true;
-                    ygg_log(APP_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(routing_table_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+
+                    /*my_logger_flush(app_logger);
+                    my_logger_flush(discovery_logger);
+                    my_logger_flush(neighbors_logger);*/
 
                     milli_to_timespec(&t, app_args->final_grace_period_s*1000);
                     SetTimer(&t, end_exp, APP_ID, 0);
                 } else {
                     requestDiscoveryStats();
                     requestBroadcastStats();
+                    requestRoutingStats();
+                    milli_to_timespec(&t, 500);
+                    SetTimer(&t, kill_exp, APP_ID, 0);
                 }
 			} else if( uuid_compare(elem.data.timer.id, send_timer_id) == 0 ) {
                 uponSendTimer(app_args, app_state, send_timer_id);
+			}  else if( uuid_compare(elem.data.timer.id, kill_exp) == 0 ) {
+
+                my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "KILL");
+                my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+                my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+                my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+                my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+                my_logger_write(routing_table_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+
+                my_logger_flush(app_logger);
+                my_logger_flush(discovery_logger);
+                my_logger_flush(neighbors_logger);
+                my_logger_flush(broadcast_logger);
+                my_logger_flush(routing_logger);
+                my_logger_flush(routing_table_logger);
+
+                //return 0;
 			}
 
             /*if(finished) {
@@ -253,7 +346,11 @@ int main(int argc, char* argv[]) {
 					}
 				} else if ( req->proto_origin == BROADCAST_FRAMEWORK_PROTO_ID ) {
 					if( req->request == REPLY && req->request_type == REQ_BROADCAST_FRAMEWORK_STATS) {
-						printBcastStats(req);
+						printBroadcastStats(req);
+					}
+				} else if ( req->proto_origin == ROUTING_FRAMEWORK_PROTO_ID ) {
+					if( req->request == REPLY && req->request_type == REQ_ROUTING_FRAMEWORK_STATS) {
+						printRoutingStats(req);
 					}
 				}
 			}
@@ -269,7 +366,7 @@ int main(int argc, char* argv[]) {
 			uponNotification(&elem.data.event, app_args);
 			break;
 		default:
-			ygg_log(APP_NAME, "MAIN LOOP", "Received wierd thing in my queue.");
+			my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "Received wierd thing in my queue.");
 		}
 
         // Release memory of elem payload
@@ -286,7 +383,7 @@ static void sendMessage(RoutingAppArgs* app_args, RoutingAppState* app_state) {
             char str[100];
             sprintf(str, "[%u]", app_state->counter-1);
 
-            ygg_log(APP_NAME, "TIMEOUT", str);
+            my_logger_write(app_logger, APP_NAME, "TIMEOUT", str);
         }
     }
 
@@ -299,7 +396,7 @@ static void sendMessage(RoutingAppArgs* app_args, RoutingAppState* app_state) {
 
     sprintf(payload, "PING [%u] [%lu:%lu]", /*dest_str,*/ app_state->counter, current_time.tv_sec, current_time.tv_nsec);
 
-    //ygg_log(); // TODO
+    //my_logger_write(app_logger, ); // TODO
 
     assert(app_state->current_destination);
 
@@ -346,7 +443,7 @@ static void rcvMessage(YggMessage* msg, RoutingAppArgs* app_args, RoutingAppStat
 
             char str[100];
             sprintf(str, "[%u] from %s : s=%d bytes", counter, src_str, payload_size);
-            ygg_log(APP_NAME, "REQ", str);
+            my_logger_write(app_logger, APP_NAME, "REQ", str);
         }
 
         // Send Reply
@@ -370,7 +467,7 @@ static void rcvMessage(YggMessage* msg, RoutingAppArgs* app_args, RoutingAppStat
             char str[100];
             sprintf(str, "[%u] from %s : t=%lu ms s=%d bytes", counter, dest_str, t_ms, payload_size);
 
-            ygg_log(APP_NAME, "REP", str);
+            my_logger_write(app_logger, APP_NAME, "REP", str);
         }
     } else {
         printf("Unknown message type!\n");
@@ -390,7 +487,13 @@ static void requestBroadcastStats() {
     deliverRequest(&req);
 }
 
-static void printBcastStats(YggRequest* req) {
+static void requestRoutingStats() {
+    YggRequest req;
+	YggRequest_init(&req, APP_ID, ROUTING_FRAMEWORK_PROTO_ID, REQUEST, REQ_ROUTING_FRAMEWORK_STATS);
+    deliverRequest(&req);
+}
+
+static void printBroadcastStats(YggRequest* req) {
 	broadcast_stats stats;
 	YggRequest_readPayload(req, NULL, &stats, sizeof(broadcast_stats));
 
@@ -402,7 +505,7 @@ static void printBcastStats(YggRequest* req) {
 			stats.messages_not_transmitted,
             stats.messages_delivered);
 
-	ygg_log(APP_NAME, "BROADCAST STATS", m);
+	my_logger_write(app_logger, APP_NAME, "BROADCAST STATS", m);
 }
 
 static void printDiscoveryStats(YggRequest* req) {
@@ -416,8 +519,26 @@ static void printDiscoveryStats(YggRequest* req) {
             stats.lost_neighbors,
             stats.new_neighbors);
 
-	ygg_log(APP_NAME, "DISCOVERY STATS", str);
+	my_logger_write(app_logger, APP_NAME, "DISCOVERY STATS", str);
 }
+
+static void printRoutingStats(YggRequest* req) {
+	routing_stats stats;
+	YggRequest_readPayload(req, NULL, &stats, sizeof(routing_stats));
+
+	char m[1000];
+	sprintf(m, "Sent: %lu \t Delivered: %lu \t Forwarded: %lu \t Not_Forwarded: %lu \t Received: %lu \t Ctrl_sent: %lu \t Ctrl_rcv: %lu",
+            stats.messages_requested,
+            stats.messages_delivered,
+            stats.messages_forwarded,
+			stats.messages_not_forwarded,
+            stats.messages_received,
+            stats.control_sent,
+            stats.control_received);
+
+	my_logger_write(app_logger, APP_NAME, "ROUTING STATS", m);
+}
+
 
 static void uponNotification(YggEvent* ev, RoutingAppArgs* app_args) {
 
@@ -429,14 +550,14 @@ static void uponNotification(YggEvent* ev, RoutingAppArgs* app_args) {
                 printAnnounce(ev->payload, ev->length, -1, &an_str);
                 char str[strlen(an_str)+2];
                 sprintf(str, "\n%s", an_str);
-                ygg_log(APP_NAME, "DISCOVERY", str);
+                my_logger_write(app_logger, APP_NAME, "DISCOVERY", str);
                 free(an_str);
             }
         }
 	} else {
 		char s[100];
 		sprintf(s, "Received notification from protocol %d meant for protocol %d", ev->proto_origin, ev->proto_dest);
-		ygg_log(APP_NAME, "NOTIFICATION", s);
+		my_logger_write(app_logger, APP_NAME, "NOTIFICATION", s);
 	}
 */
 
@@ -502,7 +623,7 @@ static RoutingAppArgs* parse_routing_app_args(const char* file_path) {
     if(configs == NULL) {
         char str[100];
         sprintf(str, "Config file %s not found!", file_path);
-        ygg_log(APP_NAME, "ARG ERROR", str);
+        my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
         ygg_logflush();
 
         exit(-1);
@@ -540,12 +661,12 @@ static RoutingAppArgs* parse_routing_app_args(const char* file_path) {
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
-                ygg_log(APP_NAME, "ARG ERROR", str);
+                my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
             }
         } else {
             char str[50];
             sprintf(str, "Empty Config %s", key);
-            ygg_log(APP_NAME, "ARG ERROR", str);
+            my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
         }
     }
 
@@ -580,7 +701,7 @@ static list* parse_int_list(char* value) {
     str[0] = ' ';
     str[len] = ' ';
 
-    printf("parse_int_list = %s\n", str);
+    //printf("parse_int_list = %s\n", str);
 
     list* l = list_init();
 
@@ -623,9 +744,13 @@ static void uponSendTimer(RoutingAppArgs* app_args, RoutingAppState* app_state, 
 
             app_state->current_destination = list_remove_head(app_state->destinations);
 
-            char str[UUID_STR_LEN];
-            uuid_unparse(app_state->current_destination, str);
-            printf("app_state->current_destination = %s (%d remaining)\n", str, app_state->destinations->size);
+            /*if(app_state->current_destination) {
+                char str[UUID_STR_LEN];
+                uuid_unparse(app_state->current_destination, str);
+                printf("app_state->current_destination = %s (%d remaining)\n", str, app_state->destinations->size);
+            } else {
+                printf("app_state->current_destination = NULL (%d remaining)\n", app_state->destinations->size);
+            }*/
         }
 
         if(app_state->current_destination) {
@@ -656,6 +781,7 @@ static RoutingAppState* init_app_state(RoutingAppArgs* app_args, unsigned char* 
     app_state->last_rep_counter = 0;
     app_state->finished = false;
 
+    /*
     printf("destinations: ");
     for(list_item* it = l->head; it; it = it->next) {
         char str[UUID_STR_LEN];
@@ -665,6 +791,7 @@ static RoutingAppState* init_app_state(RoutingAppArgs* app_args, unsigned char* 
     printf("\n");
 
     printf("rcv_only = %s\n", (app_state->rcv_only?"T":"F"));
+    */
 
     return app_state;
 }

@@ -62,5 +62,6 @@ PiggybackFilter* PiggybackOnAll(bool convert_to_broadcast);
 
 PiggybackFilter* PiggybackOnNewNeighbor();
 
+PiggybackFilter* BATMANHelloPiggyback();
 
 #endif /* _DISCOVERY_PIGGYBACK_FILTER_H_ */

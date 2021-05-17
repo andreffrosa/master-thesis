@@ -76,7 +76,7 @@ routing_framework_args* load_routing_framework_args(const char* file_path) {
     if(configs == NULL) {
         char str[100];
         sprintf(str, "Config file %s not found!", file_path);
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
+        my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
         ygg_logflush();
 
         exit(-1);
@@ -125,12 +125,12 @@ routing_framework_args* load_routing_framework_args(const char* file_path) {
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
-                ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
+                my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
             }
         } else {
             char str[50];
             sprintf(str, "Empty Config %s", key);
-            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
+            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ARG ERROR", str);
         }
 
     }

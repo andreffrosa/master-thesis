@@ -61,8 +61,11 @@ int run_command(char* cmd, char* out, int size) {
        waitpid(pid, 0, 0); // wait for child to exit
 
        // Read output of child
-       memset(out, 0, size);
-       int n = read(fd[0], out, size);
+       int n = 0;
+       if(out) {
+           memset(out, 0, size);
+           n = read(fd[0], out, size);
+       }
 
        close(fd[0]);
 

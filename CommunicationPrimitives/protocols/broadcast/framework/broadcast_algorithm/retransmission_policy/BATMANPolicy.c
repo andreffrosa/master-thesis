@@ -1,15 +1,15 @@
 /*********************************************************
- * This code was written in the context of the Lightkone
- * European project.
- * Code is of the authorship of NOVA (NOVA LINCS @ DI FCT
- * NOVA University of Lisbon)
- * Author:
- * André Rosa (af.rosa@campus.fct.unl.pt)
- * Under the guidance of:
- * Pedro Ákos Costa (pah.costa@campus.fct.unl.pt)
- * João Leitão (jc.leitao@fct.unl.pt)
- * (C) 2020
- *********************************************************/
+* This code was written in the context of the Lightkone
+* European project.
+* Code is of the authorship of NOVA (NOVA LINCS @ DI FCT
+* NOVA University of Lisbon)
+* Author:
+* André Rosa (af.rosa@campus.fct.unl.pt)
+* Under the guidance of:
+* Pedro Ákos Costa (pah.costa@campus.fct.unl.pt)
+* João Leitão (jc.leitao@fct.unl.pt)
+* (C) 2020
+*********************************************************/
 
 #include "retransmission_policy_private.h"
 
@@ -22,6 +22,16 @@ static bool BATMANPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, u
 
     unsigned int current_phase = getCurrentPhase(p_msg);
 
+    MessageCopy* first = ((MessageCopy*)getCopies(p_msg)->head->data);
+    unsigned char* source = getBcastHeader(first)->source_id;
+    unsigned char* parent = getBcastHeader(first)->sender_id;
+
+    bool result = false;
+
+    // source is my neigh
+    if(uuid_compare(parent, source) == 0) {
+        result = current_phase == 1;
+    } else {
         bool bi = false;
 
         hash_table* query_args = hash_table_init((hashing_function) &string_hash, (comparator_function) &equal_str);
@@ -37,8 +47,6 @@ static bool BATMANPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, u
         bool found = RC_query(r_context, "bi", &bi, query_args, myID, contexts);
         assert(found);
 
-        bool result = false;
-
         if(bi) {
             r_context = hash_table_find_value(contexts, "BATMANContext");
             assert(r_context);
@@ -48,9 +56,9 @@ static bool BATMANPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, u
             uuid_t best_neigh;
             found = RC_query(r_context, "best_neigh", best_neigh, query_args, myID, contexts);
             if(found) {
-                char str[UUID_STR_LEN];
+                /*char str[UUID_STR_LEN];
                 uuid_unparse(best_neigh, str);
-                printf("best_neigh = %s\n", str);
+                printf("best_neigh = %s\n", str);*/
 
                 for(double_list_item* it = copies->head; it; it = it->next) {
                     MessageCopy* copy = (MessageCopy*)it->data;
@@ -86,9 +94,9 @@ static bool BATMANPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, u
                 if(uuid_compare(src_id, myID) == 0) {
                     result = false;
                 } else {
-                    char str[UUID_STR_LEN];
+                    /*char str[UUID_STR_LEN];
                     uuid_unparse(src_id, str);
-                    printf("=> best_neigh not found! for src=%s\n", str);
+                    printf("=> best_neigh not found! for src=%s\n", str);*/
 
                     result = true;
                 }
@@ -96,8 +104,9 @@ static bool BATMANPolicyEval(ModuleState* policy_state, PendingMessage* p_msg, u
         }
 
         hash_table_delete(query_args);
+    }
 
-        return result;
+    return result;
 }
 
 RetransmissionPolicy* BATMANPolicy() {

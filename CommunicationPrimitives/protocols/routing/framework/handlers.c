@@ -138,7 +138,7 @@ void RF_uponSourceTimer(routing_framework_state* state, unsigned char* source_id
             char id_str[UUID_STR_LEN];
             uuid_unparse(source_id, id_str);
 
-            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SOURCE EXP", id_str);
+            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "SOURCE EXP", id_str);
             #endif
 
             ST_removeEntry(state->source_table, source_id);
@@ -349,6 +349,8 @@ void RF_uponJitterTimer(routing_framework_state* state, RoutingContextSendType s
 void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendType send_type, RoutingEventType event_type, void* info, RoutingControlHeader* neigh_header) {
     assert(send_type != NO_SEND);
 
+    state->stats.control_sent++;
+
     RoutingControlHeader control_header = {0};
 
     /*if( neigh_header ) {
@@ -385,9 +387,9 @@ void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendTyp
 
     #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
     char str[100];
-    sprintf(str, "seq %hu\n", control_header.seq);
+    sprintf(str, "SEQ=%hu", control_header.seq);
 
-    ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SEND CONTROL", str);
+    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "SEND CONTROL", str);
     #endif
 
     copy_timespec(&state->last_announce_time, &state->current_time);
@@ -396,6 +398,9 @@ void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendTyp
 }
 
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message, unsigned char* source_id, unsigned short src_proto, byte* meta_data, unsigned int meta_length) {
+
+    state->stats.control_received++;
+
     // Read header
     RoutingControlHeader header = {0};
     void* ptr = YggMessage_readPayload(message, NULL, &header, sizeof(RoutingControlHeader));
@@ -404,6 +409,16 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
     unsigned short length = message->dataLen - sizeof(RoutingControlHeader);
     byte payload[length];
     ptr = YggMessage_readPayload(message, ptr, payload, length);
+
+    #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+    char id_str[UUID_STR_LEN];
+    uuid_unparse(source_id, id_str);
+
+    char str[100];
+    sprintf(str, "from %s with SEQ=%hu", id_str, header.seq);
+
+    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "RCV CONTROL", str);
+    #endif
 
     if(uuid_compare(source_id, state->myID) != 0) {
 
@@ -443,15 +458,6 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
         }
 
         if(process) {
-            #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, ADVANCED_DEBUG)
-            char id_str[UUID_STR_LEN];
-            uuid_unparse(source_id, id_str);
-
-            char str[100];
-            sprintf(str, "from %s with seq %hu\n", id_str, header.seq);
-
-            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "RCV CONTROL", str);
-            #endif
 
             //bool forward = false;
             RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, src_proto, meta_data, meta_length);
@@ -482,7 +488,7 @@ void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, s
 
             char str[strlen(table_str) + 2];
             sprintf(str, "\n%s\n", table_str);
-            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
+            my_logger_write(routing_table_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
 
             free(table_str);
             #endif
@@ -491,7 +497,6 @@ void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, s
         }
 
 }
-
 
 void RF_runGarbageCollector(routing_framework_state* state) {
 
@@ -503,7 +508,7 @@ void RF_runGarbageCollector(routing_framework_state* state) {
 
         char s[100];
         sprintf(s, "deleted %u messages.", counter);
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "GC", s);
+        my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "GC", s);
     #else
         SeenMessagesGC(state->seen_msgs, &state->current_time, &seen_expiration);
     #endif

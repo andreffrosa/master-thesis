@@ -26,13 +26,15 @@ void RF_DeliverMessage(routing_framework_state* state, RoutingHeader* header, Yg
 
     #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
     {
-        char id_str[UUID_STR_LEN+1];
-        id_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(header->msg_id, id_str);
+        if(!isControlMessage(toDeliver)) {
+            char id_str[UUID_STR_LEN+1];
+            id_str[UUID_STR_LEN] = '\0';
+            uuid_unparse(header->msg_id, id_str);
 
-        char str[UUID_STR_LEN+4];
-        sprintf(str, "[%s]", id_str);
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "DELIVER", str);
+            char str[UUID_STR_LEN+4];
+            sprintf(str, "[%s]", id_str);
+            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "DELIVER", str);
+        }
     }
     #endif
 
@@ -63,11 +65,13 @@ void RF_DeliverMessage(routing_framework_state* state, RoutingHeader* header, Yg
     assert(add_result != FAILED);
 
     deliver(&m);
-	state->stats.messages_delivered++;
+
+    if(!isControlMessage(toDeliver)) {
+        state->stats.messages_delivered++;
+    }
 }
 
 void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
-    state->stats.messages_requested++;
 
     // Deserialize request
     void* ptr = NULL;
@@ -88,6 +92,13 @@ void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
     YggMessage_init(&toDeliver, state->myAddr.data, req->proto_origin);
 	YggMessage_addPayload(&toDeliver, (char*)data, len);
 
+
+    if(!isControlMessage(&toDeliver)) {
+        state->stats.messages_requested++;
+    } /*else {
+        state->stats.control_sent++;
+    }*/
+
     uuid_t msg_id;
     genUUID(msg_id);
 
@@ -100,21 +111,23 @@ void RF_uponRouteRequest(routing_framework_state* state, YggRequest* req) {
 
     #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
     {
-        char id_str[UUID_STR_LEN+1];
-        id_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(destination_id, id_str);
+        if(!isControlMessage(&toDeliver)) {
+            char id_str[UUID_STR_LEN+1];
+            id_str[UUID_STR_LEN] = '\0';
+            uuid_unparse(destination_id, id_str);
 
-        char msg_id_str[UUID_STR_LEN+1];
-        msg_id_str[UUID_STR_LEN] = '\0';
-        uuid_unparse(msg_id, msg_id_str);
+            char msg_id_str[UUID_STR_LEN+1];
+            msg_id_str[UUID_STR_LEN] = '\0';
+            uuid_unparse(msg_id, msg_id_str);
 
-        char msg[len+1];
-        memcpy(msg, data, len);
-        msg[len] = '\0';
+            char msg[len+1];
+            memcpy(msg, data, len);
+            msg[len] = '\0';
 
-        char str[300];
-        sprintf(str, "[%s] to %s : %s", msg_id_str, id_str, msg);
-        ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "SEND REQ", str);
+            char str[300];
+            sprintf(str, "[%s] to %s : %s", msg_id_str, id_str, msg);
+            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "SEND REQ", str);
+        }
     }
     #endif
 
@@ -128,6 +141,10 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
     RoutingHeader header;
     byte meta_data[1000] = {0};
     RF_deserializeMessage(msg, &header, meta_data, &toDeliver);
+
+    if(!isControlMessage(&toDeliver)) {
+        state->stats.messages_received++;
+    }
 
     // Check if the current node is the next-hop
     //bool im_next_hop = memcmp(msg->destAddr.data, state->myAddr.data, WLAN_ADDR_LEN) == 0;
@@ -152,18 +169,19 @@ void RF_uponNewMessage(routing_framework_state* state, YggMessage* msg) {
         if( !SeenMessagesContains(state->seen_msgs, header.msg_id) ) {
             state->stats.messages_received++;
 
-            #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, ADVANCED_DEBUG)
+            #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
             {
-                char id_str[UUID_STR_LEN+1];
-                id_str[UUID_STR_LEN] = '\0';
-                uuid_unparse(header.msg_id, id_str);
+                if(!isControlMessage(&toDeliver)) {
+                    char id_str[UUID_STR_LEN+1];
+                    id_str[UUID_STR_LEN] = '\0';
+                    uuid_unparse(header.msg_id, id_str);
 
-                char str[150];
-                sprintf(str, "[%s]", id_str);
-                ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "RECEIVED", str);
+                    char str[150];
+                    sprintf(str, "[%s]", id_str);
+                    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "DELIVER", str);
+                }
             }
             #endif
-
 
             RF_processMessage(state, &header, meta_data, false, &toDeliver);
         } else {
@@ -203,10 +221,9 @@ void RF_processMessage(routing_framework_state* state, RoutingHeader* header, by
 
                     void* info = (void*[]){header, prev_meta_data, &first};
 
-                    //printf("RECEIVED CONTROL MSG \n");
-
-
                     RF_uponNewControlMessage(state, &m, header->source_id, ROUTING_FRAMEWORK_PROTO_ID, info, sizeof(RoutingHeader));
+
+                    //state->stats.control_received++;
                 } else {
                     assert(false);
                 }
@@ -253,7 +270,7 @@ void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, by
             free(meta_data);
         }
 
-        #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, ADVANCED_DEBUG)
+        #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
         {
             char id_str[UUID_STR_LEN+1];
             id_str[UUID_STR_LEN] = '\0';
@@ -265,10 +282,24 @@ void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, by
 
             char str[100];
             sprintf(str, "[%s] to %s", id_str, next_hop_id_str);
-            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "FORWARD", str);
+
+            if(!isControlMessage(toDeliver)) {
+                my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "FORWARD MSG", str);
+            } else {
+                my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "FORWARD CTRL", str);
+            }
         }
         #endif
+
+        if(!isControlMessage(toDeliver)) {
+            state->stats.messages_forwarded++;
+        }
+
     } else {
+
+        if(!isControlMessage(toDeliver)) {
+            state->stats.messages_not_forwarded++;
+        }
 
         bool print = true;
 
@@ -286,13 +317,22 @@ void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, by
 
         if( print ) {
             #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
-            char id_str[UUID_STR_LEN];
-            uuid_unparse(header->msg_id, id_str);
+            {
+                char id_str[UUID_STR_LEN];
+                uuid_unparse(header->msg_id, id_str);
 
-            char str[UUID_STR_LEN+4];
-            sprintf(str, "[%s]", id_str);
+                char id_str2[UUID_STR_LEN];
+                uuid_unparse(header->destination_id, id_str2);
 
-            ygg_log(ROUTING_FRAMEWORK_PROTO_NAME, "ROUTE NOT KNOWN", str);
+                char str[100];
+                sprintf(str, "[%s] to destination %s", id_str, id_str2);
+
+                if(!isControlMessage(toDeliver)) {
+                    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "UNKNOWN ROUTE", str);
+                } else {
+                    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "UNKNOWN ROUTE", str);
+                }
+            }
             #endif
         }
     }
@@ -352,7 +392,7 @@ void RF_SendMessage(routing_framework_state* state, RoutingHeader* old_header, u
     RF_serializeMessage(state, &m, old_header, next_hop_id, next_hop_addr, new_meta_data, new_meta_data_length, ttl, &toForward);
 
 	dispatch(&m);
-	state->stats.messages_transmitted++;
+	//state->stats.messages_transmitted++;
 }
 
 void RF_serializeMessage(routing_framework_state* state, YggMessage* m, RoutingHeader* old_header, unsigned char* next_hop_id, unsigned char* next_hop_addr, byte* new_meta_data, unsigned short new_meta_data_length, unsigned short ttl, YggMessage* toDeliver) {
@@ -412,4 +452,23 @@ void RF_deserializeMessage(YggMessage* m, RoutingHeader* header, byte* meta_data
 	memcpy(toDeliver->srcAddr.data, m->srcAddr.data, WLAN_ADDR_LEN);
 	toDeliver->dataLen = payload_size;
 	ptr = YggMessage_readPayload(m, ptr, toDeliver->data, payload_size);
+}
+
+bool isControlMessage(YggMessage* toDeliver) {
+
+    if( toDeliver->Proto_id == ROUTING_FRAMEWORK_PROTO_ID ) {
+        //if( uuid_compare(header->source_id, state->myID) != 0 ) {
+            void* ptr = NULL;
+
+            byte aux = 0;
+            ptr = YggMessage_readPayload(toDeliver, ptr, &aux, sizeof(byte));
+            RoutingMessageType type = aux;
+
+            if(type == MSG_CONTROL_MESSAGE) {
+                return true;
+            }
+        //}
+    }
+
+    return false;
 }

@@ -17,7 +17,6 @@
 
 #include <assert.h>
 
-
 static unsigned long getLatency(double_list* copies, struct timespec* current_time) {
     assert(copies->size > 0);
 
@@ -31,7 +30,7 @@ static unsigned long getLatency(double_list* copies, struct timespec* current_ti
 
     /* char str[100];
     sprintf(str, "%lu", elapsed);
-    ygg_log("", "ELAPSED", str); */
+    my_logger_write(broadcast_logger, "", "ELAPSED", str); */
 
     hash_table* headers = getHeaders(first);
     unsigned long* latency = (unsigned long*)hash_table_find_value(headers, "latency");
@@ -78,7 +77,7 @@ static void LatencyContextCopy(ModuleState* context_state, PendingMessage* p_msg
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(getPendingMessageID(p_msg), id_str);
         sprintf(str, "[%s] %lu", id_str, *latency);
-        ygg_log("BROADCAST", "LATENCY", str);
+        my_logger_write(broadcast_logger, "BROADCAST FRAMEWORK", "LATENCY", str);
     }
 }
 

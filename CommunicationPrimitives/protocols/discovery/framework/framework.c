@@ -16,6 +16,9 @@
 
 #include <assert.h>
 
+MyLogger* discovery_logger = NULL;
+MyLogger* neighbors_logger = NULL;
+
 void* discovery_framework_main_loop(main_loop_args* args);
 
 static bool processTimer(discovery_framework_state* f_state, YggTimer* timer);
@@ -24,6 +27,9 @@ static bool processRequest(discovery_framework_state* f_state, YggRequest* reque
 static bool processEvent(discovery_framework_state* f_state, YggEvent* event);
 
 proto_def* discovery_framework_init(void* arg) {
+
+    assert(discovery_logger);
+    assert(neighbors_logger);
 
 	discovery_framework_state* f_state = malloc(sizeof(discovery_framework_state));
 	f_state->args = (discovery_framework_args*)arg;
@@ -43,6 +49,8 @@ proto_def* discovery_framework_init(void* arg) {
 }
 
 void* discovery_framework_main_loop(main_loop_args* args) {
+
+    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "INIT", "Starting discovery framework ...");
 
 	discovery_framework_state* f_state = args->state;
 
@@ -94,12 +102,12 @@ void* discovery_framework_main_loop(main_loop_args* args) {
     			; // On purpose
     			char s[100];
     			sprintf(s, "Got weird queue elem, type = %u", elem.type);
-    			ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", s);
+    			my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", s);
     			exit(-1);
 		}
 
         if(!processed) {
-            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "Event not processed");
+            my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "Event not processed");
         }
 
 		// Release memory of elem payload
@@ -204,7 +212,7 @@ static bool processRequest(discovery_framework_state* f_state, YggRequest* reque
             char s[100];
             sprintf(s, "Received %s from protocol %d meant for protocol %d", (request->request == REPLY ? "relpy" : "request") , request->proto_origin, request->proto_dest);
 
-            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "ERROR", s);
+            my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "ERROR", s);
 
             return true;
         }
@@ -218,7 +226,7 @@ static bool processEvent(discovery_framework_state* f_state, YggEvent* event) {
     else {
         char s[100];
         sprintf(s, "Received event from protocol %d meant for protocol %d", event->proto_origin, event->proto_dest);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "ERROR", s);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "ERROR", s);
 
         return false;
     }

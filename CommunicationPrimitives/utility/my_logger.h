@@ -8,24 +8,22 @@
  * Under the guidance of:
  * Pedro Ákos Costa (pah.costa@campus.fct.unl.pt)
  * João Leitão (jc.leitao@fct.unl.pt)
- * (C) 2020
+ * (C) 2021
  *********************************************************/
 
-#ifndef _BROADCAST_ALGORITHM_COMMON_H_
-#define _BROADCAST_ALGORITHM_COMMON_H_
+#ifndef _MY_LOGGER_H_
+#define _MY_LOGGER_H_
 
-#include "Yggdrasil.h"
+#include <stdio.h>
 
-#include "../pending_messages/pending_message.h"
+typedef struct MyLogger_ MyLogger;
 
-#include "../broadcast_header.h"
+MyLogger* new_my_logger(FILE* out, const char* hostname);
 
-#include "utility/my_logger.h"
+void my_logger_write(MyLogger* logger, char* proto, char* event, char* desc);
 
-extern MyLogger* broadcast_logger;
+void my_logger_flush(MyLogger* logger);
 
-#include "utility/byte.h"
-#include "utility/my_misc.h"
-#include "utility/my_string.h"
+void my_logger_close(MyLogger* logger);
 
-#endif /* _BROADCAST_ALGORITHM_COMMON_H_ */
+#endif /* _MY_LOGGER_H_ */

@@ -151,7 +151,7 @@ void DF_createHello(discovery_framework_state* state, HelloMessage* hello, bool 
     #ifdef DEBUG_DISCOVERY
     char str[200];
     sprintf(str, "SEQ=%hu PERIOD=%ds", hello->seq, hello->period);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "CREATE HELLO", str);
+    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "CREATE HELLO", str);
     #endif
     */
 }
@@ -188,7 +188,7 @@ void DF_createHack(discovery_framework_state* state, HackMessage* hack, Neighbor
 
     char str[200];
     sprintf(str, "ID=%s SEQ=%hu RX_LQ=%0.2f TX_LQ=%0.2f TYPE=%s PERIOD=%ds", id_str, hack_size);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "CREATE HACK", str);
+    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "CREATE HACK", str);
     #endif
     */
 }
@@ -438,7 +438,7 @@ void DF_uponHelloTimer(discovery_framework_state* state) {
 
                 char str[200];
                 sprintf(str, "HELLO=[SEQ=%hu] HACK=[%s]", dsp->hello->seq, hack_str);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO TIMER", str);
+                my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO TIMER", str);
             #endif
 
             if(dsp->hacks) {
@@ -493,7 +493,7 @@ void DF_uponHackTimer(discovery_framework_state* state) {
 
                 char str[200];
                 sprintf(str, "HELLO=[%s] HACK=[%s]", hello_str, hack_str);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK TIMER", str);
+                my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK TIMER", str);
             #endif
 
             if(dsp) {
@@ -547,7 +547,7 @@ void DF_uponReplyTimer(discovery_framework_state* state, unsigned char* timer_pa
 
         char str[200];
         sprintf(str, "HELLO=[%s] HACK=[%s]", hello_str, hack_str);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REPLY TIMER", str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "REPLY TIMER", str);
     #endif
 
     if(dsp->hello) {
@@ -570,7 +570,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         char str[200];
         sprintf(str, "Neigh %s was deleted before! (ERROR)", id_str);
 
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
         #endif
 
         return true;
@@ -584,7 +584,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         char str[200];
         sprintf(str, "%s (Timer expired)", id_str);
 
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
         #endif
         */
     }
@@ -612,7 +612,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
             char str[200];
             sprintf(str, "%s    (REMOVAL TIME)", id_str);
 
-            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REMOVED NEIGHBOR", str);
+            my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "REMOVED NEIGHBOR", str);
             #endif
 
             flushNeighbor(state, neigh);
@@ -729,14 +729,14 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
                 summary->lost_bi = true;
 
                 // Log
-                #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+                #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
                 char id_str[UUID_STR_LEN+1];
                 id_str[UUID_STR_LEN] = '\0';
                 uuid_unparse(NE_getNeighborID(neigh), id_str);
 
                 char str[200];
                 sprintf(str, "%s", id_str);
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
+                my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
                 #endif
             }
 
@@ -828,7 +828,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
 
             char str[200];
             sprintf(str, "%s  missed hellos: %s  missed hacks: %s  lost 2-hop neighs: %u", id_str, hellos_str, hacks_str, summary->deleted_2hop);
-            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
+            my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
         }
         #endif
 
@@ -936,7 +936,7 @@ void DF_uponDiscoveryEnvironmentTimer(discovery_framework_state* state) {
         char str2[strlen(str)+1];
         sprintf(str2, "\n%s", str);
 
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "DISCOVERY ENVIRONMENT", str2);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "DISCOVERY ENVIRONMENT", str2);
 
         free(str);
         #endif
@@ -1093,7 +1093,7 @@ void DF_uponNeighborChangeTimer(discovery_framework_state* state) {
 
     char str[200];
     sprintf(str, "HELLO=[%s] HACK=[%s]", hello_str, hack_str);
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR-CHANGE TIMER", str);
+    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR-CHANGE TIMER", str);
     #endif
 
     if(send_hello) {
@@ -1461,7 +1461,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
 
         char str[200];
         sprintf(str, "SRC=%s SEQ=%hu P=%d s", id_str, hello->seq, hello->period);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RECEIVED HELLO", str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "RECEIVED HELLO", str);
     #endif
 
     HelloDeliverSummary* summary = newHelloDeliverSummary();
@@ -1488,7 +1488,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
                     id_str[UUID_STR_LEN] = '\0';
                     uuid_unparse(hello->process_id, id_str);
 
-                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
+                    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
                 #endif
             }
             flushNeighbor(state, neigh);
@@ -1515,12 +1515,12 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
             //old_accepted_reboot = NE_isAccepted(neigh);
 
             // Log
-            #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
+            #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
                 char id_str[UUID_STR_LEN+1];
                 id_str[UUID_STR_LEN] = '\0';
                 uuid_unparse(hello->process_id, id_str);
 
-                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
+                my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "REBOOTED", id_str);
             #endif
 
             missed_hellos = 0;
@@ -1547,7 +1547,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
                     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
                         char str[200];
                         sprintf(str, "prev_missed_hellos=%u   seq_missed_hellos=%d", missed_hellos, seq_missed_hellos);
-                        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO SEQ ERROR", str);
+                        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "HELLO SEQ ERROR", str);
                     #endif
                 }
             } else {
@@ -1558,7 +1558,7 @@ HelloDeliverSummary* DF_uponHelloMessage(discovery_framework_state* state, Hello
                 #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
                     char str[200];
                     sprintf(str, "seq=%hu", previous_seq);
-                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REPEATED HELLO SEQ", str);
+                    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "REPEATED HELLO SEQ", str);
                 #endif
             }
         }
@@ -1723,7 +1723,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
 
         char str[200];
         sprintf(str, "SRC=%s DEST=%s SEQ=%hu P=%d s [%s]", id_str1, id_str2, hack->seq, hack->period, (positive_hack?"+":"-"));
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "RECEIVED HACK", str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "RECEIVED HACK", str);
     #endif
 
     HackDeliverSummary* summary = newHackDeliverSummary();
@@ -1805,7 +1805,7 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                                 #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, NO_DEBUG)
                                     char str[200];
                                     sprintf(str, "prev_missed_hacks=%u   seq_cmp-1=%d", missed_hacks, seq_cmp-1);
-                                    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK SEQ ERROR", str);
+                                    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK SEQ ERROR", str);
                                 #endif
                             }
                         } else {
@@ -1826,14 +1826,14 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         summary->became_bi = NE_getNeighborType(neigh, &state->current_time) != BI_NEIGH;
                         if( summary->became_bi ) {
                             // Log
-                            #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+                            #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
                                 char id_str[UUID_STR_LEN+1];
                                 id_str[UUID_STR_LEN] = '\0';
                                 uuid_unparse(hack->src_process_id, id_str);
 
                                 char str[200];
                                 sprintf(str, "%s", id_str);
-                                ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "BECAME BI", str);
+                                my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "BECAME BI", str);
                             #endif
 
                             assert(!NE_isPending(neigh));
@@ -1964,14 +1964,14 @@ HackDeliverSummary* DF_uponHackMessage(discovery_framework_state* state, HackMes
                         summary->lost_bi = true;
 
                         // Log
-                        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+                        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
                             char id_str[UUID_STR_LEN+1];
                             id_str[UUID_STR_LEN] = '\0';
                             uuid_unparse(hack->src_process_id, id_str);
 
                             char str[200];
                             sprintf(str, "%s", id_str);
-                            ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
+                            my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST BI", str);
                         #endif
                     }
                 }
@@ -2106,7 +2106,7 @@ bool DF_createMessage(discovery_framework_state* state, YggMessage* msg, HelloMe
             state->stats.total_hacks += n_hacks;
         }
 
-        //ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REGISTER TRAFFIC", "");
+        //my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "REGISTER TRAFFIC", "");
         DE_registerOutTraffic(state->environment, &state->current_time);
 
     } else {
@@ -2154,7 +2154,7 @@ void DF_piggybackDiscovery(discovery_framework_state* state, YggMessage* msg) {
 
         char str[200];
         sprintf(str, "HELLO=[%s] HACK=[%s] [%s]", hello_str, hack_str, addr_str);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "PIGGYBACK MESSAGE", str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "PIGGYBACK MESSAGE", str);
         #endif
 
         if( dsp->hello ) {
@@ -2203,7 +2203,7 @@ void changeAlgorithm(discovery_framework_state* state, DiscoveryAlgorithm* new_a
 
     // Log
     #ifdef DEBUG_DISCOVERY
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "CHANGED ALGORITHM", "");
+    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "CHANGED ALGORITHM", "");
     #endif
 }
 */
@@ -2225,7 +2225,7 @@ void DF_printNeighbors(discovery_framework_state* state) {
     char str3[strlen(str2)+1];
     sprintf(str3, "\n%s", str2);
 
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORHOOD", str3);
+    my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORHOOD", str3);
 
     //free(str1);
     free(str2);
@@ -2342,7 +2342,7 @@ void DF_notifyNewNeighbor(discovery_framework_state* state, NeighborEntry* neigh
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(NE_getNeighborID(neigh), id_str);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEW NEIGHBOR", id_str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEW NEIGHBOR", id_str);
     #endif
 
     YggEvent packet = {0};
@@ -2438,11 +2438,11 @@ void DF_notifyUpdateNeighbor(discovery_framework_state* state, NeighborEntry* ne
         }
     }
 
-    #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
+    #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(NE_getNeighborID(neigh), id_str);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "UPDATE NEIGHBOR", id_str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "UPDATE NEIGHBOR", id_str);
     #endif
 
     YggEvent packet = {0};
@@ -2524,7 +2524,7 @@ void DF_notifyLostNeighbor(discovery_framework_state* state, NeighborEntry* neig
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(NE_getNeighborID(neigh), id_str);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST NEIGHBOR", id_str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "LOST NEIGHBOR", id_str);
     #endif
 
     YggEvent packet = {0};
@@ -2580,7 +2580,7 @@ YggEvent* DF_notifyNeighborhood(discovery_framework_state* state) {
     char str3[strlen(str1)+strlen(str2)+1];
     sprintf(str3, "\n%s\n%s", str1, str2);
 
-    ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORHOOD", str3);
+    my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBORHOOD", str3);
 
     if(state->args->toggle_env) {
         free(str1);
@@ -2614,7 +2614,7 @@ void DF_notifyGenericEvent(void* f_state, char* type, void* buffer, unsigned int
     #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
         char str[30];
         sprintf(str, "[%s]", type);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "GENERIC EVENT", str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "GENERIC EVENT", str);
     #endif
 
     list_add_item_to_tail(state->pending_notifications, ev);
@@ -2687,7 +2687,7 @@ void DF_sendMessage(discovery_framework_state* state, DiscoverySendPack* dsp, Yg
 
         char str[200];
         sprintf(str, "HELLO=[%s] HACK=[%s] [%s]", hello_str, hack_str, addr_str);
-        ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "SEND MESSAGE", str);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "SEND MESSAGE", str);
         #endif
 
         if( dsp->hello ) {
@@ -2801,7 +2801,7 @@ void DF_createMessage(discovery_framework_state* state, HelloMessage* hello, Hac
             state->stats.total_hacks += n_hacks;
         }
 
-        //ygg_log(DISCOVERY_FRAMEWORK_PROTO_NAME, "REGISTER TRAFFIC", "");
+        //my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "REGISTER TRAFFIC", "");
         DE_registerOutTraffic(state->environment, &state->current_time);
     }
 

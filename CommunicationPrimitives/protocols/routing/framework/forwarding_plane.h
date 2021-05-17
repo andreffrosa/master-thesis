@@ -33,5 +33,6 @@ void RF_deserializeMessage(YggMessage* m, RoutingHeader* header, byte* meta_data
 
 bool RF_findNextHop(routing_framework_state* state, unsigned char* destination_id, unsigned char* next_hop_id, unsigned char* next_hop_addr);
 
+bool isControlMessage(YggMessage* toDeliver);
 
 #endif /* _ROUTING_FRAMEWORK_FORWARDING_PLANE_H_ */

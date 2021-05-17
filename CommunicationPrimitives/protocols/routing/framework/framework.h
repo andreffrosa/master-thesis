@@ -20,14 +20,24 @@
 
 #include "routing_algorithm/routing_algorithms.h"
 
+#include "utility/my_logger.h"
+
 #define ROUTING_FRAMEWORK_PROTO_ID 161
 #define ROUTING_FRAMEWORK_PROTO_NAME "ROUTING FRAMEWORK"
 
+extern MyLogger* routing_logger;
+extern MyLogger* routing_table_logger;
+
 typedef struct _routing_stats {
-    unsigned long messages_transmitted;
+    unsigned long messages_forwarded;
+    unsigned long messages_not_forwarded;
     unsigned long messages_delivered;
     unsigned long messages_received;
     unsigned long messages_requested;
+    unsigned long found_routes;
+    unsigned long lost_routes;
+    unsigned long control_sent;
+    unsigned long control_received;
 } routing_stats;
 
 typedef struct _routing_framework_args {

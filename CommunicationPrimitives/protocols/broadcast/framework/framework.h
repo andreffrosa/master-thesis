@@ -23,8 +23,12 @@
 
 #include "broadcast_algorithm/bcast_algorithms.h"
 
+#include "utility/my_logger.h"
+
 #define BROADCAST_FRAMEWORK_PROTO_ID 160
 #define BROADCAST_FRAMEWORK_PROTO_NAME "BROADCAST FRAMEWORK"
+
+extern MyLogger* broadcast_logger;
 
 typedef struct broadcast_stats_ {
 	unsigned long messages_transmitted;
