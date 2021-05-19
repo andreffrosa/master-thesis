@@ -34,9 +34,14 @@
 #include "utility/my_time.h"
 #include "utility/my_sys.h"
 #include "utility/my_misc.h"
+#include "utility/my_string.h"
+
+#include "utility/my_logger.h"
 
 #define APP_ID 400
 #define APP_NAME "DISCOVERY APP"
+
+/*static*/ MyLogger* app_logger = NULL;
 
 typedef struct DiscoveryAppArgs_ {
     bool periodic_messages;
@@ -60,6 +65,47 @@ int main(int argc, char* argv[]) {
     // Interface and Hostname
     char interface[20] = {0}, hostname[30] = {0};
     unparse_host(hostname, 20, interface, 30, args);
+
+    // Logs
+    //char destination[200] = "../experiments/output/discovery/exp1-";
+    //hash_table_insert(args, new_str("log"), new_str(strcat(destination, hostname))); // temp
+
+    char* log_path = hash_table_find_value(args, "log");
+    if(log_path) {
+        //rmdir(log_path);
+        char cmd[100];
+        sprintf(cmd, "rm -r %s", log_path);
+        run_command(cmd, NULL, 0);
+
+        // Create dir if does not exist
+        struct stat st = {0};
+        if (stat(log_path, &st) == -1) {
+            if(mkdir(log_path, S_IRWXO) != 0) {
+                printf("Could not create dir %s!\n", log_path);
+                exit(-1);
+            }
+        }
+
+        char file_path[PATH_MAX];
+        build_path(file_path, log_path, "app.log");
+        //app_logger = new_my_logger(fopen("../experiments/output/routing/test.txt", "w"), hostname);
+        //app_logger = new_my_logger(stdout, hostname);
+
+        /*FILE* f = */freopen(file_path, "w", stdout);
+        dup2(1, 2);  //redirects stderr to stdout below this line.
+
+        app_logger = new_my_logger(stdout, hostname);
+
+        build_path(file_path, log_path, "discovery.log");
+        discovery_logger = new_my_logger(fopen(file_path, "w"), hostname);
+
+        build_path(file_path, log_path, "neighbors.log");
+        neighbors_logger = new_my_logger(fopen(file_path, "w"), hostname);
+    } else {
+        app_logger = new_my_logger(stdout, hostname);
+        discovery_logger = app_logger;
+        neighbors_logger = app_logger;
+    }
 
     // Network
     NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
@@ -116,7 +162,7 @@ int main(int argc, char* argv[]) {
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Start App
 
-    ygg_log(APP_NAME, "INIT", "init");
+    my_logger_write(app_logger, APP_NAME, "INIT", "init");
 
     uuid_t myID;
     getmyId(myID);
@@ -155,7 +201,7 @@ int main(int argc, char* argv[]) {
 		case YGG_MESSAGE:
             if(app_args->verbose) {
                 YggMessage* msg = &elem.data.msg;
-                ygg_log(APP_NAME, "RECEIVED MESSAGE", msg->data);
+                my_logger_write(app_logger, APP_NAME, "RECEIVED MESSAGE", msg->data);
             }
 			break;
         case YGG_EVENT:
@@ -164,11 +210,11 @@ int main(int argc, char* argv[]) {
     			} else {
     				char s[100];
     				sprintf(s, "Received notification from protocol %d meant for protocol %d", elem.data.event.proto_origin, elem.data.event.proto_dest);
-    				ygg_log("BCAST TEST APP", "NOTIFICATION", s);
+    				my_logger_write(app_logger, APP_NAME, "NOTIFICATION", s);
     			}
     			break;
 		default:
-			ygg_log(APP_NAME, "MAIN LOOP", "Received wierd thing in my queue.");
+			my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "Received wierd thing in my queue.");
 		}
 
         // Release memory of elem payload
@@ -227,15 +273,15 @@ static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_ar
         unsigned char* ptr2 = main.payload;
         if(notification->notification_id == NEW_NEIGHBOR) {
             uuid_unparse(ptr2, id);
-    		ygg_log(APP_NAME, "NEW NEIGHBOR", id);
+    		my_logger_write(app_logger, APP_NAME, "NEW NEIGHBOR", id);
 
     	} else if(notification->notification_id == UPDATE_NEIGHBOR) {
             uuid_unparse(ptr2, id);
-    		ygg_log(APP_NAME, "UPDATE NEIGHBOR", id);
+    		my_logger_write(app_logger, APP_NAME, "UPDATE NEIGHBOR", id);
 
     	} else if(notification->notification_id == LOST_NEIGHBOR) {
             uuid_unparse(ptr2, id);
-    		ygg_log(APP_NAME, "LOST NEIGHBOR", id);
+    		my_logger_write(app_logger, APP_NAME, "LOST NEIGHBOR", id);
     	}
     }
 
@@ -253,7 +299,7 @@ static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_ar
 
     {
         //if(notification->notification_id == NEIGHBORHOOD) {
-            ygg_log(APP_NAME, "NEIGHBORHOOD", "");
+            my_logger_write(app_logger, APP_NAME, "NEIGHBORHOOD", "");
     	//}
     }
     YggEvent_freePayload(&neighborhood);
@@ -351,7 +397,7 @@ static DiscoveryAppArgs* load_discovery_app_args(const char* file_path) {
     if(configs == NULL) {
         char str[100];
         sprintf(str, "Config file %s not found!", file_path);
-        ygg_log(APP_NAME, "ARG ERROR", str);
+        my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
         ygg_logflush();
 
         exit(-1);
@@ -373,12 +419,12 @@ static DiscoveryAppArgs* load_discovery_app_args(const char* file_path) {
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
-                ygg_log(APP_NAME, "ARG ERROR", str);
+                my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
             }
         } else {
             char str[50];
             sprintf(str, "Empty Config %s", key);
-            ygg_log(APP_NAME, "ARG ERROR", str);
+            my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
         }
     }
 

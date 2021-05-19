@@ -18,4 +18,6 @@
 
 void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, struct timespec* current_time);
 
+void RF_uponNewControlMessage2(void* state, YggMessage* message, unsigned char* source_id, unsigned short src_proto, byte* meta_data, unsigned int meta_length);
+
 #endif /*_ROUTING_UPDATE_H_*/

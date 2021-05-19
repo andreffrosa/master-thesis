@@ -33,7 +33,7 @@ RoutingTableEntry* RT_findEntry(RoutingTable* rt, unsigned char* destination_id)
 
 RoutingTableEntry* RT_removeEntry(RoutingTable* rt, unsigned char* destination_id);
 
-bool RT_update(RoutingTable* rt, list* to_update, list* to_remove);
+//bool RT_update(RoutingTable* rt, list* to_update, list* to_remove);
 
 RoutingTableEntry* RT_nextRoute(RoutingTable* rt, void** iterator);
 

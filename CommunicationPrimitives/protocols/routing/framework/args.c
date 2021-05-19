@@ -169,6 +169,8 @@ static RoutingContext* parse_r_context(char* value, bool nested) {
         return OLSRRoutingContext();
     } else if(strcmp(token, (name = "BATMAN")) == 0 || strcmp(token, (name = "BATMANRoutingContext")) == 0) {
         return BATMANRoutingContext();
+    } else if(strcmp(token, (name = "BABEL")) == 0 || strcmp(token, (name = "BABELRoutingContext")) == 0) {
+        return BabelRoutingContext();
     } else if(strcmp(token, (name = "AODV")) == 0 || strcmp(token, (name = "AODVRoutingContext")) == 0) {
         return AODVRoutingContext();
     } else if(strcmp(token, (name = "DSR")) == 0 || strcmp(token, (name = "DSRRoutingContext")) == 0) {

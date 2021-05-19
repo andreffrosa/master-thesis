@@ -153,7 +153,11 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
     }
 }
 
-static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length) {
+static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, void* state) {
+
+    if(!new_seq) {
+        return NO_SEND;
+    }
 
     byte* ptr = payload;
 

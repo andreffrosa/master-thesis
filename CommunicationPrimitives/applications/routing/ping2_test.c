@@ -123,16 +123,18 @@ int main(int argc, char* argv[]) {
     char* log_path = hash_table_find_value(args, "log");
     if(log_path) {
         //rmdir(log_path);
-        char cmd[100];
-        sprintf(cmd, "rm -r %s", log_path);
-        run_command(cmd, NULL, 0);
+        //char cmd[100];
+        //sprintf(cmd, "rm -r %s", log_path);
+        //run_command(cmd, NULL, 0);
 
         // Create dir if does not exist
         struct stat st = {0};
         if (stat(log_path, &st) == -1) {
             if(mkdir(log_path, S_IRWXO) != 0) {
-                printf("Could not create dir %s!\n", log_path);
+                fprintf(stderr, "Could not create dir %s!\n", log_path);
                 exit(-1);
+            } else {
+                //printf("Creating dir %s ...\n", log_path);
             }
         }
 
@@ -141,26 +143,69 @@ int main(int argc, char* argv[]) {
         //app_logger = new_my_logger(fopen("../experiments/output/routing/test.txt", "w"), hostname);
         //app_logger = new_my_logger(stdout, hostname);
 
-        /*FILE* f = */freopen(file_path, "w", stdout);
+        FILE* f = freopen(file_path, "w", stdout);
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+
         dup2(1, 2);  //redirects stderr to stdout below this line.
 
         app_logger = new_my_logger(stdout, hostname);
 
         build_path(file_path, log_path, "discovery.log");
-        discovery_logger = new_my_logger(fopen(file_path, "w"), hostname);
+        f = fopen(file_path, "w");
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+        discovery_logger = new_my_logger(f, hostname);
 
         build_path(file_path, log_path, "neighbors.log");
-        neighbors_logger = new_my_logger(fopen(file_path, "w"), hostname);
+        f = fopen(file_path, "w");
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+        neighbors_logger = new_my_logger(f, hostname);
 
         build_path(file_path, log_path, "broadcast.log");
-        broadcast_logger = new_my_logger(fopen(file_path, "w"), hostname);
+        f = fopen(file_path, "w");
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+        broadcast_logger = new_my_logger(f, hostname);
 
         build_path(file_path, log_path, "routing.log");
-        routing_logger = new_my_logger(fopen(file_path, "w"), hostname);
+        f = fopen(file_path, "w");
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+        routing_logger = new_my_logger(f, hostname);
 
         build_path(file_path, log_path, "routing_table.log");
-        routing_table_logger = new_my_logger(fopen(file_path, "w"), hostname);
+        f = fopen(file_path, "w");
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+        routing_table_logger = new_my_logger(f, hostname);
     } else {
+        printf("Using stdout as logger ...\n");
         app_logger = new_my_logger(stdout, hostname);
         discovery_logger = app_logger;
         neighbors_logger = app_logger;
@@ -697,7 +742,7 @@ static list* parse_int_list(char* value) {
 
     int len = strlen(value);
     char str[len+1];
-    strcpy(str, value);
+    memcpy(str, value, len+1);
     str[0] = ' ';
     str[len] = ' ';
 

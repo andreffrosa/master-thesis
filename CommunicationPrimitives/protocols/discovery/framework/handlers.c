@@ -475,6 +475,7 @@ void DF_uponHackTimer(discovery_framework_state* state) {
 
             YggMessage msg = {0};
             DiscoverySendPack* dsp = DF_triggerDiscoveryEvent(state, DPE_HACK_TIMER, NULL, &msg);
+            //assert(dsp);
 
             #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
                 char hello_str[10];
@@ -496,14 +497,12 @@ void DF_uponHackTimer(discovery_framework_state* state) {
                 my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "HACK TIMER", str);
             #endif
 
-            if(dsp) {
-                if(dsp->hello) {
-                    state->stats.piggybacked_hellos++;
-                }
+            if(dsp && dsp->hello) {
+                state->stats.piggybacked_hellos++;
+            }
 
-                if(dsp->n_hacks == 0) {
-                    scheduleHackTimer(state, false);
-                }
+            if(dsp == NULL || dsp->n_hacks == 0) {
+                scheduleHackTimer(state, false);
             }
 
             DF_sendMessage(state, dsp, &msg);

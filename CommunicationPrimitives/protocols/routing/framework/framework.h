@@ -34,8 +34,8 @@ typedef struct _routing_stats {
     unsigned long messages_delivered;
     unsigned long messages_received;
     unsigned long messages_requested;
-    unsigned long found_routes;
-    unsigned long lost_routes;
+    //unsigned long found_routes;
+    //unsigned long lost_routes;
     unsigned long control_sent;
     unsigned long control_received;
 } routing_stats;

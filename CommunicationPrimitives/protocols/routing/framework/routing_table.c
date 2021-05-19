@@ -105,7 +105,7 @@ RoutingTableEntry* RT_removeEntry(RoutingTable* rt, unsigned char* destination_i
     }
 }
 
-bool RT_update(RoutingTable* rt, list* to_update, list* to_remove) {
+/*bool RT_update(RoutingTable* rt, list* to_update, list* to_remove) {
     assert(rt);
 
     bool updated = false;
@@ -156,7 +156,7 @@ bool RT_update(RoutingTable* rt, list* to_update, list* to_remove) {
     }
 
     return updated;
-}
+}*/
 
 RoutingTableEntry* newRoutingTableEntry(unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, double cost, unsigned int hops, struct timespec* found_time, const char* proto) {
     RoutingTableEntry* entry = malloc(sizeof(RoutingTableEntry));

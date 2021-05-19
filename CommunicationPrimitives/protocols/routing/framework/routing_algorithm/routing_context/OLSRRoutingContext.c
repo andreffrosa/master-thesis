@@ -101,7 +101,11 @@ static void OLSRRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
     }
 }
 
-static RoutingContextSendType OLSRRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length) {
+static RoutingContextSendType OLSRRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, void* f_state) {
+
+    if(!new_seq) {
+        return NO_SEND;
+    }
     //OLSRState* state = (OLSRState*)m_state->vars;
 
     void* ptr = payload;

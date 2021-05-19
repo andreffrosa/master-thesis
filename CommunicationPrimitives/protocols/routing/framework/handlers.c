@@ -397,6 +397,10 @@ void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendTyp
     RA_disseminateControlMessage(state->args->algorithm, state->myID, &msg, event_type, info);
 }
 
+void RF_uponNewControlMessage2(void* state, YggMessage* message, unsigned char* source_id, unsigned short src_proto, byte* meta_data, unsigned int meta_length) {
+    RF_uponNewControlMessage((routing_framework_state*)state, message, source_id, src_proto, meta_data, meta_length);
+}
+
 void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* message, unsigned char* source_id, unsigned short src_proto, byte* meta_data, unsigned int meta_length) {
 
     state->stats.control_received++;
@@ -410,19 +414,21 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
     byte payload[length];
     ptr = YggMessage_readPayload(message, ptr, payload, length);
 
-    #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
-    char id_str[UUID_STR_LEN];
-    uuid_unparse(source_id, id_str);
-
-    char str[100];
-    sprintf(str, "from %s with SEQ=%hu", id_str, header.seq);
-
-    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "RCV CONTROL", str);
-    #endif
-
     if(uuid_compare(source_id, state->myID) != 0) {
 
+        #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(source_id, id_str);
+
+        char str[100];
+        sprintf(str, "from %s with SEQ=%hu", id_str, header.seq);
+
+        my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "RCV CONTROL", str);
+        #endif
+
         bool process = false;
+        bool new_seq = false;
+        bool new_source = false;
 
         struct timespec exp_time = {0}, t = {0};
         milli_to_timespec(&t, header.announce_period*state->args->announce_misses*1000);
@@ -437,13 +443,20 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
             SetTimer(&t, source_id, ROUTING_FRAMEWORK_PROTO_ID, TIMER_SOURCE_ENTRY);
 
             process = true;
+            new_seq = true;
+            new_source = true;
         } else {
 
             if( header.seq > SE_getSEQ(entry) ) {
-                process = true;
+                //process = true;
+                new_seq = true;
+            } else {
+                new_seq = false;
             }
 
             if( header.seq >= SE_getSEQ(entry) ) {
+                process = true;
+
                 SE_setSEQ(entry, header.seq);
                 SE_setPeriod(entry, header.announce_period);
 
@@ -460,7 +473,7 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
         if(process) {
 
             //bool forward = false;
-            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, src_proto, meta_data, meta_length);
+            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, src_proto, meta_data, meta_length, new_seq, new_source, (void*)state);
 
             if(send_type != NO_SEND) {
 
@@ -479,7 +492,81 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
 
 void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, struct timespec* current_time) {
 
-        bool updated = RT_update(rt, to_update, to_remove);
+        //bool updated = RT_update(rt, to_update, to_remove);
+        bool updated = false;
+
+        if(to_update) {
+            RoutingTableEntry* new_entry = NULL;
+            while( (new_entry = list_remove_head(to_update)) ) {
+
+                RoutingTableEntry* current_entry = RT_findEntry(rt, RTE_getDestinationID(new_entry));
+                if(current_entry) {
+
+                    // New Entry
+                    if(uuid_compare(RTE_getNextHopID(new_entry), RTE_getNextHopID(current_entry)) != 0 || RTE_getCost(new_entry) != RTE_getCost(current_entry) || RTE_getHops(new_entry) != RTE_getHops(current_entry)) {
+                            RoutingTableEntry* old_entry = RT_removeEntry(rt, RTE_getDestinationID(new_entry));
+                            free(old_entry);
+
+                            RTE_resetMessagesForwarded(new_entry);
+                            //RTE_setFoundTime(current_entry, current_time);
+                            RTE_setLastUsedTime(new_entry, (struct timespec*)&zero_timespec);
+                            RT_addEntry(rt, new_entry);
+
+                            updated = true;
+
+                            #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+                            char id_str[UUID_STR_LEN];
+                            uuid_unparse(RTE_getDestinationID(new_entry), id_str);
+
+                            char str[100];
+                            sprintf(str, "Replaced route to %s", id_str);
+                            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
+                            #endif
+                        } else {
+                            free(new_entry);
+                        }
+                } else {
+                    RT_addEntry(rt, new_entry);
+
+                    #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+                    char id_str[UUID_STR_LEN];
+                    uuid_unparse(RTE_getDestinationID(new_entry), id_str);
+
+                    char str[100];
+                    sprintf(str, "Added route to %s", id_str);
+                    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
+                    #endif
+
+                    updated = true;
+                }
+            }
+
+            list_delete(to_update);
+        }
+
+        if(to_remove) {
+            unsigned char* id = NULL;
+            while( (id = list_remove_head(to_remove)) ) {
+                RoutingTableEntry* old_entry = RT_removeEntry(rt, id);
+
+                #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+                char id_str[UUID_STR_LEN];
+                uuid_unparse(RTE_getDestinationID(old_entry), id_str);
+
+                char str[100];
+                sprintf(str, "Removed route to %s", id_str);
+                my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
+                #endif
+
+                free(old_entry);
+
+                free(id);
+
+                updated = true;
+            }
+
+            free(to_remove);
+        }
 
         if(updated) {
             #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)

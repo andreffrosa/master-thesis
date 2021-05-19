@@ -77,7 +77,11 @@ static void ZoneRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
     // TODO: assim?
 }
 
-static RoutingContextSendType ZoneRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length) {
+static RoutingContextSendType ZoneRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, void* f_state) {
+
+    if(!new_seq) {
+        return NO_SEND;
+    }
 
     ZoneRoutingArgs* args = (ZoneRoutingArgs*)m_state->args;
 
@@ -92,9 +96,9 @@ static RoutingContextSendType ZoneRoutingContextProcessMsg(ModuleState* m_state,
     //printf("ZONE TYPE: %d    %d bytes\n", type, new_len);
 
     if(type == 1) {
-        return RCtx_processMsg(args->proactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length);
+        return RCtx_processMsg(args->proactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length, new_seq, new_source, f_state);
     } else if(type == 2) {
-        return RCtx_processMsg(args->reactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length);
+        return RCtx_processMsg(args->reactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length, new_seq, new_source, f_state);
     } else {
         assert(false);
     }
