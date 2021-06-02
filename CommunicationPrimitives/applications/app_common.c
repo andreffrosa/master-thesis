@@ -38,10 +38,11 @@ struct option long_options[] = {
     { "interface", required_argument, NULL, 'i' },
     { "hostname", required_argument, NULL, 'h' },
     { "log", required_argument, NULL, 'l'},
+    { "sleep", required_argument, NULL, 's'},
     { NULL, 0, NULL, 0 }
 };
 
-static const char* opt_str = "a:d:b:r:o:i:h:l:";
+static const char* opt_str = "a:d:b:r:o:i:h:l:s:";
 
 static void* process_arg(char option, int option_index, char* args);
 
@@ -92,6 +93,7 @@ static void* process_arg(char option, int option_index, char* opt_arg) {
         case 'o':
         case 'i':
         case 'l':
+        case 's':
         case 'h': {
                 unsigned int str_size = (strlen(opt_arg)+1)*sizeof(char);
                 char* value = malloc(str_size);
@@ -99,7 +101,7 @@ static void* process_arg(char option, int option_index, char* opt_arg) {
                 return value;
             }
         case '?':
-            if ( optopt == 'a' || optopt == 'd' || optopt == 'b' || optopt == 'r' || optopt == 'o' || optopt == 'i' || optopt == 'h' || optopt == 'l')
+            if ( optopt == 'a' || optopt == 'd' || optopt == 'b' || optopt == 'r' || optopt == 'o' || optopt == 'i' || optopt == 'h' || optopt == 'l'|| optopt == 's')
                 fprintf(stderr, "Option -%c is followed by a parameter.\n", optopt);
             else if (isprint(optopt))
                 fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -129,14 +131,51 @@ void unparse_host(char* hostname, unsigned int hostname_length, char* interface,
         assert(strlen(hostname_arg) < hostname_length);
         strcpy(hostname, hostname_arg);
     } else {
-        const char* h = getHostname();
-        if(h && strcmp(h, "") != 0) {
+        //const char* h = getHostname();
+        FILE* f = fopen("/etc/hostname","r");
+    	if(f > 0) {
+    		struct stat s;
+    		if(fstat(fileno(f), &s) < 0){
+    			perror("FSTAT");
+    		}
+
+            assert(s.st_size+1 <= hostname_length);
+
+    		memset(hostname, 0, s.st_size+1);
+    		if(fread(hostname, 1, s.st_size, f) <= 0){
+    			if(s.st_size < 8) {
+    				//free(hostname);
+    				//hostname = malloc(9);
+    				memset(hostname,0,9);
+    			}
+    			int r = rand() % 10000;
+    			sprintf(hostname, "host%04d", r);
+    		} else{
+
+    			int i;
+    			for(i = 0; i < s.st_size + 1; i++){
+    				if(hostname[i] == '\n') {
+    					hostname[i] = '\0';
+    					break;
+    				}
+    			}
+    		}
+
+    	} else {
+
+    		//hostname = malloc(9);
+    		memset(hostname,0,9);
+
+    		int r = rand() % 10000;
+    		sprintf(hostname, "host%04d", r);
+    	}
+        /*if(h && strcmp(h, "") != 0) {
             assert(strlen(h) < hostname_length);
             strcpy(hostname, h);
         } else {
             assert(strlen("hostname") < hostname_length);
             strcpy(hostname, "hostname");
-        }
+        }*/
     }
 }
 

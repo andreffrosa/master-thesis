@@ -309,7 +309,7 @@ void RF_ForwardMessage(routing_framework_state* state, RoutingHeader* header, by
             if(send_type != NO_SEND) {
                 state->jitter_timer_active = true;
                 RF_sendControlMessage(state, send_type, RTE_ROUTE_NOT_FOUND, header, NULL);
-                print = false;
+                //print = false;
 
                 /// TODO: put in buffer
             }

@@ -139,6 +139,8 @@ void ygg_log_multi(int n, ...) {
 	pthread_mutex_unlock(&loglock);
 }
 
+void (*log_flush_handler)() = NULL;
+
 void ygg_logflush() {
 	char buffer[26];
 	struct tm* tm_info;
@@ -150,6 +152,10 @@ void ygg_logflush() {
 	fprintf(out, "<%s> TIME: %s %ld :: [%s] : [%s] %s\n", hostname, buffer, tv.tv_usec, "YGG_RUNTIME", "QUIT", "Stopping process");
 	//printf("<%s> TIME: %ld %ld :: [%s] : [%s] %s\n", hostname, tv.tv_sec, tv.tv_usec, "YGG_RUNTIME", "QUIT", "Stopping process");
 	fflush(out);
+
+    if(log_flush_handler) {
+        log_flush_handler();
+    }
 }
 
 void ygg_log_stdout(char* proto, char* event, char* desc) {

@@ -383,7 +383,7 @@ void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendTyp
     add_result = YggMessage_addPayload(&msg, (char*) &control_header, sizeof(RoutingControlHeader));
     assert(add_result != FAILED);
 
-    RA_createControlMsg(state->args->algorithm, &control_header, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg, event_type, info);
+    RoutingContextSendType send_type2 = RA_createControlMsg(state->args->algorithm, &control_header, state->routing_table, state->neighbors, state->source_table, state->myID, &state->current_time, &msg, event_type, info);
 
     #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
     char str[100];
@@ -395,6 +395,10 @@ void RF_sendControlMessage(routing_framework_state* state, RoutingContextSendTyp
     copy_timespec(&state->last_announce_time, &state->current_time);
 
     RA_disseminateControlMessage(state->args->algorithm, state->myID, &msg, event_type, info);
+
+    if(send_type2 != NO_SEND) {
+        RF_scheduleJitter(state, RTE_CONTROL_MESSAGE_SEND, NULL, send_type2);
+    }
 }
 
 void RF_uponNewControlMessage2(void* state, YggMessage* message, unsigned char* source_id, unsigned short src_proto, byte* meta_data, unsigned int meta_length) {
@@ -473,7 +477,7 @@ void RF_uponNewControlMessage(routing_framework_state* state, YggMessage* messag
         if(process) {
 
             //bool forward = false;
-            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, src_proto, meta_data, meta_length, new_seq, new_source, (void*)state);
+            RoutingContextSendType send_type = RA_processControlMsg(state->args->algorithm, state->routing_table, state->neighbors, state->source_table, entry, state->myID, &state->current_time, &header, payload, length, src_proto, meta_data, meta_length, new_seq, new_source, state->my_seq, (void*)state);
 
             if(send_type != NO_SEND) {
 

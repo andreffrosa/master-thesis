@@ -34,4 +34,6 @@ DisseminationStrategy* ReactiveDissemination(bool hop_delivery);
 
 DisseminationStrategy* ZoneDissemination(unsigned short zone_radius);
 
+DisseminationStrategy* BabelDissemination();
+
 #endif /*_DISSEMINATION_STRATEGY_H_*/

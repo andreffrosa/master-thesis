@@ -111,6 +111,18 @@ static void* timer_main_loop(main_loop_args* args) {
 
 			if(el.data.timer.proto_dest != PROTO_TIMER || el.data.timer.proto_origin != PROTO_TIMER) {
 
+                #ifdef DEBUG
+                char id_str[UUID_STR_LEN];
+                uuid_unparse(el.data.timer.id, id_str);
+
+                bool is_cancel = el.data.timer.config.first_notification.tv_sec == 0 && el.data.timer.config.first_notification.tv_nsec == 0
+						&& el.data.timer.config.repeat_interval.tv_sec == 0 && el.data.timer.config.repeat_interval.tv_nsec == 0;
+
+                char str[200];
+                sprintf(str, "Received timer from proto %d with id %s (%s)\n", el.data.timer.proto_origin, id_str, (is_cancel?"cancel":"new"));
+                ygg_log("TIMER", "RCV", str);
+                #endif
+
 				timer_elem* newTimerEvent = malloc(sizeof(timer_elem));
 				newTimerEvent->timer = malloc(sizeof(YggTimer));
 				newTimerEvent->next = NULL;
@@ -120,7 +132,9 @@ static void* timer_main_loop(main_loop_args* args) {
 						&& newTimerEvent->timer->config.repeat_interval.tv_sec == 0 && newTimerEvent->timer->config.repeat_interval.tv_nsec == 0) {
 
 					//The goal now is to cancel a timer
-					if(state->pendingTimers != NULL && uuid_compare(state->pendingTimers->timer->id, newTimerEvent->timer->id) == 0) {
+
+                    //if(state->pendingTimers != NULL && uuid_compare(state->pendingTimers->timer->id, newTimerEvent->timer->id) == 0) {
+                    if( state->pendingTimers != NULL && uuid_compare(state->pendingTimers->timer->id, newTimerEvent->timer->id) == 0 && state->pendingTimers->timer->proto_origin == newTimerEvent->timer->proto_origin ) {
 						//We are canceling the first timer
 						timer_elem* tmp = state->pendingTimers;
 						state->pendingTimers = tmp->next;
@@ -129,7 +143,8 @@ static void* timer_main_loop(main_loop_args* args) {
 						free(tmp);
 					} else if(state->pendingTimers != NULL) {
 						timer_elem* current = state->pendingTimers;
-						while(current->next != NULL && uuid_compare(current->next->timer->id, newTimerEvent->timer->id) != 0) {
+                        // while(current->next != NULL && uuid_compare(current->next->timer->id, newTimerEvent->timer->id) != 0) {
+						while(current->next != NULL && (uuid_compare(current->next->timer->id, newTimerEvent->timer->id) != 0 || current->next->timer->proto_origin != newTimerEvent->timer->proto_origin)) {
 							current = current->next;
 						}
 						if(current->next != NULL) {
@@ -138,8 +153,11 @@ static void* timer_main_loop(main_loop_args* args) {
 							free(tmp->timer);
 							free(tmp);
 							state->pendingTimersSize--;
-
-						}
+						}  else {
+    						char s[100];
+    						sprintf(s,"Received a cancellation request when I have no pending timers (origin %d).", newTimerEvent->timer->proto_origin);
+    						ygg_log("TIMER", "WARNING", s);
+    					}
 					} else {
 						char s[100];
 						sprintf(s,"Received a cancellation request when I have no pending timers (origin %d).", newTimerEvent->timer->proto_origin);

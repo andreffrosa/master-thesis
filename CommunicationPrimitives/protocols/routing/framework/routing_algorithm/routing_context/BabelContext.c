@@ -17,13 +17,17 @@
 
 #include "utility/my_string.h"
 #include "utility/my_time.h"
+#include "utility/my_math.h"
+
 
 #include "utility/seq.h"
 
 #include <assert.h>
 
+extern MyLogger* routing_logger;
+
 typedef enum {
-    BABEL_UPDT,
+    BABEL_UPDT = 0,
     BABEL_SREQ
 } BabelControlMessageType;
 
@@ -31,6 +35,10 @@ typedef struct BabelState_ {
     bool seq_req;
 
     hash_table* destinations;
+
+    list* starvation;
+    bool trigger_update;
+    hash_table* pending_requests;
 } BabelState;
 
 typedef struct FeasabilityDistance_ {
@@ -48,17 +56,22 @@ typedef struct NeighEntry_ {
 typedef struct DestEntry_ {
     FeasabilityDistance* feasability_distance;
     hash_table* neigh_vectors;
-    // struct timespec expiration_time;
+    struct timespec expiration_time;
     bool retracted;
 } DestEntry;
 
+typedef struct PendingReq_ {
+    unsigned short seq_no;
+    struct timespec expiration_time;
+} PendingReq;
+
 static bool getParent(byte* meta_data, unsigned int meta_length, unsigned char* found_parent);
 
-static void processUpdate(BabelState* state, unsigned char* destination_id, double cost, byte hops, unsigned short seq_no, RoutingNeighborsEntry* parent_entry, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto);
+static void processUpdate(BabelState* state, unsigned char* destination_id, double cost, byte hops, unsigned short seq_no, RoutingNeighborsEntry* parent_entry, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto, list* to_update, list* to_remove);
 
-static void recomputeAllRoutes(hash_table* destinations, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto);
+static void recomputeAllRoutes(BabelState* state, hash_table* destinations, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto);
 
-static void recomputeRoute(unsigned char* destination_id, DestEntry* de, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto);
+static void recomputeRoute(BabelState* state, unsigned char* destination_id, DestEntry* de, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto, list* to_update, list* to_remove);
 
 static RoutingContextSendType ProcessDiscoveryEvent(YggEvent* ev, BabelState* state, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, const char* proto);
 
@@ -104,18 +117,19 @@ static RoutingContextSendType BabelRoutingContextTriggerEvent(ModuleState* m_sta
     return NO_SEND;
 }
 
-static void BabelRoutingContextCreateMsg(ModuleState* m_state, const char* proto, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
+static RoutingContextSendType BabelRoutingContextCreateMsg(ModuleState* m_state, const char* proto, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
 
     BabelState* state = (BabelState*)m_state->vars;
 
-    // TODO: fazer os requests
+    if(event_type == RTE_ANNOUNCE_TIMER || state->trigger_update /*|| event_type == RTE_NEIGHBORS_CHANGE*/) {
 
-    if(event_type == RTE_ANNOUNCE_TIMER || event_type == RTE_NEIGHBORS_CHANGE) {
         byte type = BABEL_UPDT;
         YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
 
         // Verify if all routes are still valid and recompute if necessary
-        recomputeAllRoutes(state->destinations, routing_table, neighbors, current_time, proto);
+        recomputeAllRoutes(state, state->destinations, routing_table, neighbors, current_time, proto);
+
+        state->trigger_update = false;
 
         byte amount = 0; //state->destinations->n_items;
         byte* amount_ptr = (byte*)(msg->data + msg->dataLen);
@@ -127,50 +141,96 @@ static void BabelRoutingContextCreateMsg(ModuleState* m_state, const char* proto
             unsigned char* destination_id = hit->key;
             DestEntry* de = hit->value;
 
-            if(de->retracted) {
-                YggMessage_addPayload(msg, (char*)destination_id, sizeof(uuid_t));
+            //if(de->feasability_distance) {
 
-                assert(de->feasability_distance);
-                YggMessage_addPayload(msg, (char*)&de->feasability_distance->seq_no, sizeof(unsigned short));
+                // Not expired
+                if(true) {
+                    if(de->retracted && de->feasability_distance) {
+                        if(compare_timespec(&de->expiration_time, current_time) > 0) {
+                            YggMessage_addPayload(msg, (char*)destination_id, sizeof(uuid_t));
 
-                double cost = INFINITY;
-                YggMessage_addPayload(msg, (char*)&cost, sizeof(double));
+                            YggMessage_addPayload(msg, (char*)&de->feasability_distance->seq_no, sizeof(unsigned short));
 
-                byte hops = 255;
-                YggMessage_addPayload(msg, (char*)&hops, sizeof(byte));
+                            double cost = INFINITY;
+                            YggMessage_addPayload(msg, (char*)&cost, sizeof(double));
 
-                amount++;
-            } else {
-                RoutingTableEntry* rte = RT_findEntry(routing_table, destination_id);
-                //assert(rte);
+                            byte hops = 255;
+                            YggMessage_addPayload(msg, (char*)&hops, sizeof(byte));
 
-                if(rte) {
-                    NeighEntry* ne = hash_table_find_value(de->neigh_vectors, RTE_getNextHopID(rte));
-                    assert(ne);
+                            amount++;
+                        }
+                    } else {
+                        RoutingTableEntry* rte = RT_findEntry(routing_table, destination_id);
+                        //assert(rte);
 
-                    assert(compare_timespec(&ne->expiration_time, current_time) > 0);
+                        if(rte) {
+                            NeighEntry* ne = hash_table_find_value(de->neigh_vectors, RTE_getNextHopID(rte));
+                            assert(ne);
 
-                    YggMessage_addPayload(msg, (char*)RTE_getDestinationID(rte), sizeof(uuid_t));
+                            YggMessage_addPayload(msg, (char*)RTE_getDestinationID(rte), sizeof(uuid_t));
 
-                    YggMessage_addPayload(msg, (char*)&ne->seq_no, sizeof(unsigned short));
+                            YggMessage_addPayload(msg, (char*)&ne->seq_no, sizeof(unsigned short));
 
-                    double cost = RTE_getCost(rte);
-                    YggMessage_addPayload(msg, (char*)&cost, sizeof(double));
+                            double cost = RTE_getCost(rte);
+                            YggMessage_addPayload(msg, (char*)&cost, sizeof(double));
 
-                    byte hops = RTE_getHops(rte);
-                    YggMessage_addPayload(msg, (char*)&hops, sizeof(byte));
+                            byte hops = RTE_getHops(rte);
+                            YggMessage_addPayload(msg, (char*)&hops, sizeof(byte));
 
-                    // Update feasability distance
-                    if(de->feasability_distance == NULL) {
-                        de->feasability_distance = malloc(sizeof(FeasabilityDistance));
+                            // Update feasability distance
+                            if(de->feasability_distance == NULL) {
+                                de->feasability_distance = malloc(sizeof(FeasabilityDistance));
+
+                                de->feasability_distance->seq_no = ne->seq_no;
+                                de->feasability_distance->cost = cost;
+                            } else {
+                                int seq_cmp = compare_seq(ne->seq_no, de->feasability_distance->seq_no, true);
+                                if(seq_cmp > 0) {
+                                    de->feasability_distance->seq_no = ne->seq_no;
+                                    de->feasability_distance->cost = cost;
+                                } else if(seq_cmp == 0) {
+                                    de->feasability_distance->cost = dMin(de->feasability_distance->cost, cost);
+                                } else {
+                                    assert(false); // unfeasible
+                                }
+                            }
+
+                            struct timespec aux;
+                            milli_to_timespec(&aux, 5*5*1000);
+                            add_timespec(&de->expiration_time, current_time, &aux);
+
+                            amount++;
+                        }
+                    }
+                } else {
+                    char id_str[UUID_STR_LEN];
+                    uuid_unparse(destination_id, id_str);
+
+                    my_logger_write(routing_logger, "BABEL", "DEL DEST", id_str);
+
+                    DestEntry* x = hash_table_remove(state->destinations, destination_id);
+                    assert(x == de);
+
+                    void* iterator = NULL;
+                    hash_table_item* hit = NULL;
+                    while( (hit = hash_table_iterator_next(x->neigh_vectors, &iterator)) ) {
+                        unsigned char* neigh_id = hit->key;
+                        NeighEntry* ne = hit->value;
+
+                        NeighEntry* y = hash_table_remove(x->neigh_vectors, neigh_id);
+                        assert(y == ne);
+
+                        free(y);
+                    }
+                    hash_table_delete(x->neigh_vectors);
+
+                    if(x->feasability_distance) {
+                        free(x->feasability_distance);
                     }
 
-                    de->feasability_distance->seq_no = ne->seq_no;
-                    de->feasability_distance->cost = cost;
-
-                    amount++;
+                    free(x);
                 }
-            }
+            //}
         }
 
         *amount_ptr = amount;
@@ -212,17 +272,60 @@ static void BabelRoutingContextCreateMsg(ModuleState* m_state, const char* proto
         // TODO: include retracted destinations
         // double cost = INFINITY;
         // byte hops = 255;
+
+    } else if(state->starvation->size > 0) {
+
+        unsigned char* destination_id = list_remove_head(state->starvation);
+
+        DestEntry* de = hash_table_find_value(state->destinations, destination_id);
+
+        if(de) {
+            if(de->feasability_distance) {
+                //char str[200];
+                //sprintf(str, "to %s from %s SEQ=%hu COST=%f HOPS=%d", id_str1, id_str2, seq_no, cost, hops);
+
+                char id_str[UUID_STR_LEN];
+                uuid_unparse(destination_id, id_str);
+
+                my_logger_write(routing_logger, "BABEL", "SEQ REQ", id_str);
+
+                byte type = BABEL_SREQ;
+                YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
+
+                YggMessage_addPayload(msg, (char*)destination_id, sizeof(uuid_t));
+
+                unsigned short seq_no = inc_seq(de->feasability_distance->seq_no, true);
+                YggMessage_addPayload(msg, (char*)&seq_no, sizeof(unsigned short));
+
+                //list_add_item_to_tail(state->pending_requests, new_id(destination_id));
+            }  else {
+                // TODO: how to cancel sending?
+                assert(false);
+            }
+        } else {
+            // TODO: how to cancel sending?
+            assert(false);
+        }
+
+        free(destination_id);
     }
+
+    if(state->starvation->size > 0) {
+        return SEND_NO_INC;
+    }
+
+    return NO_SEND;
 }
 
 // #define MSG_CONTROL_MESSAGE 1
 
-static RoutingContextSendType BabelRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, void* f_state) {
+static RoutingContextSendType BabelRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, unsigned short my_seq, void* f_state) {
 
     BabelState* state = (BabelState*)m_state->vars;
 
     uuid_t parent_id;
     getParent(meta_data, meta_length, parent_id);
+
 
     RoutingNeighborsEntry* parent_entry = RN_getNeighbor(neighbors, parent_id);
     if( parent_entry && RNE_isBi(parent_entry)) { // parent is bi
@@ -232,38 +335,108 @@ static RoutingContextSendType BabelRoutingContextProcessMsg(ModuleState* m_state
         memcpy(&type, ptr, sizeof(byte));
         ptr += sizeof(byte);
 
-        // process update
-        processUpdate(state, SE_getID(source_entry), 0, 0, SE_getSEQ(source_entry), parent_entry, routing_table, neighbors, current_time, proto);
+        if(type == BABEL_UPDT) {
 
-        byte amount = 0;
-        memcpy(&amount, ptr, sizeof(byte));
-        ptr += sizeof(byte);
+            list* to_update = list_init();
+            list* to_remove = list_init();
 
-        for(int i = 0; i < amount; i++) {
-            uuid_t destination_id;
-            memcpy(destination_id, ptr, sizeof(uuid_t));
-            ptr += sizeof(uuid_t);
+            // process update
+            processUpdate(state, SE_getID(source_entry), 0, 0, SE_getSEQ(source_entry), parent_entry, routing_table, neighbors, current_time, proto, to_update, to_remove);
 
-            unsigned short seq = 0;
-            memcpy(&seq, ptr, sizeof(unsigned short));
-            ptr += sizeof(unsigned short);
-
-            double cost = 0;
-            memcpy(&cost, ptr, sizeof(double));
-            ptr += sizeof(double);
-
-            byte hops = 0;
-            memcpy(&hops, ptr, sizeof(byte));
+            byte amount = 0;
+            memcpy(&amount, ptr, sizeof(byte));
             ptr += sizeof(byte);
 
-            //byte period_s = SE_getPeriod(source_entry);
+            for(int i = 0; i < amount; i++) {
+                uuid_t destination_id;
+                memcpy(destination_id, ptr, sizeof(uuid_t));
+                ptr += sizeof(uuid_t);
 
-            if(uuid_compare(destination_id, myID) != 0) {
-                // process update
-                processUpdate(state, destination_id, cost, hops, seq, parent_entry, routing_table, neighbors, current_time, proto);
+                unsigned short seq = 0;
+                memcpy(&seq, ptr, sizeof(unsigned short));
+                ptr += sizeof(unsigned short);
+
+                double cost = 0;
+                memcpy(&cost, ptr, sizeof(double));
+                ptr += sizeof(double);
+
+                byte hops = 0;
+                memcpy(&hops, ptr, sizeof(byte));
+                ptr += sizeof(byte);
+
+                //byte period_s = SE_getPeriod(source_entry);
+
+                if(uuid_compare(destination_id, myID) != 0) {
+                    // process update
+                    processUpdate(state, destination_id, cost, hops, seq, parent_entry, routing_table, neighbors, current_time, proto, to_update, to_remove);
+                }
+            }
+
+            RF_updateRoutingTable(routing_table, to_update, to_remove, current_time);
+
+            if(state->starvation->size > 0 || state->trigger_update) {
+                return SEND_NO_INC;
+            }
+
+        } else if(type == BABEL_SREQ) {
+
+            uuid_t id;
+            memcpy(id, ptr, sizeof(uuid_t));
+            ptr += sizeof(uuid_t);
+
+            unsigned short seq_no = 0;
+            memcpy(&seq_no, ptr, sizeof(unsigned short));
+            ptr += sizeof(unsigned short);
+
+            char id_str1[UUID_STR_LEN];
+            uuid_unparse(id, id_str1);
+
+            char id_str2[UUID_STR_LEN];
+            uuid_unparse(parent_id, id_str2);
+
+            char str[200];
+            sprintf(str, "to %s from %s SEQ=%hu", id_str1, id_str2, seq_no);
+
+            my_logger_write(routing_logger, "BABEL", "RCV SEQREQ", str);
+
+            // Add to pending_requests
+            PendingReq* req = hash_table_find_value(state->pending_requests, id);
+            if(req) {
+                int cmp_seq = compare_seq(seq_no, req->seq_no, true);
+                if(cmp_seq > 0 || compare_timespec(&req->expiration_time, current_time) <= 0 ) {
+                    req->seq_no = seq_no;
+
+                    struct timespec aux;
+                    milli_to_timespec(&aux, 5*10*1000);
+                    add_timespec(&req->expiration_time, &aux, current_time);
+                }
+            } else {
+                PendingReq* req2 = malloc(sizeof(PendingReq));
+                req2->seq_no = seq_no;
+
+                struct timespec aux;
+                milli_to_timespec(&aux, 5*10*1000);
+                add_timespec(&req2->expiration_time, &aux, current_time);
+
+                PendingReq* req3 = hash_table_insert(state->pending_requests, new_id(id), req2);
+                assert(req3==NULL);
+            }
+
+
+            if(uuid_compare(id, myID) == 0) {
+                if(seq_no > my_seq) {
+                    return SEND_INC;
+                } else {
+                    return NO_SEND;
+                }
+            } else {
+                // TODO
+
+                return NO_SEND;
             }
         }
     }
+
 
     return NO_SEND;
 }
@@ -273,6 +446,9 @@ RoutingContext* BabelRoutingContext() {
     BabelState* state = malloc(sizeof(BabelState));
     state->seq_req = false;
     state->destinations = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
+    state->starvation = list_init();
+    state->trigger_update = false;
+    state->pending_requests = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
 
     return newRoutingContext(
         "BABEL",
@@ -293,12 +469,14 @@ static RoutingContextSendType ProcessDiscoveryEvent(YggEvent* ev, BabelState* st
     unsigned short ev_id = ev->notification_id;
 
     if(ev_id == UPDATE_NEIGHBOR || ev_id == LOST_NEIGHBOR) {
-        recomputeAllRoutes(state->destinations, routing_table, neighbors, current_time, proto);
+        recomputeAllRoutes(state, state->destinations, routing_table, neighbors, current_time, proto);
     }
 
-    // enviar triggered update quando vizinhança muda
-    return SEND_NO_INC;
+    if(state->starvation->size > 0 || state->trigger_update) {
+        return SEND_NO_INC;
+    }
 
+    return NO_SEND;
 }
 
 
@@ -309,7 +487,9 @@ static bool isFeasible(FeasabilityDistance* feasability_distance, double cost, u
     } else if(feasability_distance == NULL) {
         return true;
     } else {
-        return feasability_distance->seq_no < seq_no || (feasability_distance->seq_no == seq_no);
+        int seq_cmp = compare_seq(feasability_distance->seq_no, seq_no, true);
+
+        return seq_cmp < 0 || (seq_cmp == 0 && cost < feasability_distance->cost);
     }
 }
 
@@ -358,10 +538,9 @@ return false;
 
 }
 
-extern MyLogger* routing_logger;
 
 
-static void processUpdate(BabelState* state, unsigned char* destination_id, double cost, byte hops, unsigned short seq_no, RoutingNeighborsEntry* parent_entry, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto) {
+static void processUpdate(BabelState* state, unsigned char* destination_id, double cost, byte hops, unsigned short seq_no, RoutingNeighborsEntry* parent_entry, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto, list* to_update, list* to_remove) {
 
     char id_str1[UUID_STR_LEN];
     uuid_unparse(destination_id, id_str1);
@@ -383,7 +562,22 @@ static void processUpdate(BabelState* state, unsigned char* destination_id, doub
         de->feasability_distance = NULL;
         de->neigh_vectors = hash_table_init((hashing_function)&uuid_hash, (comparator_function)&equalID);
         de->retracted = false;
+
+        /*struct timespec aux;
+        milli_to_timespec(&aux, 5*10*1000);
+        add_timespec(&de->expiration_time, current_time, &aux);*/
+        copy_timespec(&de->expiration_time, &zero_timespec);
+
         hash_table_insert(state->destinations, new_id(destination_id), de);
+    }
+
+    //
+    PendingReq* req = hash_table_find_value(state->pending_requests, destination_id);
+    if(req) {
+        int seq_cmp = compare_seq(req->seq_no, seq_no, true);
+        if(seq_cmp <= 0) {
+            free(hash_table_remove(state->pending_requests, destination_id));
+        }
     }
 
     // Route Acquisition
@@ -429,19 +623,19 @@ static void processUpdate(BabelState* state, unsigned char* destination_id, doub
     }
 
     // Update routing table, if necessary
-    recomputeRoute(destination_id, de, routing_table, neighbors, current_time, proto);
+    recomputeRoute(state, destination_id, de, routing_table, neighbors, current_time, proto, to_update, to_remove);
 }
 
 
-// static void recomputeRoute(SourceEntry* destination, hash_table* neigh_vectors, SourceTable* source_table, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto) {
-
-static void recomputeRoute(unsigned char* destination_id, DestEntry* de, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto) {
+static void recomputeRoute(BabelState* state, unsigned char* destination_id, DestEntry* de, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto, list* to_update, list* to_remove) {
 
     //double* feasability_distance = SE_getAttr(destination, "feasability_distance");
 
     RoutingNeighborsEntry* best_neigh = NULL;
     double best_cost = INFINITY;
     byte best_hops = 255;
+    unsigned int unfeasable_routes = 0;
+
     hash_table_item* current_neigh = NULL;
     void* iterator = NULL;
     while( (current_neigh = hash_table_iterator_next(de->neigh_vectors, &iterator)) ) {
@@ -456,12 +650,17 @@ static void recomputeRoute(unsigned char* destination_id, DestEntry* de, Routing
             //bool new_seq_ = uuid_compare(neigh_id, RNE_getID(parent_entry)) == 0 ? new_seq : false;
             //bool new_seq_ = compare_seq(neigh_vector->seq_no, SE_getSEQ(destination), true) > 0;
 
-            if(RNE_isBi(rte) && neigh_vector->advertised_cost != INFINITY && isFeasible(de->feasability_distance, neigh_vector->advertised_cost, neigh_vector->seq_no)) {
-                bool select = route_cost < best_cost ? true : (route_cost == best_cost ? route_hops < best_hops : false);
-                if(select) {
-                    best_neigh = rte;
-                    best_cost = route_cost;
-                    best_hops = route_hops;
+            if(RNE_isBi(rte) && neigh_vector->advertised_cost != INFINITY) {
+
+                if(isFeasible(de->feasability_distance, neigh_vector->advertised_cost, neigh_vector->seq_no)) {
+                    bool select = route_cost < best_cost ? true : (route_cost == best_cost ? route_hops < best_hops : false);
+                    if(select) {
+                        best_neigh = rte;
+                        best_cost = route_cost;
+                        best_hops = route_hops;
+                    }
+                } else {
+                    unfeasable_routes++;
                 }
             }
 
@@ -480,30 +679,90 @@ static void recomputeRoute(unsigned char* destination_id, DestEntry* de, Routing
         //RoutingNeighborsEntry* best_neigh_entry = RN_getNeighbor(neighbors, best_neigh->key);
         //assert(best_neigh_entry);
 
-        list* to_update = list_init();
+        RoutingTableEntry* rte = RT_findEntry(routing_table, destination_id);
+        if(rte) {
+            if(uuid_compare(RNE_getID(best_neigh), RTE_getNextHopID(rte)) != 0) {
+                // different next hop
+                state->trigger_update = true;
+            }
+        } else {
+            // new route
+            state->trigger_update = true;
+        }
+
+        //list* to_update = list_init();
 
         WLANAddr* addr = RNE_getAddr(best_neigh);
         RoutingTableEntry* new_entry = newRoutingTableEntry(destination_id, RNE_getID(best_neigh), addr, best_cost, best_hops, current_time, proto);
 
         list_add_item_to_tail(to_update, new_entry);
 
-        RF_updateRoutingTable(routing_table, to_update, NULL, current_time);
+        //RF_updateRoutingTable(routing_table, to_update, NULL, current_time);
     } else {
         RoutingTableEntry* rte = RT_findEntry(routing_table, destination_id);
 
         if(rte) {
             // Remove if exist
-            list* to_remove = list_init();
+            //list* to_remove = list_init();
             list_add_item_to_tail(to_remove, new_id(destination_id));
-            RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
+            //RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
 
             de->retracted = true;
+
+            state->trigger_update = true;
+        }
+
+        if(unfeasable_routes > 0) {
+
+            // check if in pending
+            bool send = false;
+            PendingReq* req = hash_table_find_value(state->pending_requests, destination_id);
+            if(req) {
+                int seq_cmp = compare_seq(req->seq_no, de->feasability_distance->seq_no, true);
+                if(seq_cmp < 0|| compare_timespec(&req->expiration_time, current_time) <= 0) {
+                    send = true;
+
+                    req->seq_no = de->feasability_distance->seq_no;
+
+                    struct timespec aux;
+                    milli_to_timespec(&aux, 5*10*1000);
+                    add_timespec(&req->expiration_time, &aux, current_time);
+                }
+            } else {
+                send = true;
+
+                PendingReq* req2 = malloc(sizeof(PendingReq));
+                req2->seq_no = de->feasability_distance->seq_no;
+
+                struct timespec aux;
+                milli_to_timespec(&aux, 5*10*1000);
+                add_timespec(&req2->expiration_time, &aux, current_time);
+
+                PendingReq* req3 = hash_table_insert(state->pending_requests, new_id(destination_id), req2);
+                assert(req3 == NULL);
+            }
+
+            if(send) {
+                list_add_item_to_tail(state->starvation, new_id(destination_id));
+            }
+
+            char id_str[UUID_STR_LEN];
+            uuid_unparse(destination_id, id_str);
+
+            char str[200];
+            sprintf(str, "to %s (%s)", id_str, (send?"sending":"not sending"));
+
+            my_logger_write(routing_logger, "BABEL", "STARVATION", str);
+
         }
     }
 
 }
 
-static void recomputeAllRoutes(hash_table* destinations, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto) {
+static void recomputeAllRoutes(BabelState* state, hash_table* destinations, RoutingTable* routing_table, RoutingNeighbors* neighbors, struct timespec* current_time, const char* proto) {
+
+    list* to_update = list_init();
+    list* to_remove = list_init();
 
     // Verify if all routes are still valid and recompute if necessary
     void* iterator = NULL;
@@ -512,7 +771,8 @@ static void recomputeAllRoutes(hash_table* destinations, RoutingTable* routing_t
         unsigned char* destination_id = hit->key;
         DestEntry* de = hit->value;
 
-        recomputeRoute(destination_id, de, routing_table, neighbors, current_time, proto);
+        recomputeRoute(state, destination_id, de, routing_table, neighbors, current_time, proto, to_update, to_remove);
     }
 
+    RF_updateRoutingTable(routing_table, to_update, to_remove, current_time);
 }

@@ -11,6 +11,7 @@ PIS=$1
 DURATION=$2
 EXP=$3
 EXE=$4
+L_DIR=$5
 
 echo $PIS $DURATION $EXP $EXE
 
@@ -64,7 +65,13 @@ for PI in $(seq 1 $PIS); do
 
     OUT="../experiments/output/$EXP-$HOSTNAME.log"
 
-    CMD="sudo $EXE -i $INTERFACE -h $HOSTNAME"
+    ARR=( $(echo $EXP | sed 's/\// /g') )
+    #d1=${ARR[0]}
+    d2=${ARR[1]}
+    L="-l $L_DIR/$HOSTNAME/$d2-run1/"
+    mkdir "$L_DIR/$HOSTNAME/" > /dev/null 2>&1
+
+    CMD="sudo $EXE -i $INTERFACE -h $HOSTNAME $L"
 
     echo "Launching node $PI ($CMD) ..."
 

@@ -112,7 +112,7 @@ int randomInt(int min, int max) {
 }
 
 double randomProb() {
-	return getRandomInt(0, 100) / 100.0;
+	return (double)rand() / RAND_MAX;
 }
 
 double randomExponential(double lambda) {

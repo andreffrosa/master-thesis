@@ -18,32 +18,17 @@
 static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing_table, SourceTable* source_table, RoutingNeighbors* neighbors, unsigned char* myID, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, byte** meta_data, unsigned short* meta_data_length, byte* prev_meta_data, unsigned short prev_meta_data_length, bool first, struct timespec* current_time) {
 
     if(first) {
-        SourceEntry* source_entry = ST_getEntry(source_table, destination_id);
+        RoutingNeighborsEntry* rne = RN_getNeighbor(neighbors, destination_id);
 
-        if(source_entry == NULL) {
-            printf("[getNextHop] No source entry\n");
-            return false;
-        }
-
-        list* route = (list*)SE_getAttr(source_entry, "route");
-        if(route) {
-
+        if(rne && RNE_isBi(rne)) {
             char aux_str[UUID_STR_LEN];
-            uuid_unparse(SE_getID(source_entry), aux_str);
-            printf("[getNextHop] Found route to %s (%d):\n", aux_str, route->size);
+            uuid_unparse(destination_id, aux_str);
+            printf("[getNextHop] Found route to %s (%d): (neigh)\n", aux_str, 1);
 
-            *meta_data_length = route->size*sizeof(uuid_t);
+            *meta_data_length = 1*sizeof(uuid_t);
             *meta_data = malloc(*meta_data_length);
             byte* ptr = *meta_data;
-
-            for(list_item* it = route->head; it; it = it->next) {
-                memcpy(ptr, it->data, sizeof(uuid_t));
-                ptr += sizeof(uuid_t);
-
-                char id_str[UUID_STR_LEN];
-                uuid_unparse(it->data, id_str);
-                printf("=> %s\n", id_str);
-            }
+            uuid_copy(ptr, destination_id);
 
             RoutingTableEntry* entry = RT_findEntry(routing_table, destination_id);
             //assert(entry);
@@ -63,11 +48,58 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
                 return false;
             }
         } else {
-            printf("[getNextHop] No route in source_entry\n");
+            SourceEntry* source_entry = ST_getEntry(source_table, destination_id);
 
-            // send RREQ
-            return false;
+            if(source_entry == NULL) {
+                printf("[getNextHop] No source entry\n");
+                return false;
+            }
+
+            list* route = (list*)SE_getAttr(source_entry, "route");
+            if(route) {
+
+                char aux_str[UUID_STR_LEN];
+                uuid_unparse(SE_getID(source_entry), aux_str);
+                printf("[getNextHop] Found route to %s (%d):\n", aux_str, route->size);
+
+                *meta_data_length = route->size*sizeof(uuid_t);
+                *meta_data = malloc(*meta_data_length);
+                byte* ptr = *meta_data;
+
+                for(list_item* it = route->head; it; it = it->next) {
+                    memcpy(ptr, it->data, sizeof(uuid_t));
+                    ptr += sizeof(uuid_t);
+
+                    //char id_str[UUID_STR_LEN];
+                    //uuid_unparse(it->data, id_str);
+                    //printf("=> %s\n", id_str);
+                }
+
+                RoutingTableEntry* entry = RT_findEntry(routing_table, destination_id);
+                //assert(entry);
+                if(entry) {
+                    uuid_copy(next_hop_id, RTE_getNextHopID(entry));
+                    memcpy(next_hop_addr->data, RTE_getNextHopAddr(entry)->data, WLAN_ADDR_LEN);
+
+                    RTE_setLastUsedTime(entry, current_time);
+                    RTE_incMessagesForwarded(entry);
+
+                    printf("[getNextHop] Found route in routing table!\n");
+
+                    return true;
+                }
+                else {
+                    printf("[getNextHop] Route not found in routing table!\n");
+                    return false;
+                }
+            } else {
+                printf("[getNextHop] No route in source_entry\n");
+
+                // send RREQ
+                return false;
+            }
         }
+
     } else {
         if(prev_meta_data) {
             *meta_data_length = prev_meta_data_length;

@@ -322,6 +322,8 @@ static DisseminationStrategy* parse_d_strategy(char* value, bool nested) {
 
     if(strcmp(token, (name = "Broadcast")) == 0 || strcmp(token, (name = "BroadcastDissemination")) == 0) {
         return BroadcastDissemination();
+    } else if(strcmp(token, (name = "Babel")) == 0 || strcmp(token, (name = "BabelDissemination")) == 0) {
+        return BabelDissemination();
     } else if(strcmp(token, (name = "Fisheye")) == 0 || strcmp(token, (name = "FisheyeDissemination")) == 0) {
         token = strtok_r(NULL, " ", &ptr);
         if(token != NULL) {

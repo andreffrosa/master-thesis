@@ -41,11 +41,20 @@
 #define APP_ID 400
 #define APP_NAME "DISCOVERY APP"
 
+
+extern void (*log_flush_handler)();
+
+void my_log_flush_handler();
+
 /*static*/ MyLogger* app_logger = NULL;
 
 typedef struct DiscoveryAppArgs_ {
     bool periodic_messages;
     bool verbose;
+    unsigned long exp_duration_s;
+    //unsigned long max_pings;
+    //unsigned long initial_grace_period_s;
+    unsigned long final_grace_period_s;
     char timer_type[100];
     // TODO:
 } DiscoveryAppArgs;
@@ -53,11 +62,18 @@ typedef struct DiscoveryAppArgs_ {
 static DiscoveryAppArgs* default_discovery_app_args();
 static DiscoveryAppArgs* load_discovery_app_args(const char* file_path);
 
+static void requestDiscoveryStats();
+static void printDiscoveryStats(YggRequest* req);
+
 static void processNotification(YggEvent* notification, DiscoveryAppArgs* app_args);
 static void setTimer(unsigned char* timer_id, struct timespec* start_time, struct timespec* current_time, DiscoveryAppArgs* app_args);
 static void sendMessage(unsigned char* dest, char* txt);
 
 int main(int argc, char* argv[]) {
+
+    srand(time(NULL));
+
+    log_flush_handler = &my_log_flush_handler;
 
     // Process Args
     hash_table* args = parse_args(argc, argv);
@@ -67,28 +83,30 @@ int main(int argc, char* argv[]) {
     unparse_host(hostname, 20, interface, 30, args);
 
     // Logs
-    //char destination[200] = "../experiments/output/discovery/exp1-";
-    //hash_table_insert(args, new_str("log"), new_str(strcat(destination, hostname))); // temp
+    // char destination[200] = "../experiments/output/discovery/exp1-";
+    // hash_table_insert(args, new_str("log"), new_str(strcat(destination, hostname))); // temp
 
     char* log_path = hash_table_find_value(args, "log");
     if(log_path) {
         //rmdir(log_path);
-        char cmd[100];
-        sprintf(cmd, "rm -r %s", log_path);
-        run_command(cmd, NULL, 0);
+        //char cmd[100];
+        //sprintf(cmd, "rm -r %s", log_path);
+        //run_command(cmd, NULL, 0);
 
         // Create dir if does not exist
         struct stat st = {0};
         if (stat(log_path, &st) == -1) {
             if(mkdir(log_path, S_IRWXO) != 0) {
-                printf("Could not create dir %s!\n", log_path);
+                fprintf(stderr, "Could not create dir %s!\n", log_path);
                 exit(-1);
+            } else {
+                //printf("Creating dir %s ...\n", log_path);
             }
         }
 
         char file_path[PATH_MAX];
         build_path(file_path, log_path, "app.log");
-        //app_logger = new_my_logger(fopen("../experiments/output/routing/test.txt", "w"), hostname);
+        //app_logger = new_my_logger(fopen("../experiments/output/discovery/test.txt", "w"), hostname);
         //app_logger = new_my_logger(stdout, hostname);
 
         /*FILE* f = */freopen(file_path, "w", stdout);
@@ -105,6 +123,20 @@ int main(int argc, char* argv[]) {
         app_logger = new_my_logger(stdout, hostname);
         discovery_logger = app_logger;
         neighbors_logger = app_logger;
+    }
+
+    // Sleep
+    char* sleep_ms = hash_table_find_value(args, "sleep");
+    if(sleep_ms) {
+        unsigned long t_ms = randomProb() * strtol(sleep_ms, NULL, 10);
+
+        char str[30];
+        sprintf(str, "%lu ms", t_ms);
+        my_logger_write(app_logger, APP_NAME, "SLEEP", str);
+
+        usleep(t_ms*1000);
+    } else {
+        my_logger_write(app_logger, APP_NAME, "SLEEP", "0");
     }
 
     // Network
@@ -141,6 +173,8 @@ int main(int argc, char* argv[]) {
     }
     // TODO: print app_args
 
+    bool finished = false;
+
     hash_table_delete(args);
     args = NULL;
 
@@ -171,6 +205,17 @@ int main(int argc, char* argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     struct timespec current_time = start_time;
 
+    struct timespec t = {0};
+
+	// Set end of experiment
+	uuid_t end_exp;
+	genUUID(end_exp);
+	milli_to_timespec(&t, app_args->exp_duration_s*1000);
+    SetTimer(&t, end_exp, APP_ID, 0);
+
+    uuid_t kill_exp;
+	genUUID(kill_exp);
+
 	// Set timer
     uuid_t send_timer_id;
     genUUID(send_timer_id);
@@ -193,8 +238,33 @@ int main(int argc, char* argv[]) {
 
 		switch(elem.type) {
 		case YGG_TIMER:
-            sendMessage(NULL, "msg");
-            setTimer(send_timer_id, &start_time, &current_time, app_args);
+            if( uuid_compare(elem.data.timer.id, end_exp ) == 0 ) {
+                if(!finished) {
+                    finished = true;
+                    my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+
+                    /*my_logger_flush(app_logger);
+                    my_logger_flush(discovery_logger);
+                    my_logger_flush(neighbors_logger);*/
+
+                    milli_to_timespec(&t, app_args->final_grace_period_s*1000);
+                    SetTimer(&t, end_exp, APP_ID, 0);
+                } else {
+                    requestDiscoveryStats();
+
+                    milli_to_timespec(&t, 500);
+                    SetTimer(&t, kill_exp, APP_ID, 0);
+                }
+            } else if( uuid_compare(elem.data.timer.id, kill_exp) == 0 ) {
+                my_log_flush_handler();
+                //return 0;
+			} else {
+                sendMessage(NULL, "msg");
+                setTimer(send_timer_id, &start_time, &current_time, app_args);
+            }
+
 			break;
 		/*case YGG_REQUEST:
 			break;*/
@@ -213,6 +283,16 @@ int main(int argc, char* argv[]) {
     				my_logger_write(app_logger, APP_NAME, "NOTIFICATION", s);
     			}
     			break;
+        case YGG_REQUEST:
+            ;YggRequest* req = &elem.data.request;
+            if( req->proto_dest == APP_ID ) {
+                if( req->proto_origin == DISCOVERY_FRAMEWORK_PROTO_ID ) {
+                    if( req->request == REPLY && req->request_type == REQ_DISCOVERY_FRAMEWORK_STATS) {
+                        printDiscoveryStats(req);
+                    }
+                }
+            }
+            break;
 		default:
 			my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "Received wierd thing in my queue.");
 		}
@@ -384,6 +464,8 @@ static DiscoveryAppArgs* default_discovery_app_args() {
 
     d_args->periodic_messages = false;
     d_args->verbose = false;
+    d_args->final_grace_period_s = 30;
+    d_args->exp_duration_s = 5*60; // 5 min
     strcpy(d_args->timer_type, "Periodic 1.0 6"); // trans every 6 seconds with 1.0 probability
 
     return d_args;
@@ -416,6 +498,10 @@ static DiscoveryAppArgs* load_discovery_app_args(const char* file_path) {
                 d_args->verbose = strcmp("false", value) == 0 ? false : true;
             } else if( strcmp(key, "timer_type") == 0 ) {
                 strcpy(d_args->timer_type, value);
+            } else if( strcmp(key, "exp_duration_s") == 0 ) {
+                d_args->exp_duration_s = strtol(value, NULL, 10);
+            } else if( strcmp(key, "final_grace_period_s") == 0 ) {
+                d_args->final_grace_period_s = strtol(value, NULL, 10);
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
@@ -433,4 +519,36 @@ static DiscoveryAppArgs* load_discovery_app_args(const char* file_path) {
     list_delete(order);
 
     return d_args;
+}
+
+static void requestDiscoveryStats() {
+    YggRequest req;
+	YggRequest_init(&req, APP_ID, DISCOVERY_FRAMEWORK_PROTO_ID, REQUEST, REQ_DISCOVERY_FRAMEWORK_STATS);
+    deliverRequest(&req);
+}
+
+static void printDiscoveryStats(YggRequest* req) {
+	discovery_stats stats;
+	YggRequest_readPayload(req, NULL, &stats, sizeof(discovery_stats));
+
+	char str[1000];
+	sprintf(str, "Disc. Messages: %lu \t Piggybacked Hellos: %lu \t Lost Neighs: %lu \t New Neighs: %lu",
+            stats.discovery_messages,
+            stats.piggybacked_hellos,
+            stats.lost_neighbors,
+            stats.new_neighbors);
+
+	my_logger_write(app_logger, APP_NAME, "DISCOVERY STATS", str);
+}
+
+void my_log_flush_handler() {
+
+    my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+
+    my_logger_flush(app_logger);
+    my_logger_flush(discovery_logger);
+    my_logger_flush(neighbors_logger);
+
 }

@@ -574,8 +574,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
 
         return true;
     } else {
-        /*
-        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
+        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
         char id_str[UUID_STR_LEN+1];
         id_str[UUID_STR_LEN] = '\0';
         uuid_unparse(neigh_id, id_str);
@@ -585,7 +584,6 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
 
         my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
         #endif
-        */
     }
 
     NeighborTimerSummary* summary = newNeighborTimerSummary();
@@ -603,7 +601,7 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         // Check if
         struct timespec* removal_time = NE_getNeighborRemovalTime(neigh);
         if( compare_timespec(removal_time, &state->current_time) <= 0 ) {
-            #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+            #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, SIMPLE_DEBUG)
             char id_str[UUID_STR_LEN+1];
             id_str[UUID_STR_LEN] = '\0';
             uuid_unparse(NE_getNeighborID(neigh), id_str);
@@ -622,7 +620,24 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         } else {
             struct timespec aux = {0};
             subtract_timespec(&aux, removal_time, &state->current_time);
-            next_timer_ms = ulMin(next_timer_ms, timespec_to_milli(&aux));
+            //next_timer_ms = ulMin(next_timer_ms, timespec_to_milli(&aux));
+
+            //next_timer_ms = timespec_to_milli(&aux);
+
+            //struct timespec t;
+            //milli_to_timespec(&t, next_timer_ms);
+            SetTimer(&aux, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
+
+            char id_str[UUID_STR_LEN+1];
+            id_str[UUID_STR_LEN] = '\0';
+            uuid_unparse(NE_getNeighborID(neigh), id_str);
+
+            char str[100];
+            sprintf(str, "IGNORE %s, next timer in %lu ms", id_str, timespec_to_milli(&aux));
+
+            my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
+
+            return false;
         }
     }
 
@@ -876,9 +891,15 @@ bool DF_uponNeighborTimer(discovery_framework_state* state, unsigned char* neigh
         milli_to_timespec(&t, next_timer_ms);
         SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
 
-        //char id_str[UUID_STR_LEN];
-        //uuid_unparse(NE_getNeighborID(neigh), id_str);
+        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(NE_getNeighborID(neigh), id_str);
         //printf("SetTimer %s = %lu ms\n", id_str, next_timer_ms);
+
+        char str[200];
+        sprintf(str, "%s  next timer = %lu ms", id_str, next_timer_ms);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "NEIGHBOR TIMER", str);
+        #endif
     }
 
     bool removed = summary->removed;
@@ -979,7 +1000,8 @@ void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neig
 
     // Check if removal time
     if( NE_isLost(neigh) ) {
-        struct timespec* removal_time = NE_getNeighborTxExpTime(neigh);
+        //struct timespec* removal_time = NE_getNeighborTxExpTime(neigh);
+        struct timespec* removal_time = NE_getNeighborRemovalTime(neigh);
 
         // If already expired
         if( compare_timespec(removal_time, &state->current_time) <= 0 ) {
@@ -1014,16 +1036,21 @@ void scheduleNeighborTimer(discovery_framework_state* state, NeighborEntry* neig
     //if( next_timer_ms > 0 ) {
         // TODO: compare with old timer
         CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
+
         struct timespec t;
         milli_to_timespec(&t, next_timer_ms);
         SetTimer(&t, NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID, NEIGHBOR_TIMER);
 
+        // Log
+        #if DEBUG_INCLUDE_GT(DISCOVERY_DEBUG_LEVEL, ADVANCED_DEBUG)
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(NE_getNeighborID(neigh), id_str);
 
-        //char id_str[UUID_STR_LEN];
-        //uuid_unparse(NE_getNeighborID(neigh), id_str);
-        //printf("SetTimer Re-scheduling neighbor timer of %s (next_timer = %lu ms)\n", id_str, next_timer_ms);
+        char str[200];
+        sprintf(str, "of %s (next_timer = %lu ms)", id_str, next_timer_ms);
+        my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "RE-SCHEDULE NEIGH TIMER", str);
+        #endif
     //}
-
 }
 
 void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
@@ -1032,6 +1059,10 @@ void flushNeighbor(discovery_framework_state* state, NeighborEntry* neigh) {
     NT_removeNeighbor(state->neighbors, NE_getNeighborID(neigh));
 
     CancelTimer(NE_getNeighborID(neigh), DISCOVERY_FRAMEWORK_PROTO_ID);
+
+    char id_str[UUID_STR_LEN];
+    uuid_unparse(NE_getNeighborID(neigh), id_str);
+    printf("Flush neighbor %s\n", id_str);
 
     void* lq_attrs = NULL, *msg_attrs = NULL;
     destroyNeighborEntry(neigh, &lq_attrs, &msg_attrs);

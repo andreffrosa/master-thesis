@@ -69,6 +69,8 @@ static RoutingContextSendType OLSRRoutingContextTriggerEvent(ModuleState* m_stat
 
     else if(event_type == RTE_ANNOUNCE_TIMER) {
 
+        //printf("RTE_ANNOUNCE_TIMER\n");
+
         byte amount = state->mpr_selectors->size;
         if( state->dirty ) {
             state->dirty = false;
@@ -83,7 +85,7 @@ static RoutingContextSendType OLSRRoutingContextTriggerEvent(ModuleState* m_stat
     return NO_SEND;
 }
 
-static void OLSRRoutingContextCreateMsg(ModuleState* m_state, const char* proto, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
+static RoutingContextSendType OLSRRoutingContextCreateMsg(ModuleState* m_state, const char* proto, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
     OLSRState* state = (OLSRState*)m_state->vars;
 
     byte amount = state->mpr_selectors->size;
@@ -99,9 +101,11 @@ static void OLSRRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
         YggMessage_addPayload(msg, (char*)id, sizeof(uuid_t));
         YggMessage_addPayload(msg, (char*)&tx_cost, sizeof(double));
     }
+
+    return NO_SEND;
 }
 
-static RoutingContextSendType OLSRRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, void* f_state) {
+static RoutingContextSendType OLSRRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, unsigned short my_seq, void* f_state) {
 
     if(!new_seq) {
         return NO_SEND;

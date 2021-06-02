@@ -14,7 +14,7 @@ TESTS=(
 "broadcast/flooding"
 "broadcast/gossip1"
 #"broadcast/gossip1_horizon"
-"broadcast/gossip2;discovery/PeriodicHelloDiscovery"
+#"broadcast/gossip2;discovery/PeriodicHelloDiscovery"
 #"broadcast/gossip3"
 #"broadcast/rapid;discovery/PeriodicHelloDiscovery"
 #"broadcast/enhanced_rapid;discovery/PeriodicHelloDiscovery"
@@ -25,8 +25,8 @@ TESTS=(
 #"broadcast/naba2;discovery/PeriodicHelloDiscovery"
 #"broadcast/naba3;discovery/PeriodicJointDiscovery"
 #"broadcast/naba4;discovery/PeriodicJointDiscovery"
-#"broadcast/sba;discovery/PeriodicJointDiscovery"
-#"broadcast/mpr;discovery/OLSRDiscovery"
+"broadcast/sba;discovery/PeriodicJointDiscovery"
+"broadcast/mpr;discovery/OLSRDiscovery"
 #"broadcast/ahbp;discovery/PeriodicJointDiscovery"
 #"broadcast/lenwb;discovery/LENWBDiscovery"
 #"broadcast/dynamic_probability"
@@ -34,6 +34,15 @@ TESTS=(
 #"broadcast/rad_extension"
 #"broadcast/hop_count_rad_extension"
 )
+
+#ARR=( $(echo $EXP | sed 's/\// /g') )
+#d1=${ARR[0]}
+#d2=${ARR[1]}
+#d0
+L_DIR="../experiments/output/broadcast/broadcast_tests_"$(date +"%Y.%m.%d-%H.%M.%S")
+
+rm -r "$L_DIR/" > /dev/null 2>&1
+mkdir "$L_DIR/" > /dev/null 2>&1
 
 i=1
 for t in ${TESTS[@]}; do
@@ -52,5 +61,5 @@ for t in ${TESTS[@]}; do
     EXP=$BCAST
     i=$((i+1))
     EXE="../bin/broadcast_test -b ../experiments/configs/$BCAST.conf"$D" -a ../experiments/configs/broadcast_app.conf -o ../topologies/exp1/"
-    sudo ./test_algortihm_local.sh $PIS $DURATION $EXP "$EXE"
+    sudo ./test_algortihm_local.sh $PIS $DURATION $EXP "$EXE" $L_DIR
 done

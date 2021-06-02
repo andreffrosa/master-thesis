@@ -43,9 +43,13 @@
 
 #define ID_TEMPLATE "66600666-1001-1001-1001-000000000001"
 
+extern void (*log_flush_handler)();
+
 typedef struct RoutingAppArgs_ {
     list* destinations;
     list* sources;
+
+    bool loop_destinations;
 
     //uuid_t destination_id;
     //bool rcv_only;
@@ -84,7 +88,7 @@ static RoutingAppState* init_app_state(RoutingAppArgs* app_args, unsigned char* 
 static list* parse_int_list(char* value);
 static void parse_node(unsigned char* id, unsigned int node_id);
 
-static void uponSendTimer(RoutingAppArgs* app_args, RoutingAppState* app_state, unsigned char* send_timer_id);
+static void uponSendTimer(RoutingAppArgs* app_args, RoutingAppState* app_state, unsigned char* send_timer_id, unsigned char* myID);
 
 static void printDiscoveryStats(YggRequest* req);
 static void printBroadcastStats(YggRequest* req);
@@ -107,7 +111,13 @@ static void setRoutingTimer(RoutingAppArgs* app_args, unsigned char* send_timer_
 
 /*static*/ MyLogger* app_logger = NULL;
 
+void my_log_flush_handler();
+
 int main(int argc, char* argv[]) {
+
+    srand(time(NULL));
+
+    log_flush_handler = &my_log_flush_handler;
 
 	// Process Args
     hash_table* args = parse_args(argc, argv);
@@ -117,8 +127,8 @@ int main(int argc, char* argv[]) {
     unparse_host(hostname, 20, interface, 30, args);
 
     // Logs
-    char destination[200] = "../experiments/output/routing/exp1-";
-    hash_table_insert(args, new_str("log"), new_str(strcat(destination, hostname))); // temp
+    //char destination[200] = "../experiments/output/routing/exp1-";
+    //hash_table_insert(args, new_str("log"), new_str(strcat(destination, hostname))); // temp
 
     char* log_path = hash_table_find_value(args, "log");
     if(log_path) {
@@ -212,6 +222,20 @@ int main(int argc, char* argv[]) {
         broadcast_logger = app_logger;
         routing_logger = app_logger;
         routing_table_logger = app_logger;
+    }
+
+    // Sleep
+    char* sleep_ms = hash_table_find_value(args, "sleep");
+    if(sleep_ms) {
+        unsigned long t_ms = randomProb() * strtol(sleep_ms, NULL, 10);
+
+        char str[30];
+        sprintf(str, "%lu ms", t_ms);
+        my_logger_write(app_logger, APP_NAME, "SLEEP", str);
+
+        usleep(t_ms*1000);
+    } else {
+        my_logger_write(app_logger, APP_NAME, "SLEEP", "0");
     }
 
     // Network
@@ -352,22 +376,10 @@ int main(int argc, char* argv[]) {
                     SetTimer(&t, kill_exp, APP_ID, 0);
                 }
 			} else if( uuid_compare(elem.data.timer.id, send_timer_id) == 0 ) {
-                uponSendTimer(app_args, app_state, send_timer_id);
+                uponSendTimer(app_args, app_state, send_timer_id, myID);
 			}  else if( uuid_compare(elem.data.timer.id, kill_exp) == 0 ) {
 
-                my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "KILL");
-                my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
-                my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
-                my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
-                my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
-                my_logger_write(routing_table_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
-
-                my_logger_flush(app_logger);
-                my_logger_flush(discovery_logger);
-                my_logger_flush(neighbors_logger);
-                my_logger_flush(broadcast_logger);
-                my_logger_flush(routing_logger);
-                my_logger_flush(routing_table_logger);
+                my_log_flush_handler();
 
                 //return 0;
 			}
@@ -658,6 +670,8 @@ static RoutingAppArgs* default_routing_app_args() {
     app_args->ping_interval_ms = 1000;
     app_args->verbose = true;
 
+    app_args->loop_destinations = false;
+
     return app_args;
 }
 
@@ -703,6 +717,8 @@ static RoutingAppArgs* parse_routing_app_args(const char* file_path) {
                 //app_args->rcv_only = parse_bool(value);
             } else if( strcmp(key, "verbose") == 0 ) {
                 app_args->verbose = parse_bool(value);
+            } else if( strcmp(key, "loop_destinations") == 0 ) {
+                app_args->loop_destinations = parse_bool(value);
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
@@ -774,7 +790,7 @@ static list* parse_int_list(char* value) {
     return l;
 }
 
-static void uponSendTimer(RoutingAppArgs* app_args, RoutingAppState* app_state, unsigned char* send_timer_id) {
+static void uponSendTimer(RoutingAppArgs* app_args, RoutingAppState* app_state, unsigned char* send_timer_id, unsigned char* myID) {
 
     /*if(first) {
         printf("starting\n");
@@ -796,6 +812,19 @@ static void uponSendTimer(RoutingAppArgs* app_args, RoutingAppState* app_state, 
             } else {
                 printf("app_state->current_destination = NULL (%d remaining)\n", app_state->destinations->size);
             }*/
+
+            if(app_state->current_destination == NULL && app_args->loop_destinations) {
+                list* l = list_clone(app_args->destinations, sizeof(uuid_t));
+                void* aux = list_remove_item(l, &equalID, myID);
+                if(aux) {
+                    free(aux);
+                }
+                list_shuffle(l, 3);
+                list_delete(app_state->destinations);
+                app_state->destinations = l;
+
+                app_state->current_destination = list_remove_head(app_state->destinations);
+            }
         }
 
         if(app_state->current_destination) {
@@ -839,4 +868,22 @@ static RoutingAppState* init_app_state(RoutingAppArgs* app_args, unsigned char* 
     */
 
     return app_state;
+}
+
+void my_log_flush_handler() {
+    //printf("my_log_flush_handler\n");
+
+    my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(routing_table_logger, ROUTING_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+
+    my_logger_flush(app_logger);
+    my_logger_flush(discovery_logger);
+    my_logger_flush(neighbors_logger);
+    my_logger_flush(broadcast_logger);
+    my_logger_flush(routing_logger);
+    my_logger_flush(routing_table_logger);
 }

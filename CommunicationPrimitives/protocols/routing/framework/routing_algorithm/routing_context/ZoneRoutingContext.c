@@ -39,7 +39,7 @@ static RoutingContextSendType ZoneRoutingContextTriggerEvent(ModuleState* m_stat
     return send_type;
 }
 
-static void ZoneRoutingContextCreateMsg(ModuleState* m_state, const char* proto, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
+static RoutingContextSendType ZoneRoutingContextCreateMsg(ModuleState* m_state, const char* proto, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
 
     ZoneRoutingArgs* args = (ZoneRoutingArgs*)m_state->args;
 
@@ -48,7 +48,7 @@ static void ZoneRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
     if(event_type == RTE_NEIGHBORS_CHANGE || event_type == RTE_ANNOUNCE_TIMER || event_type == RTE_SOURCE_EXPIRE) {
         type = 1;
         YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
-        RCtx_createMsg(args->proactive_ctx, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
+        return RCtx_createMsg(args->proactive_ctx, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
     } else {
         if(event_type == RTE_CONTROL_MESSAGE) {
             assert(info);
@@ -65,19 +65,21 @@ static void ZoneRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
 
             type = 2;
             YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
-            RCtx_createMsg(args->reactive_ctx, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
+            return RCtx_createMsg(args->reactive_ctx, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
         } else {
             type = 2;
             YggMessage_addPayload(msg, (char*)&type, sizeof(byte));
-            RCtx_createMsg(args->reactive_ctx, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
+            return RCtx_createMsg(args->reactive_ctx, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
         }
 
     }
 
+    return NO_SEND;
+
     // TODO: assim?
 }
 
-static RoutingContextSendType ZoneRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, void* f_state) {
+static RoutingContextSendType ZoneRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, unsigned short my_seq, void* f_state) {
 
     if(!new_seq) {
         return NO_SEND;
@@ -96,9 +98,9 @@ static RoutingContextSendType ZoneRoutingContextProcessMsg(ModuleState* m_state,
     //printf("ZONE TYPE: %d    %d bytes\n", type, new_len);
 
     if(type == 1) {
-        return RCtx_processMsg(args->proactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length, new_seq, new_source, f_state);
+        return RCtx_processMsg(args->proactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length, new_seq, new_source, my_seq, f_state);
     } else if(type == 2) {
-        return RCtx_processMsg(args->reactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length, new_seq, new_source, f_state);
+        return RCtx_processMsg(args->reactive_ctx, routing_table, neighbors, source_table, source_entry, myID, current_time, header, aux, new_len, src_proto, meta_data, meta_length, new_seq, new_source, my_seq, f_state);
     } else {
         assert(false);
     }

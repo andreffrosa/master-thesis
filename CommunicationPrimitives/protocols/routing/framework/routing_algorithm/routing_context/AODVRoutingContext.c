@@ -18,6 +18,8 @@
 
 #include <assert.h>
 
+
+
 typedef enum {
     AODV_RREQ,
     AODV_RREP,
@@ -55,7 +57,7 @@ static RoutingContextSendType AODVRoutingContextTriggerEvent(ModuleState* m_stat
     return NO_SEND;
 }
 
-static void AODVRoutingContextCreateMsg(ModuleState* m_state, const char* proto, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
+static RoutingContextSendType AODVRoutingContextCreateMsg(ModuleState* m_state, const char* proto, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
 
     if( event_type == RTE_ROUTE_NOT_FOUND ) {
         assert(info);
@@ -71,9 +73,13 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
 
             YggMessage_addPayload(msg, (char*)header2->destination_id, sizeof(uuid_t));
 
-            char str[UUID_STR_LEN];
-            uuid_unparse(header2->destination_id, str);
-            printf("GENERATING REQ to %s\n", str);
+
+            char id_str[UUID_STR_LEN];
+            uuid_unparse(header2->destination_id, id_str);
+
+            char str[100];
+            sprintf(str, "GENERATING RREQ to %s", id_str);
+            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "AODV", str);
         }
         // Send RERR
         else {
@@ -86,9 +92,12 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
 
             YggMessage_addPayload(msg, (char*)header2->destination_id, sizeof(uuid_t));
 
-            char str[UUID_STR_LEN];
-            uuid_unparse(header2->destination_id, str);
-            printf("GENERATING RERR to remove %s\n", str);
+            char id_str[UUID_STR_LEN];
+            uuid_unparse(header2->destination_id, id_str);
+
+            char str[100];
+            sprintf(str, "GENERATING RERR to remove %s", id_str);
+            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "AODV", str);
         }
 
     } /*else if(event_type == RTE_NEIGHBORS_CHANGE) {
@@ -136,24 +145,30 @@ static void AODVRoutingContextCreateMsg(ModuleState* m_state, const char* proto,
                     route_cost = -1;
                     route_hops = -1;
 
-                    printf("[RREP] Neighbor not known!\n");
+                    //printf("[RREP] Neighbor not known!\n");
+                    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "AODV", "[RREP] Neighbor not known!");
                 }
             }
 
             YggMessage_addPayload(msg, (char*)&route_cost, sizeof(double));
             YggMessage_addPayload(msg, (char*)&route_hops, sizeof(byte));
 
-            char str[UUID_STR_LEN];
-            uuid_unparse(old_header->destination_id, str);
-            printf("GENERATING RREP \n");
+            //char id_str[UUID_STR_LEN];
+            //uuid_unparse(old_header->source_id, id_str);
+
+            //char str[100];
+            //sprintf(str, "GENERATING RREP to %s\n", id_str);
+            //my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "AODV", str);
 
         } else if(msg_type == AODV_RERR) {
             YggMessage_addPayload(msg, (char*)payload, length);
         }
     }
+
+    return NO_SEND;
 }
 
-static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, void* state) {
+static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state, const char* proto, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, unsigned short my_seq, void* state) {
 
     if(!new_seq) {
         return NO_SEND;
@@ -172,6 +187,15 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
         memcpy(destination_id, ptr, sizeof(uuid_t));
         ptr += sizeof(uuid_t);
 
+        char id_str[UUID_STR_LEN];
+        uuid_unparse(SE_getID(source_entry), id_str);
+        char id_str2[UUID_STR_LEN];
+        uuid_unparse(destination_id, id_str2);
+
+        char str[200];
+        sprintf(str, "Received RREQ from %s to %s", id_str, id_str2);
+        my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "AODV", str);
+
         uuid_t found_parent = {0};
         double found_route_cost = 0.0;
         unsigned int found_route_hops = 0;
@@ -182,7 +206,13 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
 
             if( uuid_compare(destination_id, myID) == 0 ) {
 
-                printf("I'm the wanted destination! SEND RREP\n");
+                char id_str[UUID_STR_LEN];
+                uuid_unparse(SE_getID(source_entry), id_str);
+
+                char str[200];
+                sprintf(str, "I'm the wanted destination! SEND RREP to %s", id_str);
+                my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "AODV", str);
+
 
                 return SEND_INC; // SEND RREP
             }
@@ -274,9 +304,12 @@ static RoutingContextSendType AODVRoutingContextProcessMsg(ModuleState* m_state,
                 list_add_item_to_tail(to_remove, new_id(dest_to_remove_id));
             }
 
-            char str[UUID_STR_LEN];
-            uuid_unparse(dest_to_remove_id, str);
-            printf("RECEIVED RERR to %s\n", str);
+            char id_str[UUID_STR_LEN];
+            uuid_unparse(dest_to_remove_id, id_str);
+
+            char str[200];
+            sprintf(str, "RECEIVED RERR to %s", id_str);
+            my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "AODV", str);
         }
 
         RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);

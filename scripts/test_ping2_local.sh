@@ -12,14 +12,24 @@ DURATION=$2
 
 TESTS=(
 #"routing/static"
-#"routing/olsr;broadcast/mpr;discovery/OLSRDiscovery"
-#"routing/aodv;broadcast/biflooding;discovery/PeriodicJointDiscovery"
-#"routing/dsr;broadcast/biflooding;discovery/PeriodicJointDiscovery"
+"routing/olsr;broadcast/mpr;discovery/OLSRDiscovery"
+"routing/aodv;broadcast/biflooding;discovery/PeriodicJointDiscovery"
+"routing/dsr;broadcast/biflooding;discovery/PeriodicJointDiscovery"
 #"routing/zone;broadcast/mpr+biflooding;discovery/OLSRDiscovery"
 #"routing/tora;broadcast/biflooding;discovery/PeriodicJointDiscovery"
-#"routing/batman;broadcast/batmanflooding;discovery/BATMANDiscovery"
+"routing/batman;broadcast/batmanflooding;discovery/BATMANDiscovery"
 "routing/babel;broadcast/flooding;discovery/PeriodicDisjointDiscovery"
 )
+
+
+#ARR=( $(echo $EXP | sed 's/\// /g') )
+#d1=${ARR[0]}
+#d2=${ARR[1]}
+#d0
+L_DIR="../experiments/output/routing/routing_tests_"$(date +"%Y.%m.%d-%H.%M.%S")
+
+rm -r "$L_DIR/" > /dev/null 2>&1
+mkdir "$L_DIR/" > /dev/null 2>&1
 
 i=1
 for t in ${TESTS[@]}; do
@@ -46,5 +56,5 @@ for t in ${TESTS[@]}; do
     EXP=$ROUTING
     i=$((i+1))
     EXE="../bin/ping2_test -r ../experiments/configs/$ROUTING.conf"$B""$D" -a ../experiments/configs/ping2_app.conf -o ../topologies/exp1/"
-    sudo ./test_algortihm_local.sh $PIS $DURATION $EXP "$EXE"
+    sudo ./test_algortihm_local.sh $PIS $DURATION $EXP "$EXE" $L_DIR
 done

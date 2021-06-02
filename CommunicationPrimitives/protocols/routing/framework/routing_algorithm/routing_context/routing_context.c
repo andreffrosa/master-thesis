@@ -58,19 +58,20 @@ RoutingContextSendType RCtx_triggerEvent(RoutingContext* context, RoutingEventTy
     }
 }
 
-void RCtx_createMsg(RoutingContext* context, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
+RoutingContextSendType RCtx_createMsg(RoutingContext* context, RoutingControlHeader* header, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, unsigned char* myID, struct timespec* current_time, YggMessage* msg, RoutingEventType event_type, void* info) {
     assert(context);
 
     if(context->create_msg) {
-        context->create_msg(&context->state, context->id, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
+        return context->create_msg(&context->state, context->id, header, routing_table, neighbors, source_table, myID, current_time, msg, event_type, info);
     }
+    return NO_SEND;
 }
 
-RoutingContextSendType RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, void* f_state) {
+RoutingContextSendType RCtx_processMsg(RoutingContext* context, RoutingTable* routing_table, RoutingNeighbors* neighbors, SourceTable* source_table, SourceEntry* source_entry, unsigned char* myID, struct timespec* current_time, RoutingControlHeader* header, byte* payload, unsigned short length, unsigned short src_proto, byte* meta_data, unsigned int meta_length, bool new_seq, bool new_source, unsigned short my_seq, void* f_state) {
     assert(context);
 
     if(context->process_msg) {
-        return context->process_msg(&context->state, context->id, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, src_proto, meta_data, meta_length, new_seq, new_source, f_state);
+        return context->process_msg(&context->state, context->id, routing_table, neighbors, source_table, source_entry, myID, current_time, header, payload, length, src_proto, meta_data, meta_length, new_seq, new_source, my_seq, f_state);
     }
     return NO_SEND;
 }

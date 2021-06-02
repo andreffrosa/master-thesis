@@ -15,7 +15,7 @@ com_prim_remote="~/CommunicationPrimitives"
 
 #raspis = ['192.168.1.105','192.168.1.106','192.168.1.108','192.168.1.111','192.168.1.114','192.168.1.115','192.168.1.116','192.168.1.117','192.168.1.121']
 
-raspis = ['192.168.1.105','192.168.1.102','192.168.1.108']
+raspis = ['192.168.1.103','192.168.1.104']
 
 #raspis = [
 #    '192.168.1.101','192.168.1.102','192.168.1.103','192.168.1.104','192.168.1.105',
@@ -176,7 +176,7 @@ def configureboot():
         run("sudo mv lightkone.sh /etc/init.d/")
         run("sudo chmod +x /etc/init.d/lightkone.sh")
         run("sudo cp *.sh /home/yggdrasil/")
-	run("sudo chmod +x /home/yggdrasil/*.sh")
+        run("sudo chmod +x /home/yggdrasil/*.sh")
         run("sudo cp runonboot.txt /home/yggdrasil/")
     with cd("/etc/init.d"):
         run("sudo update-rc.d lightkone.sh defaults")
@@ -296,3 +296,102 @@ def uploadConfigs(src="./experiments/", dest="~/"):
 
     local('scp -i ' + env.userKey + ' -r ' + src + ' ' + env.user + '@'+env.host+':' + dest)
     run("sudo chmod -R 777 " + dest)
+
+@parallel
+@hosts(raspis)
+def uploadProject(src="./", dest="~/"):
+    if not src.endswith("/"):
+        src = src + "/"
+
+    if not dest.endswith("/"):
+        dest = dest + "/"
+
+    # CommunicationPrimitives
+    local('scp -i ' + env.userKey + ' -r ' + src+"CommunicationPrimitives/" + ' ' + env.user + '@'+env.host+':' + dest+"CommunicationPrimitives/")
+    run("sudo chmod -R 777 " + dest+"CommunicationPrimitives/")
+
+    # experiments
+    local('scp -i ' + env.userKey + ' -r ' + src+"experiments/configs/" + ' ' + env.user + '@'+env.host+':' + dest+"experiments/configs/")
+    run("sudo chmod -R 777 " + dest+"experiments/configs/")
+
+    # scripts
+    local('scp -i ' + env.userKey + ' -r ' + src+"scripts/remote/" + ' ' + env.user + '@'+env.host+':' + dest+"scripts/")
+    run("sudo chmod -R 777 " + dest+"scripts/")
+
+    # topologies
+    local('scp -i ' + env.userKey + ' -r ' + src+"topologies/" + ' ' + env.user + '@'+env.host+':' + dest+"topologies/")
+    run("sudo chmod -R 777 " + dest+"topologies/")
+
+    # Yggdrasil
+    local('scp -i ' + env.userKey + ' -r ' + src+"Yggdrasil/" + ' ' + env.user + '@'+env.host+':' + dest+"Yggdrasil/")
+    run("sudo chmod -R 777 " + dest+"Yggdrasil/")
+
+    # CMakeLists.txt
+    local('scp -i ' + env.userKey + ' -r ' + src+"CMakeLists.txt" + ' ' + env.user + '@'+env.host+':' + dest+"CMakeLists.txt")
+    run("sudo chmod -R 777 " + dest+"CMakeLists.txt")
+
+
+@parallel
+@hosts(raspis)
+def deploy(only_scripts=False):
+
+    src="./"
+    dest="~/"
+
+    # sync clocks
+    now = datetime.datetime.now()
+    local('ssh -o StrictHostKeyChecking=no -i ' + env.userKey + ' ' + env.user + '@' + env.host + ' "sudo date +\'%Y-%m-%d %T.%N\' -s \'' + str(now) + '\'"')
+
+    if not only_scripts:
+        contents = ["CommunicationPrimitives", "experiments", "topologies", "Yggdrasil"]
+
+        for x in contents:
+            local('rsync -avz --delete --rsync-path="mkdir -p ' + dest+x + ' && rsync"  --exclude "*CMakeFiles*" --exclude "*.o" --rsh="ssh -o StrictHostKeyChecking=no" -i ' + env.userKey + ' ' + src+x + ' ' + env.user + '@%s:~/' % (env.host))
+
+        local('rsync -avz --rsh="ssh -o StrictHostKeyChecking=no" -i ' + env.userKey + ' CMakeLists.txt ' + env.user + '@%s:~/' % (env.host))
+
+    #scripts
+    try:
+        run("sudo rm -r " + dest + "scripts/")
+    except:
+        None
+    local('scp -i ' + env.userKey + ' -r ' + src+"scripts/remote/" + ' ' + env.user + '@'+env.host+':' + dest+"scripts/")
+    run("sudo chmod -R 777 " + dest+"scripts/")
+
+    if not only_scripts:
+        run("cmake .; make")
+
+
+
+import pathlib
+
+@parallel
+@hosts(raspis)
+def getExperinceResults(remote_dir,local_dir=None,unzip=False):
+
+    dir1 = "/home/" + env.user + "/" + remote_dir + "/*"
+
+    dir2 = (local_dir if local_dir != None else "./" + remote_dir + "/" )
+
+    ip = env.host
+    host = "raspi-"+ip[-2]+ip[-1]
+
+    file_path = dir2 + host + "/" +'%(basename)s'
+
+    #print(dir1)
+    #print(dir2)
+    #print(file_path)
+
+    files = get(dir1, file_path)
+    #print(files)
+
+    if unzip:
+        for f in files:
+            path = pathlib.PurePath(f)
+
+            if path.name.endswith(".tar.gz"):
+                cmd = "tar -xf " + dir2 + host + "/" + path.name + " -C " + dir2 + host + "/"
+                #print(cmd)
+                local(cmd)
+                local("rm " + dir2 + host + "/" + path.name)
+                local("chmod 777 " + dir2 + host + "/" + path.name.replace(".tar.gz", "/"))

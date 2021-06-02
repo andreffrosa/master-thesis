@@ -62,6 +62,8 @@ proto_def* routing_framework_init(void* arg) {
 
 void* routing_framework_main_loop(main_loop_args* args) {
 
+    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "INIT", "Starting routing framework ...");
+
 	routing_framework_state* f_state = args->state;
 
 	queue_t_elem elem;

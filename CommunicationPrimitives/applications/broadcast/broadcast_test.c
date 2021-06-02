@@ -36,6 +36,10 @@
 #include "utility/my_sys.h"
 #include "utility/my_string.h"
 
+extern void (*log_flush_handler)();
+
+void my_log_flush_handler();
+
 typedef struct BroadcastAppArgs_ {
     char broadcast_type[100];
     //struct timespec start_time;
@@ -59,20 +63,26 @@ static BroadcastAppArgs* default_broadcast_app_args();
 static BroadcastAppArgs* parse_broadcast_app_args(const char* file_path);
 
 static void printDiscoveryStats(YggRequest* req);
-static void printBcastStats(YggRequest* req);
+static void printBroadcastStats(YggRequest* req);
+static void requestDiscoveryStats();
+static void requestBroadcastStats();
+
 static void sendMessage(const char* pi, unsigned int counter, BroadcastAppArgs* app_args);
 static void rcvMessage(YggMessage* msg, BroadcastAppArgs* app_args);
 static void uponNotification(YggEvent* ev, BroadcastAppArgs* app_args);
-
-static void requestDiscoveryStats();
-static void requestBroadcastStats();
 
 static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_timer_id, bool isFirst, struct timespec* start_time);
 
 #define APP_ID 400
 #define APP_NAME "BROADCAST APP"
 
+/*static*/ MyLogger* app_logger = NULL;
+
 int main(int argc, char* argv[]) {
+
+    srand(time(NULL));
+
+    log_flush_handler = &my_log_flush_handler;
 
 	// Process Args
     hash_table* args = parse_args(argc, argv);
@@ -80,6 +90,97 @@ int main(int argc, char* argv[]) {
     // Interface and Hostname
     char interface[20] = {0}, hostname[30] = {0};
     unparse_host(hostname, 20, interface, 30, args);
+
+    // Logs
+    // char destination[200] = "../experiments/output/broadcast/exp1-";
+    // hash_table_insert(args, new_str("log"), new_str(strcat(destination, hostname))); // temp
+
+    char* log_path = hash_table_find_value(args, "log");
+    if(log_path) {
+        //rmdir(log_path);
+        //char cmd[100];
+        //sprintf(cmd, "rm -r %s", log_path);
+        //run_command(cmd, NULL, 0);
+
+        // Create dir if does not exist
+        struct stat st = {0};
+        if (stat(log_path, &st) == -1) {
+            if(mkdir(log_path, S_IRWXO) != 0) {
+                fprintf(stderr, "Could not create dir %s!\n", log_path);
+                exit(-1);
+            } else {
+                //printf("Creating dir %s ...\n", log_path);
+            }
+        }
+
+        char file_path[PATH_MAX];
+        build_path(file_path, log_path, "app.log");
+        //app_logger = new_my_logger(fopen("../experiments/output/broadcast/test.txt", "w"), hostname);
+        //app_logger = new_my_logger(stdout, hostname);
+
+        FILE* f = freopen(file_path, "w", stdout);
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+
+        dup2(1, 2);  //redirects stderr to stdout below this line.
+
+        app_logger = new_my_logger(stdout, hostname);
+
+        build_path(file_path, log_path, "discovery.log");
+        f = fopen(file_path, "w");
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+        discovery_logger = new_my_logger(f, hostname);
+
+        build_path(file_path, log_path, "neighbors.log");
+        f = fopen(file_path, "w");
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+        neighbors_logger = new_my_logger(f, hostname);
+
+        build_path(file_path, log_path, "broadcast.log");
+        f = fopen(file_path, "w");
+        if(f) {
+            printf("Creating log %s ...\n", file_path);
+        } else {
+            fprintf(stderr, "[ERROR] Could not create log file %s\n", file_path);
+            exit(-1);
+        }
+        broadcast_logger = new_my_logger(f, hostname);
+
+    } else {
+        printf("Using stdout as logger ...\n");
+        app_logger = new_my_logger(stdout, hostname);
+        discovery_logger = app_logger;
+        neighbors_logger = app_logger;
+        broadcast_logger = app_logger;
+    }
+
+    // Sleep
+    char* sleep_ms = hash_table_find_value(args, "sleep");
+    if(sleep_ms) {
+        unsigned long t_ms = randomProb() * strtol(sleep_ms, NULL, 10);
+
+        char str[30];
+        sprintf(str, "%lu ms", t_ms);
+        my_logger_write(app_logger, APP_NAME, "SLEEP", str);
+
+        usleep(t_ms*1000);
+    } else {
+        my_logger_write(app_logger, APP_NAME, "SLEEP", "0");
+    }
 
     // Network
     NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
@@ -148,7 +249,7 @@ int main(int argc, char* argv[]) {
 
     char str[100];
     sprintf(str, "%s starting experience with duration %lu + %lu + %lu s\n", hostname, app_args->initial_grace_period_s, app_args->exp_duration_s, app_args->final_grace_period_s);
-    ygg_log(APP_NAME, "INIT", str);
+    my_logger_write(app_logger, APP_NAME, "INIT", str);
 
     struct timespec start_time = {0};
     clock_gettime(CLOCK_MONOTONIC, &start_time);
@@ -160,6 +261,9 @@ int main(int argc, char* argv[]) {
 	genUUID(end_exp);
 	milli_to_timespec(&t, (app_args->exp_duration_s + app_args->initial_grace_period_s)*1000);
     SetTimer(&t, end_exp, APP_ID, 0);
+
+    uuid_t kill_exp;
+    genUUID(kill_exp);
 
     // Set periodic timer
     uuid_t bcast_timer_id;
@@ -181,14 +285,25 @@ int main(int argc, char* argv[]) {
 			if( uuid_compare(elem.data.timer.id, end_exp ) == 0 ) {
                 if(!finished) {
                     finished = true;
-                    ygg_log(APP_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
+                    my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "END.");
 
                     milli_to_timespec(&t, app_args->final_grace_period_s*1000);
                     SetTimer(&t, end_exp, APP_ID, 0);
                 } else {
                     requestDiscoveryStats();
                     requestBroadcastStats();
+
+                    milli_to_timespec(&t, 500);
+                    SetTimer(&t, kill_exp, APP_ID, 0);
                 }
+			} else if( uuid_compare(elem.data.timer.id, kill_exp) == 0 ) {
+
+                my_log_flush_handler();
+
+                //return 0;
 			} else if( uuid_compare(elem.data.timer.id, bcast_timer_id ) == 0 ) {
 
 				if (!app_args->rcv_only && !finished) {
@@ -219,7 +334,7 @@ int main(int argc, char* argv[]) {
 					}
 				} else if ( req->proto_origin == BROADCAST_FRAMEWORK_PROTO_ID ) {
 					if( req->request == REPLY && req->request_type == REQ_BROADCAST_FRAMEWORK_STATS) {
-						printBcastStats(req);
+						printBroadcastStats(req);
 					}
 				}
 			}
@@ -235,7 +350,7 @@ int main(int argc, char* argv[]) {
 			uponNotification(&elem.data.event, app_args);
 			break;
 		default:
-			ygg_log(APP_NAME, "MAIN LOOP", "Received wierd thing in my queue.");
+			my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "Received wierd thing in my queue.");
 		}
 
         // Release memory of elem payload
@@ -257,7 +372,7 @@ static void sendMessage(const char* hostname, unsigned int counter, BroadcastApp
     BroadcastMessage(APP_ID, -1, 0, (byte*)payload, strlen(payload)+1);
 
     if(app_args->verbose)
-	   ygg_log(APP_NAME, "BROADCAST SENT", payload);
+	   my_logger_write(app_logger, APP_NAME, "BROADCAST SENT", payload);
 }
 
 static void rcvMessage(YggMessage* msg, BroadcastAppArgs* app_args) {
@@ -287,7 +402,7 @@ static void rcvMessage(YggMessage* msg, BroadcastAppArgs* app_args) {
     }
 
     if(app_args->verbose)
-	   ygg_log(APP_NAME, "RECEIVED MESSAGE", m);
+	   my_logger_write(app_logger, APP_NAME, "RECEIVED MESSAGE", m);
 }
 
 static void requestDiscoveryStats() {
@@ -302,7 +417,7 @@ static void requestBroadcastStats() {
     deliverRequest(&req);
 }
 
-static void printBcastStats(YggRequest* req) {
+static void printBroadcastStats(YggRequest* req) {
 	broadcast_stats stats;
 	YggRequest_readPayload(req, NULL, &stats, sizeof(broadcast_stats));
 
@@ -314,7 +429,7 @@ static void printBcastStats(YggRequest* req) {
 			stats.messages_not_transmitted,
             stats.messages_delivered);
 
-	ygg_log(APP_NAME, "BROADCAST STATS", m);
+	my_logger_write(app_logger, APP_NAME, "BROADCAST STATS", m);
 }
 
 static void printDiscoveryStats(YggRequest* req) {
@@ -328,7 +443,7 @@ static void printDiscoveryStats(YggRequest* req) {
             stats.lost_neighbors,
             stats.new_neighbors);
 
-	ygg_log(APP_NAME, "DISCOVERY STATS", str);
+	my_logger_write(app_logger, APP_NAME, "DISCOVERY STATS", str);
 }
 
 static void uponNotification(YggEvent* ev, BroadcastAppArgs* app_args) {
@@ -341,14 +456,14 @@ static void uponNotification(YggEvent* ev, BroadcastAppArgs* app_args) {
                 printAnnounce(ev->payload, ev->length, -1, &an_str);
                 char str[strlen(an_str)+2];
                 sprintf(str, "\n%s", an_str);
-                ygg_log(APP_NAME, "DISCOVERY", str);
+                my_logger_write(app_logger, APP_NAME, "DISCOVERY", str);
                 free(an_str);
             }
         }
 	} else {
 		char s[100];
 		sprintf(s, "Received notification from protocol %d meant for protocol %d", ev->proto_origin, ev->proto_dest);
-		ygg_log(APP_NAME, "NOTIFICATION", s);
+		my_logger_write(app_logger, APP_NAME, "NOTIFICATION", s);
 	}
 */
 
@@ -374,7 +489,7 @@ static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_t
     #ifdef DEBUG_BROADCAST_TEST
     char str[100];
     sprintf(str, "broadcast_timer = %lu\n", t);
-    ygg_log(APP_NAME, "BROADCAST TIMER", str);
+    my_logger_write(app_logger, APP_NAME, "BROADCAST TIMER", str);
     #endif
     */
 
@@ -404,7 +519,7 @@ static BroadcastAppArgs* parse_broadcast_app_args(const char* file_path) {
     if(configs == NULL) {
         char str[100];
         sprintf(str, "Config file %s not found!", file_path);
-        ygg_log(APP_NAME, "ARG ERROR", str);
+        my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
         ygg_logflush();
 
         exit(-1);
@@ -435,12 +550,12 @@ static BroadcastAppArgs* parse_broadcast_app_args(const char* file_path) {
             } else {
                 char str[50];
                 sprintf(str, "Unknown Config %s = %s", key, value);
-                ygg_log(APP_NAME, "ARG ERROR", str);
+                my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
             }
         } else {
             char str[50];
             sprintf(str, "Empty Config %s", key);
-            ygg_log(APP_NAME, "ARG ERROR", str);
+            my_logger_write(app_logger, APP_NAME, "ARG ERROR", str);
         }
     }
 
@@ -449,4 +564,16 @@ static BroadcastAppArgs* parse_broadcast_app_args(const char* file_path) {
     list_delete(order);
 
     return app_args;
+}
+
+void my_log_flush_handler() {
+    my_logger_write(app_logger, APP_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(discovery_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(neighbors_logger, DISCOVERY_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+    my_logger_write(broadcast_logger, BROADCAST_FRAMEWORK_PROTO_NAME, "MAIN LOOP", "KILL");
+
+    my_logger_flush(app_logger);
+    my_logger_flush(discovery_logger);
+    my_logger_flush(neighbors_logger);
+    my_logger_flush(broadcast_logger);
 }
