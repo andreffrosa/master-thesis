@@ -318,7 +318,7 @@ int main(int argc, char* argv[]) {
 	// Start App
 
     char str[100];
-    sprintf(str, "%s starting experience with duration %lu + %lu + %lu s\n", hostname, app_args->initial_grace_period_s, app_args->exp_duration_s, app_args->final_grace_period_s);
+    sprintf(str, "%s starting experience with duration %lu + %lu + %lu s", hostname, app_args->initial_grace_period_s, app_args->exp_duration_s, app_args->final_grace_period_s);
     my_logger_write(app_logger, APP_NAME, "INIT", str);
 
     struct timespec start_time = {0};
@@ -584,7 +584,7 @@ static void printRoutingStats(YggRequest* req) {
 	YggRequest_readPayload(req, NULL, &stats, sizeof(routing_stats));
 
 	char m[1000];
-	sprintf(m, "Sent: %lu \t Delivered: %lu \t Forwarded: %lu \t Not_Forwarded: %lu \t Received: %lu \t Ctrl_sent: %lu \t Ctrl_rcv: %lu",
+	sprintf(m, "Sent: %lu \t Delivered: %lu \t Forwarded: %lu \t NotForwarded: %lu \t Rcv: %lu \t CtrlSent: %lu \t CtrlRcv: %lu",
             stats.messages_requested,
             stats.messages_delivered,
             stats.messages_forwarded,

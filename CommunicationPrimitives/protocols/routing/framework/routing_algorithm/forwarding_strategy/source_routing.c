@@ -15,15 +15,21 @@
 
 #include <assert.h>
 
+#include "utility/my_logger.h"
+
+extern MyLogger* routing_logger;
+
 static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing_table, SourceTable* source_table, RoutingNeighbors* neighbors, unsigned char* myID, unsigned char* destination_id, unsigned char* next_hop_id, WLANAddr* next_hop_addr, byte** meta_data, unsigned short* meta_data_length, byte* prev_meta_data, unsigned short prev_meta_data_length, bool first, struct timespec* current_time) {
 
     if(first) {
         RoutingNeighborsEntry* rne = RN_getNeighbor(neighbors, destination_id);
 
         if(rne && RNE_isBi(rne)) {
-            char aux_str[UUID_STR_LEN];
+            /*char aux_str[UUID_STR_LEN];
             uuid_unparse(destination_id, aux_str);
-            printf("[getNextHop] Found route to %s (%d): (neigh)\n", aux_str, 1);
+            char str[200];
+            sprintf(str, "Found route to %s (%d): (neigh)\n", aux_str, 1);
+            my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);*/
 
             *meta_data_length = 1*sizeof(uuid_t);
             *meta_data = malloc(*meta_data_length);
@@ -39,28 +45,40 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
                 RTE_setLastUsedTime(entry, current_time);
                 RTE_incMessagesForwarded(entry);
 
-                printf("[getNextHop] Found route in routing table!\n");
+                //printf("[getNextHop] Found route in routing table!\n");
+                //my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);
 
                 return true;
             }
             else {
-                printf("[getNextHop] Route not found in routing table!\n");
+                char aux_str[UUID_STR_LEN];
+                uuid_unparse(destination_id, aux_str);
+                char str[200];
+                sprintf(str, "Route to %s not found in routing table!", aux_str);
+                my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);
+
                 return false;
             }
         } else {
             SourceEntry* source_entry = ST_getEntry(source_table, destination_id);
 
             if(source_entry == NULL) {
-                printf("[getNextHop] No source entry\n");
+                /*char aux_str[UUID_STR_LEN];
+                uuid_unparse(destination_id, aux_str);
+                char str[200];
+                sprintf(str, "No source entry to %s", aux_str);
+                my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);*/
                 return false;
             }
 
             list* route = (list*)SE_getAttr(source_entry, "route");
             if(route) {
 
-                char aux_str[UUID_STR_LEN];
+                /*char aux_str[UUID_STR_LEN];
                 uuid_unparse(SE_getID(source_entry), aux_str);
-                printf("[getNextHop] Found route to %s (%d):\n", aux_str, route->size);
+                char str[200];
+                sprintf(str, "Found route to %s (%d)", aux_str, route->size);
+                my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);*/
 
                 *meta_data_length = route->size*sizeof(uuid_t);
                 *meta_data = malloc(*meta_data_length);
@@ -84,16 +102,28 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
                     RTE_setLastUsedTime(entry, current_time);
                     RTE_incMessagesForwarded(entry);
 
-                    printf("[getNextHop] Found route in routing table!\n");
+                    /*char aux_str[UUID_STR_LEN];
+                    uuid_unparse(destination_id, aux_str);
+                    char str[200];
+                    sprintf(str, "Found route to %s in routing table", aux_str);
+                    my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);*/
 
                     return true;
                 }
                 else {
-                    printf("[getNextHop] Route not found in routing table!\n");
+                    char aux_str[UUID_STR_LEN];
+                    uuid_unparse(destination_id, aux_str);
+                    char str[200];
+                    sprintf(str, "Route to %s not found in routing table", aux_str);
+                    my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);
                     return false;
                 }
             } else {
-                printf("[getNextHop] No route in source_entry\n");
+                /*char aux_str[UUID_STR_LEN];
+                uuid_unparse(destination_id, aux_str);
+                char str[200];
+                sprintf(str, "No route in source_entry to %s", aux_str);
+                my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);*/
 
                 // send RREQ
                 return false;
@@ -110,7 +140,7 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
 
             int n = prev_meta_data_length / sizeof(uuid_t);
 
-            printf("[SOURCE ROUTING] route_length=%d\n", n);
+            //printf("[SOURCE ROUTING] route_length=%d\n", n);
 
             byte* ptr = prev_meta_data;
             for(int i = 0; i < n - 1; i++) {
@@ -129,13 +159,17 @@ static bool SourceRouting_getNextHop(ModuleState* m_state, RoutingTable* routing
                 if(neigh) {
                     memcpy(next_hop_addr->data, RNE_getAddr(neigh)->data, WLAN_ADDR_LEN);
 
-                    printf("[getNextHop] Found!\n");
+                    // printf("[getNextHop] Found!\n");
 
                     return true;
                 }
             }
 
-            printf("[getNextHop] Cannot find myself in route!\n");
+            char aux_str[UUID_STR_LEN];
+            uuid_unparse(destination_id, aux_str);
+            char str[200];
+            sprintf(str, "Cannot find myself in route to %s", aux_str);
+            my_logger_write(routing_logger, "SOURCE FORWARDING", "GET NEXT HOP", str);
 
             return false;
         } else {

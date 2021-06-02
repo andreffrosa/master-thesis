@@ -46,12 +46,12 @@ static void disseminate(ModuleState* m_state, unsigned char* myID, YggMessage* m
         assert(false);
     }
 
-    printf("EVENT TYPE: %d %d %d\n", event_type, RTE_ROUTE_NOT_FOUND, RTE_CONTROL_MESSAGE);
+    //printf("EVENT TYPE: %d %d %d\n", event_type, RTE_ROUTE_NOT_FOUND, RTE_CONTROL_MESSAGE);
 
     if( line ) {
-        char str[UUID_STR_LEN];
-        uuid_unparse(destination_id, str);
-        printf("USING ROUTING TO DISSEMINATE to %s!!!  proto = %d\n", str, msg->Proto_id);
+        //char str[UUID_STR_LEN];
+        //uuid_unparse(destination_id, str);
+        //printf("USING ROUTING TO DISSEMINATE to %s!!!  proto = %d\n", str, msg->Proto_id);
         //BroadcastMessage(msg->Proto_id, 1, (byte*)msg->data, msg->dataLen);
         RouteMessage(destination_id, msg->Proto_id, -1, hop_delivery, (byte*)msg->data, msg->dataLen);
     } else {
