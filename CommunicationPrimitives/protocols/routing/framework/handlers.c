@@ -553,20 +553,22 @@ void RF_updateRoutingTable(RoutingTable* rt, list* to_update, list* to_remove, s
             while( (id = list_remove_head(to_remove)) ) {
                 RoutingTableEntry* old_entry = RT_removeEntry(rt, id);
 
-                #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
-                char id_str[UUID_STR_LEN];
-                uuid_unparse(RTE_getDestinationID(old_entry), id_str);
+                if(old_entry) {
+                    #if DEBUG_INCLUDE_GT(ROUTING_DEBUG_LEVEL, SIMPLE_DEBUG)
+                    char id_str[UUID_STR_LEN];
+                    uuid_unparse(RTE_getDestinationID(old_entry), id_str);
 
-                char str[100];
-                sprintf(str, "Removed route to %s", id_str);
-                my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
-                #endif
+                    char str[100];
+                    sprintf(str, "Removed route to %s", id_str);
+                    my_logger_write(routing_logger, ROUTING_FRAMEWORK_PROTO_NAME, "ROUTING TABLE", str);
+                    #endif
 
-                free(old_entry);
+                    free(old_entry);
+
+                    updated = true;
+                }
 
                 free(id);
-
-                updated = true;
             }
 
             free(to_remove);

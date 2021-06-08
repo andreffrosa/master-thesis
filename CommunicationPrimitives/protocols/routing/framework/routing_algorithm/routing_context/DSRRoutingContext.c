@@ -53,13 +53,15 @@ static RoutingContextSendType DSRRoutingContextTriggerEvent(ModuleState* m_state
         //return SEND_INC;
     } else if(event_type == RTE_SOURCE_EXPIRE) {
         SourceEntry* se = (SourceEntry*)args;
-        list* route = (list*)SE_remAttr(se, "route");
-        list_delete(route);
+        if(se) {
+            list* route = (list*)SE_remAttr(se, "route");
+            list_delete(route);
 
-        // Remove
-        list* to_remove = list_init();
-        list_add_item_to_tail(to_remove, new_id(SE_getID(se)));
-        RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
+            // Remove
+            list* to_remove = list_init();
+            list_add_item_to_tail(to_remove, new_id(SE_getID(se)));
+            RF_updateRoutingTable(routing_table, NULL, to_remove, current_time);
+        }
     }
 
     return NO_SEND;
@@ -378,9 +380,11 @@ static RoutingContextSendType DSRRoutingContextProcessMsg(ModuleState* m_state, 
             }
 
             SourceEntry* se = ST_getEntry(source_table, dest_to_remove_id);
-            list* route = (list*)SE_remAttr(se, "route");
-            list_delete(route);
-
+            if(se) {
+                list* route = (list*)SE_remAttr(se, "route");
+                list_delete(route);
+            }
+            
             char id_str[UUID_STR_LEN];
             uuid_unparse(dest_to_remove_id, id_str);
 
@@ -615,8 +619,10 @@ static void ProcessDiscoveryEvent(YggEvent* ev, void* state, RoutingTable* routi
                     list_add_item_to_tail(to_remove, new_id(RTE_getDestinationID(current_route)));
 
                     SourceEntry* se = ST_getEntry(source_table, RTE_getDestinationID(current_route));
-                    list* route = (list*)SE_remAttr(se, "route");
-                    list_delete(route);
+                    if(se) {
+                        list* route = (list*)SE_remAttr(se, "route");
+                        list_delete(route);
+                    }
                 }
             }
 

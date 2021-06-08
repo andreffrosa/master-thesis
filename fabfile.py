@@ -13,33 +13,21 @@ lightkone_remote="~/Yggdrasil"
 lightkone_protos_remote="~/Yggdrasil/Yggdrasil"
 com_prim_remote="~/CommunicationPrimitives"
 
-#raspis = ['192.168.1.105','192.168.1.106','192.168.1.108','192.168.1.111','192.168.1.114','192.168.1.115','192.168.1.116','192.168.1.117','192.168.1.121']
-
-raspis = ['192.168.1.103','192.168.1.104']
 
 #raspis = [
 #    '192.168.1.101','192.168.1.102','192.168.1.103','192.168.1.104','192.168.1.105',
 #    '192.168.1.106','192.168.1.107','192.168.1.108','192.168.1.109','192.168.1.110',
 #    '192.168.1.111','192.168.1.112','192.168.1.113','192.168.1.114','192.168.1.115',
-#    '192.168.1.116','192.168.1.117','192.168.1.118','192.168.1.119','192.168.1.120',
-#    '192.168.1.121'
+#    '192.168.1.116','192.168.1.117','192.168.1.118','192.168.1.119','192.168.1.120'
 #    ]
+    
+raspis = [
+    '192.168.1.101','192.168.1.102','192.168.1.103','192.168.1.105',
+    '192.168.1.106','192.168.1.107','192.168.1.108','192.168.1.109','192.168.1.110',
+    '192.168.1.111','192.168.1.112','192.168.1.113','192.168.1.114','192.168.1.115',
+    '192.168.1.116','192.168.1.117','192.168.1.118','192.168.1.119'
+    ]
 
-
-#raspis = [
-#    '192.168.1.101','192.168.1.102','192.168.1.103','192.168.1.104','192.168.1.105',
-#    '192.168.1.106','192.168.1.107','192.168.1.108','192.168.1.109','192.168.1.110',
-#    '192.168.1.111','192.168.1.112','192.168.1.113','192.168.1.114','192.168.1.115',
-#    '192.168.1.116','192.168.1.117','192.168.1.118','192.168.1.119','192.168.1.120',
-#    '192.168.1.121','192.168.1.122','192.168.1.123','192.168.1.124'
-#    ]
-
-
-#UP
-#raspis = ['192.168.1.101','192.168.1.102','192.168.1.106','192.168.1.107','192.168.1.114','192.168.1.122']
-
-#DOWN
-#raspis = ['192.168.1.120','192.168.1.121','192.168.1.122','192.168.1.123']
 
 def __get_hosts(hosts_dict, hosts_per_dc):
     hosts = []
@@ -99,7 +87,7 @@ def createLighkoneConfigDir():
 @parallel
 @hosts(raspis)
 def createYggdrasilHome():
-    run("sudo mkdir /home/yggdrasil; sudo chmod -R 755 /home/yygdrasil")
+    run("sudo mkdir /home/yggdrasil; sudo chmod -R 755 /home/yggdrasil")
 
 @parallel
 @hosts(raspis)
@@ -339,8 +327,8 @@ def deploy(only_scripts=False):
     dest="~/"
 
     # sync clocks
-    now = datetime.datetime.now()
-    local('ssh -o StrictHostKeyChecking=no -i ' + env.userKey + ' ' + env.user + '@' + env.host + ' "sudo date +\'%Y-%m-%d %T.%N\' -s \'' + str(now) + '\'"')
+    #now = datetime.datetime.now()
+    #local('ssh -o StrictHostKeyChecking=no -i ' + env.userKey + ' ' + env.user + '@' + env.host + ' "sudo date +\'%Y-%m-%d %T.%N\' -s \'' + str(now) + '\'"')
 
     if not only_scripts:
         contents = ["CommunicationPrimitives", "experiments", "topologies", "Yggdrasil"]
@@ -356,10 +344,36 @@ def deploy(only_scripts=False):
     except:
         None
     local('scp -i ' + env.userKey + ' -r ' + src+"scripts/remote/" + ' ' + env.user + '@'+env.host+':' + dest+"scripts/")
-    run("sudo chmod -R 777 " + dest+"scripts/")
+    run("chmod -R 777 " + dest+"scripts/")
 
     if not only_scripts:
         run("cmake .; make")
+
+@parallel
+@hosts(raspis)
+def deployConfigs():
+
+    src="./"
+    dest="~/"
+
+    # sync clocks
+    #now = datetime.datetime.now()
+    #local('ssh -o StrictHostKeyChecking=no -i ' + env.userKey + ' ' + env.user + '@' + env.host + ' "sudo date +\'%Y-%m-%d %T.%N\' -s \'' + str(now) + '\'"')
+
+    contents = ["experiments", "topologies"]
+
+    for x in contents:
+    	local('rsync -avz --delete --rsync-path="mkdir -p ' + dest+x + ' && rsync"  --exclude "*CMakeFiles*" --exclude "*.o" --rsh="ssh -o StrictHostKeyChecking=no" -i ' + env.userKey + ' ' + src+x + ' ' + env.user + '@%s:~/' % (env.host))
+
+    	local('rsync -avz --rsh="ssh -o StrictHostKeyChecking=no" -i ' + env.userKey + ' CMakeLists.txt ' + env.user + '@%s:~/' % (env.host))
+
+    #scripts
+    try:
+        run("sudo rm -r " + dest + "scripts/")
+    except:
+        None
+    local('scp -i ' + env.userKey + ' -r ' + src+"scripts/remote/" + ' ' + env.user + '@'+env.host+':' + dest+"scripts/")
+    run("sudo chmod -R 777 " + dest+"scripts/")
 
 
 
@@ -376,7 +390,8 @@ def getExperinceResults(remote_dir,local_dir=None,unzip=False):
     ip = env.host
     host = "raspi-"+ip[-2]+ip[-1]
 
-    file_path = dir2 + host + "/" +'%(basename)s'
+    #file_path = dir2 + host + "/" +'%(basename)s' # zip
+    file_path = dir2 + host + "/" +'%(path)s'
 
     #print(dir1)
     #print(dir2)
@@ -395,3 +410,49 @@ def getExperinceResults(remote_dir,local_dir=None,unzip=False):
                 local(cmd)
                 local("rm " + dir2 + host + "/" + path.name)
                 local("chmod 777 " + dir2 + host + "/" + path.name.replace(".tar.gz", "/"))
+
+@parallel
+@hosts(raspis)
+def cleanResults(regex):
+    run('sudo rm -r ' + regex )   
+
+@parallel
+@hosts(raspis)
+def whoami():
+    run('whoami')
+    
+    
+    
+@parallel
+@hosts(raspis)
+def network():
+    run("sudo iw dev")
+    
+    
+@parallel
+@hosts(raspis)
+def isrunning(regex):
+    run('ps ax | grep "' + regex + '"')   
+    
+
+@parallel
+@hosts(raspis)
+def ip():
+    run("ip a")   
+
+@parallel
+@hosts(raspis)
+def arp():
+    run("sudo cp /home/yggdrasil/tools/ethers /etc/")
+    #run("sudo /home/yggdrasil/tools/")
+    
+    
+@parallel
+@hosts(raspis)  
+def disable_avahi():
+    run("sudo systemctl stop avahi-daemon.service ; sudo systemctl stop avahi-daemon.socket ; sudo systemctl disable avahi-daemon.service ; sudo systemctl disable avahi-daemon.socket")
+
+
+
+
+

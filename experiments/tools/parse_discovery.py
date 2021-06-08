@@ -8,7 +8,7 @@ import time
 import datetime
 import sys
 
-def merge(results):
+def merge(results, t, r):
     #print(results)
 
     total_cost = 0
@@ -109,7 +109,7 @@ def on_finish(args,output_dir,save):
     print(args["normal"].to_string(index=False))
 
     if save:
-        args["normal"].to_csv(output_dir + t + ".csv", sep=";", index=False)
+        args["normal"].to_csv(output_dir + "normal" + ".csv", sep=";", index=False)
 
 ######################################################################3
 
@@ -125,12 +125,12 @@ if not logs_dir.endswith("/"):
 save = False
 if len(sys.argv) >= 2:
     #save = sys.argv[2] == "True" || sys.argv[2] == "true" || sys.argv[2] == "T"
-    save = sys.argv[1].lower() in ['true', '1', 't', 'y', 'yes', 'ok', 'save']
+    save = sys.argv[2].lower() in ['true', '1', 't', 'y', 'yes', 'ok', 'save']
 
 
 output_dir = logs_dir
 if len(sys.argv) >= 3:
-    output_dir = sys.argv[2]
+    output_dir = sys.argv[3]
     if not output_dir.endswith("/"):
         output_dir += "/"
 

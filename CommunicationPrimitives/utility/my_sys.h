@@ -28,4 +28,6 @@ hash_table* parse_configs(const char* file_path);
 
 hash_table* parse_configs_order(const char* file_path, list** order);
 
+int r_mkdir(const char* path);
+
 #endif /* SYS_H_ */

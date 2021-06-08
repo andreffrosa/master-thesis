@@ -163,3 +163,49 @@ hash_table* parse_configs_order(const char* file_path, list** order) {
     } else
         return NULL;
 }
+
+int r_mkdir(const char* path) {
+    char tmp[PATH_MAX] = {0};
+    size_t len = 0;
+    struct stat st = {0};
+
+    mode_t mode = 0777;
+
+    strcpy(tmp, path);
+    len = strlen(tmp);
+
+    if(tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
+
+    for(char* ptr = tmp + 1; *ptr; ptr++) {
+        if(*ptr == '/') {
+            *ptr = 0;
+
+            if (stat(tmp, &st) == -1) {
+                errno = 0;
+                if(mkdir(tmp, mode) != 0) {
+                    //fprintf(stderr, "Could not create directory %s (errno = %s)\n", log_path, strerror(errno));
+                    //exit(-1);
+                    return errno;
+                } else {
+                    //printf("Creating dir %s ...\n", log_path);
+                }
+            }
+
+            *ptr = '/';
+        }
+    }
+    
+    if (stat(tmp, &st) == -1) {
+        errno = 0;
+        if(mkdir(tmp, mode) != 0) {
+            //fprintf(stderr, "Could not create directory %s (errno = %s)\n", log_path, strerror(errno));
+            //exit(-1);
+            return errno;
+        } else {
+            //printf("Creating dir %s ...\n", log_path);
+        }
+    }
+
+    return 0;
+}

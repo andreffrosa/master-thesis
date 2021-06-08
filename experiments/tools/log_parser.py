@@ -85,7 +85,7 @@ def parse_run(t, r, pis, input_dir, parse_node, merge, n_threads):
 
     #print(len(results))
 
-    row = merge(results)
+    row = merge(results, t, r)
 
     #print(row)
 
@@ -140,8 +140,10 @@ def parse_experience(input_dir, output_dir, on_init=on_init, on_test_results=on_
     #asd = os.listdir(input_dir + "/" + pis[0])
     for x in os.listdir(input_dir + "/" + pis[0]):
         a = x.split("-run")
-        tests.add(a[0])
-        runs.add(a[1])
+        #if os.path.isdir(x):
+        if not x.endswith(".log"):
+            tests.add(a[0])
+            runs.add(a[1])
 
     #print(tests)
     #print(runs)

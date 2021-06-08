@@ -80,6 +80,8 @@ static void setBroadcastTimer(BroadcastAppArgs* app_args, unsigned char* bcast_t
 
 int main(int argc, char* argv[]) {
 
+    sleep(5);
+
     srand(time(NULL));
 
     log_flush_handler = &my_log_flush_handler;
@@ -97,20 +99,11 @@ int main(int argc, char* argv[]) {
 
     char* log_path = hash_table_find_value(args, "log");
     if(log_path) {
-        //rmdir(log_path);
-        //char cmd[100];
-        //sprintf(cmd, "rm -r %s", log_path);
-        //run_command(cmd, NULL, 0);
-
         // Create dir if does not exist
-        struct stat st = {0};
-        if (stat(log_path, &st) == -1) {
-            if(mkdir(log_path, S_IRWXO) != 0) {
-                fprintf(stderr, "Could not create dir %s!\n", log_path);
-                exit(-1);
-            } else {
-                //printf("Creating dir %s ...\n", log_path);
-            }
+        int err = r_mkdir(log_path);
+        if(err > 0) {
+            fprintf(stderr, "Could not create directory %s (errno = %s)\n", log_path, strerror(err));
+            exit(-1);
         }
 
         char file_path[PATH_MAX];
@@ -183,7 +176,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Network
-    NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2462, 3, 1, "pis", YGG_filter);
+    NetworkConfig* ntconf = defineNetworkConfig2(interface, "AdHoc", 2412, 3, 0, "pis", YGG_filter);
 
     // Initialize ygg_runtime
     ygg_runtime_init_2(ntconf, hostname);

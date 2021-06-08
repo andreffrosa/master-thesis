@@ -51,7 +51,7 @@ def seconds_to_string(t):
 
 class RemoteTester:
 
-    def __init__(self, tests, duration_per_test_s, wait_s, n_runs, results_dir, bin_dir, n_nodes, print_only=False, zip=False, clean_out=False):
+    def __init__(self, tests, duration_per_test_s, wait_s, n_runs, results_dir, bin_dir, n_nodes, tries=3, print_only=False, zip=False, clean_out=False):
         self.tests = tests
         self.duration_per_test_s = duration_per_test_s
         self.wait_s = wait_s
@@ -63,6 +63,7 @@ class RemoteTester:
         self.zip = zip
         self.clean_out = clean_out
         self.nodes_to_kill = []
+        self.tries = tries
 
     def __print_configs(self, start_time):
         print("------------------------------------------------------")
@@ -79,44 +80,78 @@ class RemoteTester:
         print("End Time: " + (start_time + timedelta(0,total_time)).strftime("%Y/%m/%d %H:%M:%S"))
         print("")
 
+
+    def __process_out(self, res):
+    	#print(res)
+    	res = subprocess.check_output(["grep", "raspi"], text=True, universal_newlines=True, input=res)
+    	#print(res)
+    	res = subprocess.check_output(["sort"], text=True, universal_newlines=True, input=res)
+    	nodes = [x.replace("raspi-","") for x in res.split('\n') if x.strip()]
+    	print(nodes)
+    	res = subprocess.check_output(["wc", "-l"], text=True, universal_newlines=True, input=res)
+    	#print(res)
+    	return res
+
     def __check_command(self, value):
 
+        if value == None:
+            value = "0"
+
         if isinstance(value, int):
-            value = str(value)
+                value = str(value)
         elif isinstance(value, str):
-            value = value.strip()
+        	if value == "":
+        		value = "0"
+        	else:
+        		value = value.strip()
 
         if not self.print_only:
-            if int(value) == self.n_nodes:
-                return "OK (" + value + "/" + str(self.n_nodes) + " nodes)"
-            else:
-                print("ERROR (" + value + "/" + str(self.n_nodes) + " nodes)")
-                #quit()
+                if int(value) == self.n_nodes:
+                        return "OK (" + value + "/" + str(self.n_nodes) + " nodes)"
+                else:
+                	 #print("ERROR (" + value + "/" + str(self.n_nodes) + " nodes)")
+                	 #quit()
+                        return("ERROR (" + value + "/" + str(self.n_nodes) + " nodes)")
         else:
-            return "OK (" + str(self.n_nodes) + "/" + str(self.n_nodes) + " nodes)"
+                return "OK (" + str(self.n_nodes) + "/" + str(self.n_nodes) + " nodes)"
 
     def __setup_tree(self):
         print("Setting Up Tree...")
+
         if not self.print_only:
-            res = subprocess.check_output([self.bin_dir+"cmdbuildtree", "127.0.0.1", "5000"], text=True)
-            #print(res)
 
-            time.sleep(self.wait_s)
+        	i = 0
+        	not_ok = True
+        	aux = "0"
+        	while i < self.tries and not_ok:
+        		try:
+        			res = subprocess.check_output([self.bin_dir+"cmdbuildtree", "127.0.0.1", "5000"], text=True)
+		        	#print(res)
 
-            res = subprocess.check_output([self.bin_dir+"cmdchecktree", "127.0.0.1", "5000"], text=True, universal_newlines=True)
-            #print(res)
-            res = subprocess.check_output(["grep", "raspi"], text=True, universal_newlines=True, input=res)
-            #print(res)
-            res = subprocess.check_output(["wc", "-l"], text=True, universal_newlines=True, input=res)
-            #print(res)
+		        	time.sleep(self.wait_s)
 
-            print("Check Support Tree: " + self.__check_command(res))
+		        	res = subprocess.check_output([self.bin_dir+"cmdchecktree", "127.0.0.1", "5000"], text=True, universal_newlines=True)
+		        	aux = self.__process_out(res)
+		        except:
+		        	aux = "0"
 
-            time.sleep(self.wait_s)
+		        aux2 = self.__check_command(aux)
+		        if "OK" in aux2:
+		        	not_ok = False
+
+		        print("(" + str(i+1) + "/" + str(self.tries)  + ") Check Support Tree: " + aux2)
+		        time.sleep(self.wait_s)
+
+		        i += 1
+
+        	print("")
+        	return not not_ok
+
         else:
-            print("Check Support Tree: " + self.__check_command(0))
+        	print("Check Support Tree: " + self.__check_command(0))
+        	print("")
+        	return True
 
-        print("")
 
     def __run_command(self, cmd):
         if not self.print_only:
@@ -126,10 +161,11 @@ class RemoteTester:
             try:
                 res = subprocess.check_output([self.bin_dir+"cmdexecuteexperience", "127.0.0.1", "5000", cmd], text=True, universal_newlines=True)
                 #print(res)
-                res = subprocess.check_output(["grep", "raspi"], text=True, universal_newlines=True, input=res)
-                #print(res)
-                res = subprocess.check_output(["wc", "-l"], text=True, universal_newlines=True, input=res)
-                #print(res)
+
+                try:
+                	res = self.__process_out(res)
+                except:
+                	res =""
 
                 print('Run cmd: ' + self.__check_command(res))
             except:
@@ -147,10 +183,12 @@ class RemoteTester:
             try:
                 res = subprocess.check_output([self.bin_dir+"cmdexecuteexperience", "127.0.0.1", "5000", cmd], text=True, universal_newlines=True)
                 #print(res)
-                res = subprocess.check_output(["grep", "raspi"], text=True, universal_newlines=True, input=res)
-                #print(res)
-                res = subprocess.check_output(["wc", "-l"], text=True, universal_newlines=True, input=res)
-                #print(res)
+
+                try:
+                	res = self.__process_out(res)
+                except:
+                	res = ""
+
                 print("Start Experience: " + self.__check_command(res))
             except:
                 e = traceback.format_exc()
@@ -164,11 +202,7 @@ class RemoteTester:
             try:
                 res = subprocess.check_output([self.bin_dir+"cmdterminateexperience", "127.0.0.1", "5000", str], text=True, universal_newlines=True)
 
-                #print(res)
-                res = subprocess.check_output(["grep", "raspi"], text=True, universal_newlines=True, input=res)
-                #print(res)
-                res = subprocess.check_output(["wc", "-l"], text=True, universal_newlines=True, input=res)
-                #print(res)
+                res = self.__process_out(res)
 
                 print("Stop Experience: " + self.__check_command(res))
             except:
@@ -185,11 +219,7 @@ class RemoteTester:
             try:
                 res = subprocess.check_output([self.bin_dir+"cmdterminateexperience", "127.0.0.1", "5000", str + " " + nodes_str], text=True, universal_newlines=True)
 
-                #print(res)
-                res = subprocess.check_output(["grep", "raspi"], text=True, universal_newlines=True, input=res)
-                #print(res)
-                res = subprocess.check_output(["wc", "-l"], text=True, universal_newlines=True, input=res)
-                #print(res)
+                res = self.__process_out(res)
 
                 print("Kill " + nodes_str + ": " + self.__check_command(res))
             except:
@@ -198,6 +228,42 @@ class RemoteTester:
                 print("Kill " + nodes_str + ": " + self.__check_command(0))
         else:
             print("Kill " + nodes_str + ": " + self.__check_command(0))
+
+
+    def __disable_announces(self):
+    	aux = 0
+    	if not self.print_only:
+
+            try:
+                res = subprocess.check_output([self.bin_dir+"cmddisablediscovery", "127.0.0.1", "5000"], text=True, universal_newlines=True)
+
+                aux = self.__process_out(res)
+            except:
+                e = traceback.format_exc()
+                print(e)
+                aux = 0
+    	else:
+            aux = 0
+
+    	print("Disable Announces: " + self.__check_command(aux))
+
+
+    def __enable_announces(self):
+    	aux = 0
+    	if not self.print_only:
+
+            try:
+                res = subprocess.check_output([self.bin_dir+"cmdenablediscovery", "127.0.0.1", "5000"], text=True, universal_newlines=True)
+
+                aux = self.__process_out(res)
+            except:
+                e = traceback.format_exc()
+                print(e)
+                aux = 0
+    	else:
+            aux = 0
+
+    	print("Enable Announces: " + self.__check_command(aux))
 
 
     def set_to_kill(self, nodes_to_kill):
@@ -212,9 +278,13 @@ class RemoteTester:
 
         self.__setup_tree()
 
+        self.__disable_announces()
+
+        #time.sleep(self.wait_s)
+
         self.results_dir = self.results_dir % (start_time)
-        print("Creating results dir %s" % (self.results_dir))
-        self.__run_command("sudo mkdir " + self.results_dir)
+        #print("Creating results dir %s" % (self.results_dir))
+        #self.__run_command("sudo mkdir " + self.results_dir)
 
         print("")
 
@@ -246,7 +316,7 @@ class RemoteTester:
 
                 cmd = t.get_cmd(r, self.results_dir)
 
-                print("executing experience: \n" + cmd)
+                print("Executing experience: \n" + cmd)
 
                 self.__start_experience(cmd)
 
